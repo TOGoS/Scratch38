@@ -1,0 +1,4 @@
+I want a uhm
+
+efficient format for storing Minecraft map data
+(i.e. spans of 4kb blocks)
