@@ -1,4 +1,83 @@
-I want a uhm
+#+TITLE: Scratch38.1 Block File Format
 
-efficient format for storing Minecraft map data
-(i.e. spans of 4kb blocks)
+A relatively efficient format for storing Minecraft map data
+(i.e. spans of 4kb blocks).
+
+** Basic idea
+
+Length-prefixed blocks which *happen* to be on 4kiB boundaries most of the time.
+When not storing 4kiB chunks, feel free to use anything else, on the condition that
+(a) file is always a multiple of 4 kiB long,
+(b) the first block in the file starts on a 4 kiB boundary.
+
+This way, one of these files can always be processed by skipping
+through 4kiB at a time until a block header is found.
+After that, arbitrarily-sized blocks can be processed in order.
+
+** Other possibilities
+
+Note that this could all be accomplished with something like
+https://en.wikipedia.org/wiki/Resource_Interchange_File_Format,
+using padding chunks to line things up.
+
+Even better would be if an existing container format,
+such as zip, allows splitting data into chunks.
+Then these block files could be readable by any old Joe,
+and thereby useful for much more than just special-purpose
+block storage.
+
+** Format
+
+Any number of 4 kiB chunks that do not start with "#S38.1:BLOCK" are ignored.
+This way arbitrary file formats (e.g. a RIFF file or a PNG or whatever)
+can be combined with S38.1 block files.
+
+The block headers are text-based and look a bit like TEF, because why not:
+
+#+BEGIN_SRC
+block = block header + block metadata + payload + trailing padding
+
+block header = "#S38.1:BLOCK:" + block length, in bytes + "," + payload offset + "," + payload length + [" " + tag] + newline
+block metadata = TEF header block + [newline + content]
+
+TEF header block = (TEF header line | comment line)*
+TEF header = key + ": " + value + (newline + tab + more value)* + newline
+comment line = "#" + [" "|"!" + (any char except newline)*] + newline
+TEF content = any text
+#+END_SRC
+
+- ~payload offset~ :: the offset, in bytes, from the beginning of the block (the "#s38.1:block:")
+  to the beginning of the payload
+- ~payload length~ :: length, in bytes, of the payload.
+- ~tag~ is an arbitrary string, maybe a URL or the payload's MIME type,
+  that can be used to provide simple metadata about the data stored in the block.
+
+Notes:
+- Numbers are decimal-encoded.
+- ~payload offset + payload length <= block length~, or the block can be considered malformed.
+- For simplicity, the TEF metadata format is slightly stricter than regular TEF;
+  the header continuation character is always tab
+- "#" followed by anything other than space, newline, or exclamation point is reserved
+
+Example:
+
+#+BEGIN_SRC
+#S38.1:BLOCK:16384,4096,12288 application/x-chunks:4096
+# x-chunks:<size> being a hypothetical format that is simply
+# a series of chunks of the given length.
+# The following text resides between the "#s38.1" header line
+# and the content
+tef:content-type: text/plain
+# Since the block metadata section is implicitly
+# 'everything up until the payload', to avoid having
+# junk in the metadata content, either pad the beginning
+# with comment lines, or use tef:content-length to specify
+# exactly how many bytes of content there are.
+# Between the end of the metadata content and the payload, then,
+# would be yet another secret space...
+tef:content-length: 129
+
+Here is some text!  This could just be filler,
+or it could be machine-readable metadata about the block.
+Do with it as you will.
+#+END_SRC
