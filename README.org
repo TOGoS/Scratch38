@@ -26,6 +26,18 @@ Then these block files could be readable by any old Joe,
 and thereby useful for much more than just special-purpose
 block storage.
 
+*** Zip
+
+Q: Can I just ~cat some stuff zip-file.zip~ and have a valid zip file?
+
+A: According to ~zip~ on my Linux computer, yes.
+Though it may complain a little bit about junk at the beginning of the file.
+
+Q: Can I just ~cat some stuff jar-file.jar~ and Java will still accept and run it?
+
+A: According to that same Linux machine, yes.
+   And according to OpenJDK 11.0.14.1 and Semuru Java 17.0.5.0, also yes.
+
 ** Format
 
 Any number of 4 kiB chunks that do not start with "#S38.1:BLOCK" are ignored.
