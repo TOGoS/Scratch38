@@ -49,7 +49,7 @@ The block headers are text-based and look a bit like TEF, because why not:
 #+BEGIN_SRC
 block = block header + block metadata + payload + trailing padding
 
-block header = "#S38.1:BLOCK:" + block length, in bytes + "," + payload offset + "," + payload length + [" " + tag] + newline
+block header = "#S38.1:BLOCK:" + block length, in bytes [+ "," + payload offset + "," + payload length] + [" " + tag] + newline
 block metadata = TEF header block + [newline + content]
 
 TEF header block = (TEF header line | comment line)*
@@ -93,3 +93,27 @@ Here is some text!  This could just be filler,
 or it could be machine-readable metadata about the block.
 Do with it as you will.
 #+END_SRC
+
+An alternate proposal: instead of indicating payload offset/length
+on the ~#S38.1:BLOCK~ line, the list of chunks is stored
+in the block metadata section:
+
+#+BEGIN_SRC
+#S38.1:BLOCK:<total length of block, including this line>
+# Any TEF-style headers go here
+whatever-metadata-for-the-block: whatever value
+tef:content-type: application/x-scratch38.1-chunklist
+tef:content-length: <length of chunk list>
+# Empty line indicates end of headers
+
+# The chunklist is a series of lines,
+# where each line gives an item count, an item length, and 'flags',
+# which can be used to hint at the interpretation of the content
+1 <length of header> block-header
+1 <length of padding before first chunk> padding
+# More lines of the format: <count> <length> [<flags>]
+1 <remainder of chunk> padding
+#+END_SRC
+
+~padding~ chunks are garbage and can be overwritten to
+cram more data in, if desired.
