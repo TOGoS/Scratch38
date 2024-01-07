@@ -4,3 +4,18 @@
 - S0002 :: "Can I do X in Java" scratch space
 - S0003 :: Batch trampoline experiment
 - S0004 :: Tryna learn Racket
+
+** Branch naming convention
+
+~lowercase subproject name + "/bare/" + branch name~
+
+e.g. ~s0004/bare/master~.
+
+"bare" is to distinguish 'bare' branches, i.e. those
+that include *only* the sub-project's sub-directory
+(i.e. things that could be pulled in as subtrees, if at all),
+from regular branches of the main project.
+
+This might not be the best convention.
+Maybe something like ~subtrees/s38-s0004/master~
+would be more obvious, idk.
