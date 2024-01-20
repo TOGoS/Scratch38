@@ -4,7 +4,8 @@
 - S0002 :: "Can I do X in Java" scratch space
 - S0003 :: Batch trampoline experiment
 - S0004 :: Tryna learn Racket
-
+- S0005 :: File-to-lazy-linked-list in Java 1.6
+  
 ** Branch naming convention
 
 ~lowercase subproject name + "/bare/" + branch name~
