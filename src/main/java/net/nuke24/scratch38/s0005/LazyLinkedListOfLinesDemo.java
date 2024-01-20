@@ -1,4 +1,4 @@
-package net.nuke24.tjorgextractor2024;
+package net.nuke24.scratch38.s0005;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -11,7 +11,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class TJOrgExtractor {
+public class LazyLinkedListOfLinesDemo {
 	interface ThrowingSupplier<T,E extends Throwable> {
 		T get() throws E;
 	}
