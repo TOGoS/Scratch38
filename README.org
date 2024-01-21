@@ -1,22 +1,49 @@
 #+TITLE: Scratch Project Repo
 
+A project to contain smaller, experimental, short-lived,
+and/or 'one-off' projects, mostly for concept-proving or
+language-learning, so that they don't clutter up
+my big list of Git repos.
+
+Sub-projects, especially those that have any potential
+to outgrow this monorepo, should be [[Branching conventions][maintained as subtrees]].
+
 - S0001 :: An on-disk block archive file format
 - S0002 :: "Can I do X in Java" scratch space
 - S0003 :: Batch trampoline experiment
 - S0004 :: Tryna learn Racket
 - S0005 :: File-to-lazy-linked-list in Java 1.6
   
-** Branch naming convention
+** Branching conventions
+
+*** TODO Write a document or plog entry on nuke24.net about this so I can link to it
+
+*** True branches
+
+Whatever, but e.g. ~s1234/master~ for the master branch for the 'S1234' project.
+
+That said, when projects are independent, I may wish to keep them completely
+separate from this project except to pull them in as subtrees.
+In that case...
+
+*** Subtree branches
+
+~subtrees/s1234/master~, where that branch's root tree
+is the s1234 project.  i.e. the tree starts one directory
+level deeper than Scratch38, and won't contain a 'S1234'
+subdirectory.  This way, if the project ever becomes independent,
+I can split it out (or subtree-merge it into a *different*
+container project!) without dragging in the entire history
+of the parent or sibling projects.
+
+When a sub-project comes to a nice synchronization point,
+e.g. is a self-contained demonstration of some concept,
+then I may subtree merge it into the Scratch38 master
+branch in order to make it easily discoverable.
+
+
+*** Old convention
 
 ~lowercase subproject name + "/bare/" + branch name~
 
-e.g. ~s0004/bare/master~.
-
-"bare" is to distinguish 'bare' branches, i.e. those
-that include *only* the sub-project's sub-directory
-(i.e. things that could be pulled in as subtrees, if at all),
-from regular branches of the main project.
-
-This might not be the best convention.
-Maybe something like ~subtrees/s38-s0004/master~
-would be more obvious, idk.
+I was never a fan.
