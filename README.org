@@ -13,7 +13,8 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0003 :: Batch trampoline experiment
 - S0004 :: Tryna learn Racket
 - S0005 :: File-to-lazy-linked-list in Java 1.6
-  
+- S0006 :: Attempt at a cozy shell using node, because it has readline
+
 ** Branching conventions
 
 *** TODO Write a document or plog entry on nuke24.net about this so I can link to it
