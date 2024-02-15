@@ -15,7 +15,7 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0005 :: File-to-lazy-linked-list in Java 1.6
 - S0006 :: Attempt at a cozy shell using node, because it has readline
 - S0007 :: What if I run a telnet server and PuTTY to it?
-- S0008 :: TS34.2-driven 'action runner'
+- S0008 :: TS34.2-driven 'action runner' and other little Java language/runtime experiments
 
 ** Branching conventions
 
