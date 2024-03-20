@@ -118,5 +118,14 @@ though thinking SchemaSchema-style `: modifier1 : modifier2` seems reasonable.
 
 ```
 #format http://ns.nuke24.net/X-2024/Formats/TSVFileManifest
-file:/foo/bar/helloworld.txt	urn:bitprint:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ.276TET7NAXG7FVCDQWOENOX4VABJSZ4GBV7QATQ", "data:,Hello%20world!
+file:foo/bar/helloworld.txt	urn:bitprint:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ.276TET7NAXG7FVCDQWOENOX4VABJSZ4GBV7QATQ	data:,Hello%20world!
 ```
+
+Tokens are tab separated, hence 'TSV' in the name.
+
+Blank and comment lines (defined by the HashFormat format) can be ignored.
+
+Tokens beginning with ':' indicate metadata using SchemaSchema syntax, i.e. `: property name @ property value : another @ ...`,
+where property values may be abstract identifiers or JSON-style string literals.
+
+Compatible with M3U if only one column!
