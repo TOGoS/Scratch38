@@ -8,7 +8,7 @@ my big list of Git repos.
 Sub-projects, especially those that have any potential
 to outgrow this monorepo, should be [[Branching conventions][maintained as subtrees]].
 
-- S0001 :: An on-disk block archive file format
+- S0001 :: Scheming up some file formats, including 4kB block and text/line-based ones
 - S0002 :: "Can I do X in Java" scratch space
 - S0003 :: Batch trampoline experiment
 - S0004 :: Tryna learn Racket
