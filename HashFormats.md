@@ -33,6 +33,7 @@ as a synonym for it".
 - http://ns.nuke24.net/X-2024/Formats/JSONLFileManifest
 - http://ns.nuke24.net/X-2024/Formats/TSVFileManifest
 - http://ns.nuke24.net/X-2024/Formats/JSONLRDF
+- http://ns.nuke24.net/X-2024/Formats/JSONLResolutionLog
 
 ## HashFormat meta-format
 
@@ -129,3 +130,37 @@ Tokens beginning with ':' indicate metadata using SchemaSchema syntax, i.e. `: p
 where property values may be abstract identifiers or JSON-style string literals.
 
 Compatible with M3U if only one column!
+
+## http://ns.nuke24.net/X-2024/Formats/JSONLResolutionLog
+
+```
+#format http://ns.nuke24.net/X-2024/Formats/JSONLResolutionLog
+```
+
+Inputs and outputs can be expressed as URIs or as TOGVM expressions.
+
+A resolution represents a step towards a more concrete form of
+the resulting value.  e.g. a first step might be to convert
+the application of an abstract function, such as
+`pixel dimensions of encoded image( <image file URI> )` (pseudocode)
+to the application of a specific implementation, e.g.
+`pixel dimensions according to magick-7.1.0-31( <image file URI> )`.
+
+Attributes:
+- canonical - true if this resolution is, in theory, well-defined and 100% reproducible.
+  - Resolution using a specific version of software applied to a well-defined input
+    is canonical, assuming that software's behavior is repeatable.
+  - Resolutions that could under different circumstances give different results
+    are *not* canonical
+  - e.g. `rand() = 0.3713` is *not* canonical, but `10 * 5 = 50` is.
+  - `file:foo/bar/baz.txt = data:,Hello%20there!` is not canonical, because
+    at a different point in time or on a different computer, the file
+    could have different content, or not exist at all.
+- inputUri - URI to be resolved, probably an `active` URI or somilar
+- inputExpression - TOGVM-like expression to be resolved
+- outputUri - URI representing result
+- outputExpression - Expression representing result
+- resolved - timestamp that resolution was done
+- resolvedBy - name of software/instance 
+- context - any information about the context that might have affected
+  the resolution, such as host OS, name, processor architecture, etc 
