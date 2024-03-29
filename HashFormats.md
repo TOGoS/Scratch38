@@ -164,3 +164,14 @@ Attributes:
 - resolvedBy - name of software/instance 
 - context - any information about the context that might have affected
   the resolution, such as host OS, name, processor architecture, etc 
+
+
+## See also
+
+- https://www.rfc-editor.org/rfc/rfc4180 - CSV RFC
+- https://jsonlines.org/
+- https://frictionlessdata.io/ - ???
+
+My as-yet-undocumented variation on TSV, which has a
+"#COLUMNS:foo	bar	baz" header.
+That could be its own HashFormat.
