@@ -94,7 +94,7 @@ though thinking SchemaSchema-style `: modifier1 : modifier2` seems reasonable.
 # - mtime: modification time, in seconds, an integer
 #   - if a string, ISO-8601, but lets stick to ints for now
 # - calculatedUrns: list of calculated URNs
-#   e.g. "urn:bitprint:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ.276TET7NAXG7FVCDQWOENOX4VABJSZ4GBV7QATQ", "data:,Hello%20world!"]
+#   e.g. "urn:bitprint:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ.276TET7NAXG7FVCDQWOENOX4VABJSZ4GBV7QATQ", "data:,Hello,%20world!"]
 # - crc32Hex: hex-encoded CRC32 (which CRC32?)
 # 
 # The secondary format is...maybe not something I need to flesh out at the moment,
@@ -119,10 +119,23 @@ though thinking SchemaSchema-style `: modifier1 : modifier2` seems reasonable.
 
 ```
 #format http://ns.nuke24.net/X-2024/Formats/TSVFileManifest
-file:foo/bar/helloworld.txt	urn:bitprint:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ.276TET7NAXG7FVCDQWOENOX4VABJSZ4GBV7QATQ	data:,Hello%20world!
+
+foo/bar/helloworld.txt	urn:bitprint:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ.276TET7NAXG7FVCDQWOENOX4VABJSZ4GBV7QATQ	data:,Hello,%20world!
+
+# Same, but without giving a name:
+urn:bitprint:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ.276TET7NAXG7FVCDQWOENOX4VABJSZ4GBV7QATQ	data:,Hello,%20world!
+
+# Provide metadata about some blob;
+# by convention, bz:fileLength = http://bitzi.com/xmlns/2002/01/bz-core#fileLength.
+# Conventional prefixes TBD, but 'whatever ContentCouch uses
+# for xmlns prefixes' is a reasonable guess.
+urn:bitprint:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ.276TET7NAXG7FVCDQWOENOX4VABJSZ4GBV7QATQ	: bz:fileLength @ 13
 ```
 
 Tokens are tab separated, hence 'TSV' in the name.
+
+Each token is either a URI (if it starts with a valid URI scheme+":"),
+metadata (if it starts with ":"), or, if the first token, a relative path.
 
 Blank and comment lines (defined by the HashFormat format) can be ignored.
 
