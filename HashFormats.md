@@ -31,7 +31,7 @@ as a synonym for it".
 
 - http://ns.nuke24.net/X-2024/Formats/HashFormat
 - http://ns.nuke24.net/X-2024/Formats/JSONLFileManifest
-- http://ns.nuke24.net/X-2024/Formats/TSVFileManifest
+- http://ns.nuke24.net/Formats/TSVFileManifestV1 (formerly http://ns.nuke24.net/X-2024/Formats/TSVFileManifest)
 - http://ns.nuke24.net/X-2024/Formats/JSONLRDF
 - http://ns.nuke24.net/X-2024/Formats/JSONLResolutionLog
 
@@ -78,6 +78,20 @@ Not sure if there should be a standard or at least convention for what follows,
 though thinking SchemaSchema-style `: modifier1 : modifier2` seems reasonable.
 
 
+## Metadata
+
+For use in either of the file manifest formats.
+
+These are chosen to match the conventional xmlns namespace names as used by CCOuch's XML/RDF format.
+
+- dc:modified :: http://purl.org/dc/terms/modified
+  - modification time as unix timestamp (seconds)
+- bz:fileLength :: http://bitzi.com/xmlns/2002/01/bz-core#fileLength
+  - length of content, in bytes
+- ccouch:fileNodeId :: http://ns.nuke24.net/ContentCouch/fileNodeId
+  - filesystem-specific identifier of the node at which the file is stored
+    (inode number on most unix filesystems, a long 'file key' string on NTFS)
+
 ## JSONLFileManifest
 
 ```
@@ -91,7 +105,8 @@ though thinking SchemaSchema-style `: modifier1 : modifier2` seems reasonable.
 # Attributes:
 # - path: path of file relative to some implicit root directory
 #   (or explicit, if you look at the hidden-in-a-#-directive group)
-# - mtime: modification time, in seconds, an integer
+# - [bz:]fileLength: length of content, in bytes
+# - [dc:]modified: modification time, in seconds, an integer
 #   - if a string, ISO-8601, but lets stick to ints for now
 # - calculatedUrns: list of calculated URNs
 #   e.g. "urn:bitprint:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ.276TET7NAXG7FVCDQWOENOX4VABJSZ4GBV7QATQ", "data:,Hello,%20world!"]
@@ -110,15 +125,17 @@ though thinking SchemaSchema-style `: modifier1 : modifier2` seems reasonable.
 # Some directives that are 
 #long-names {"classRef": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type ref", "path": ....}
 #item-prototype {"classRef": "http://ns.nuke24.net/X-2024/FileManifest/File"}
-{"path": "foo/bar.txt", "calculatedUrns": ["urn:bitprint:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ.276TET7NAXG7FVCDQWOENOX4VABJSZ4GBV7QATQ", "data:,Hello%20world!"], "mtime": 1710958501}
+{"path": "foo/bar.txt", "calculatedUrns": ["urn:bitprint:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ.276TET7NAXG7FVCDQWOENOX4VABJSZ4GBV7QATQ", "data:,Hello%20world!"], "modified": 1710958501}
 #end-group
 ```
 
 
-## http://ns.nuke24.net/X-2024/Formats/TSVFileManifest
+## http://ns.nuke24.net/Formats/TSVFileManifestV1
+
+(Changed from `http://ns.nuke24.net/X-2024/Formats/TSVFileManifest` on 2024-05-18)
 
 ```
-#format http://ns.nuke24.net/X-2024/Formats/TSVFileManifest
+#format http://ns.nuke24.net/Formats/TSVFileManifestV1
 
 foo/bar/helloworld.txt	urn:bitprint:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ.276TET7NAXG7FVCDQWOENOX4VABJSZ4GBV7QATQ	data:,Hello,%20world!
 
