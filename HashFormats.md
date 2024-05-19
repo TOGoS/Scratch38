@@ -134,6 +134,8 @@ These are chosen to match the conventional xmlns namespace names as used by CCOu
 
 (Changed from `http://ns.nuke24.net/X-2024/Formats/TSVFileManifest` on 2024-05-18)
 
+Officially documented at http://www.nuke24.net/docs/2024/TSVFileManifestV1.html .
+
 ```
 #format http://ns.nuke24.net/Formats/TSVFileManifestV1
 
