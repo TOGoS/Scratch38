@@ -44,32 +44,42 @@ Any number of 4 kiB chunks that do not start with "#S38.1:BLOCK" are ignored.
 This way arbitrary file formats (e.g. a RIFF file or a PNG or whatever)
 can be combined with S38.1 block files.
 
-The block headers are text-based and look a bit like TEF, because why not:
+Once a block appears in a stream, other alignment can be used, e.g. 1kiB,
+or none at all.  To stay on 'nice fixed sized chunk' boundaries,
+blocks must have lengths that are multiples of that chunk size, e.g. 4kiB
+(this is why block size is independent of payload offset/length).
 
 #+BEGIN_SRC
-block = block header + block metadata + payload + trailing padding
+block = block-header block-metadata payload padding
 
-block header = "#S38.1:BLOCK:" + block length, in bytes [+ "," + payload offset + "," + payload length] + [" " + tag] + newline
-block metadata = TEF header block + [newline + content]
+block-header = "#S38.1:BLOCK:" block-length ("," payload-offset "," payload-length)? (" " tag)?  newline
 
-TEF header block = (TEF header line | comment line)*
-TEF header = key + ": " + value + (newline + tab + more value)* + newline
-comment line = "#" + [" "|"!" + (any char except newline)*] + newline
-TEF content = any text
+block-metadata = metadata-header* + (newline + padding)?
+
+metadata-header = metadata-header-key ": " " "* metadata-header-value newline
 #+END_SRC
 
-- ~payload offset~ :: the offset, in bytes, from the beginning of the block (the "#s38.1:block:")
+- ~payload-offset~ :: the offset, in bytes, from the beginning of the block (the "#s38.1:block:")
   to the beginning of the payload
-- ~payload length~ :: length, in bytes, of the payload.
+- ~payload-length~ :: length, in bytes, of the payload.
 - ~tag~ is an arbitrary string, maybe a URL or the payload's MIME type,
   that can be used to provide simple metadata about the data stored in the block.
+- Meaning of ~padding~ is unspecified.  Could be zeroed out,
+  filled with random data, or contain hidden messages hinted-at by headers,
+  and if large enough may even contain more blocks!
+  Though that woulkd probably be silly.
 
 Notes:
 - Numbers are decimal-encoded.
-- ~payload offset + payload length <= block length~, or the block can be considered malformed.
-- For simplicity, the TEF metadata format is slightly stricter than regular TEF;
-  the header continuation character is always tab
+- ~payload-offset + payload-length <= block-length~, or the block can be considered malformed.
+- For simplicity, the TEF metadata format is slightly stricter than regular TEF.
+  Each header is a single line.
 - "#" followed by anything other than space, newline, or exclamation point is reserved
+- ~block-metadata~ can be ignored, as it is basically padding,
+  just in a standard format (which itself contains padding!)
+- ~header-content-type~ and ~header-content-length~ headers, if present,
+  refer to any data that appears directly after the blank
+  line after the headers, not to the block payload.
 
 Example:
 
@@ -77,33 +87,40 @@ Example:
 #S38.1:BLOCK:16384,4096,12288 application/x-chunks:4096
 # x-chunks:<size> being a hypothetical format that is simply
 # a series of chunks of the given length.
-# The following text resides between the "#s38.1" header line
+# The following text resides between the "#S38.1" header line
 # and the content
-tef:content-type: text/plain
+header-content-type: text/plain
 # Since the block metadata section is implicitly
 # 'everything up until the payload', to avoid having
 # junk in the metadata content, either pad the beginning
-# with comment lines, or use tef:content-length to specify
+# with comment lines, or use header-content-length to specify
 # exactly how many bytes of content there are.
 # Between the end of the metadata content and the payload, then,
 # would be yet another secret space...
-tef:content-length: 129
+header-content-length: 129
 
 Here is some text!  This could just be filler,
 or it could be machine-readable metadata about the block.
 Do with it as you will.
 #+END_SRC
 
-An alternate proposal: instead of indicating payload offset/length
-on the ~#S38.1:BLOCK~ line, the list of chunks is stored
-in the block metadata section:
+** Idea for a 'chunk list' dialect
+
+Note: This idea is, while 100% compatible with the framing
+specified above, silly and redundant, as the blocks themselves
+are already capable of representing whatever I need.
+
+For this dialect, payload offset/length are redundant
+so can/should be left out of the block header.
+
+A list of chunks is stored in the block metadata section:
 
 #+BEGIN_SRC
 #S38.1:BLOCK:<total length of block, including this line>
 # Any TEF-style headers go here
 whatever-metadata-for-the-block: whatever value
-tef:content-type: application/x-scratch38.1-chunklist
-tef:content-length: <length of chunk list>
+header-content-type: application/x-scratch38.1-chunklist
+header-content-length: <length of chunk list>
 # Empty line indicates end of headers
 
 # The chunklist is a series of lines,
