@@ -18,6 +18,7 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0008 :: TS34.2-driven 'action runner' and other little Java language/runtime experiments
 - S0009 :: Try to write a minimal lisp interpreter (in Java)
 - S0010 :: Learn Unison
+- S0011 :: Pi Pico Hello World
 
 ** Branching conventions
 
