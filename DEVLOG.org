@@ -1,0 +1,46 @@
+#+TITLE: TOGoS Attempts To Hello Wold On Pi Pico
+
+Preferrably in C, not MicroPython shit.
+
+
+The 'getting started' [[https://projects.raspberrypi.org/en/projects/getting-started-with-the-pico][on raspberripi.org]]
+wants me to use MicroPython, but fuck that.
+
+How to do it in C?
+
+https://www.electronicshub.org/program-raspberry-pi-pico-using-c/
+
+https://www.raspberrypi.com/news/raspberry-pi-pico-windows-installer/
+recommends installing the VS Code-based SDK via
+https://github.com/raspberrypi/pico-setup-windows/releases/latest/download/pico-setup-windows-x64-standalone.exe
+(urn:bitprint:R36RGH3DLLAR3UJLTCYKPQINIYBPEC6U.2XMB5JMJACW5QWPRWPAQPUBWM4BDFN2TKWVDSKI for me)
+
+
+I wonder what https://www.instructables.com/Raspberry-Pi-Pico-As-HID-Mouse/ says.
+Looks like they use the Arduino IDE.
+
+Arduino IDE sure sounds like the easier way to go!!
+
+But since I already downloaded the VS Code SDK, maybe I should try with that, first.
+
+** Attempt to use the SDK
+
+Well, it says to "click the *CMake* button on the sidebar" but I don't see any "*CMake* button",
+so let's go the Arduino route lmao.
+
+
+
+** Attemt to use Arduino IDE (spoiler: it works)
+
+Installed 'Raspberry Pi Pico' board
+and loaded up Keyboard example.
+
+Notes:
+- When you get the thing plugged in in bootloader mode
+  (hold down the button while plugging in), Windows will
+  mount it as a storage device
+- No 'port' shows up in my Arduino IDE;
+  I guess if I want it to be a serial port, I need to make one in my program!
+
+But when I clicked 'Upload', it did indeed compile the program and
+upload it and it started spewing "Hello World" into my editor.
