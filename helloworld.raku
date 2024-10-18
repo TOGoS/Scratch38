@@ -1,7 +1,16 @@
-my $whom = 'world'; "hello $whom!".say;
+sub demo($text, $source, $eval=True) {
+	say "";
+	say $text;
+	say "> $source";
+	if $eval {
+		say "= ", $source.EVAL;
+	} else {
+		 $source.EVAL;
+	}
+}
 
+demo "Use 'say' to print shit", 'say "Hello, world!"', False;
 
-say "Use .WHAT to find out the types of things:";
-my $code = 'say (38/15 + 27/30).WHAT;';
-say "> $code";
-$code.EVAL;
+demo
+	 "Use .WHAT to find out the types of things.",
+	 '(38/15 + 27/30).WHAT;';
