@@ -19,6 +19,7 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0009 :: Try to write a minimal lisp interpreter (in Java)
 - S0010 :: Learn Unison
 - S0011 :: Pi Pico Hello World
+- S0012 :: Let's learn Raku
 
 ** Branching conventions
 
