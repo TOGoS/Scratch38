@@ -77,6 +77,16 @@ sub demo(Str $text, Str $source is copy, Bool $eval=True) {
 	}
 }
 
+say-head "Getting the docs";
+
+demo
+	'Programatically get documentation for something.',
+	'&demo.WHY';
+
+
+say-head "Back to some other stuff";
+
+
 sub say-head($title) {
 	say "";
 	say "## $title";
