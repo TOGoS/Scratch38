@@ -71,7 +71,7 @@ demo
 
 demo
 	"x repeats text.",
-	"'foo' x 5"
+	"'foo' x 5";
 
 =head2 Now how 'bout them tables?
 
@@ -108,4 +108,70 @@ What you want to say | How you gotta say it
 
 Backslash is kinda weird because it's an escape character,
 but doesn't itself need to be escaped.
+
+Anyhoo, back to some code that does stuff.
 =end pod
+
+sub do-twice($do) {
+	$do();
+	$do();
+}
+
+=begin pod
+Note that in this implementation of do-twice,
+the () are required to actually call the function.
+=end pod
+
+
+
+sub say-hey() { say "Hey there." }
+
+do-twice(&say-hey);
+
+=begin pod
+Using C<&> instead of C<$> is 'more idiomatic'
+and has the advantage that you can leave off
+the sigil and the parentheses when calling it.
+=end pod
+
+sub do-twice-ampersandly(&do) {
+	do();
+	do;
+}
+
+sub say-howdy() { say "Howdy!" }
+
+do-twice-ampersandly(&say-howdy);
+
+do-twice-ampersandly(sub { say "Jerk butts" });
+
+=begin pod
+You can create anonymous subroutines like:
+=begin code
+sub { say "Hi there" }
+=end code
+or
+=begin code
+sub ($whom) { say "Hi there, $whom" }
+=end code
+but B<not> like
+=begin code
+sub($whom) { say "Hi there, $whom" }
+=end code
+C<sub> needs to have a space after it or the parser gets confused.
+=end pod
+
+sub compose(&a, &b) {
+	sub ($x) { b(a($x)) }
+}
+
+sub double($t) {
+	"$t and $t";
+}
+
+say &compose.raku;
+
+# This should quadruple Fred, I think:
+demo
+	'Call that compose function.',
+	'compose(&double, &double)("Fred")';
