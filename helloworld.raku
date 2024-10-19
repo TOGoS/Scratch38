@@ -28,6 +28,8 @@ but eventually after trying to install C<Pod::To::HTML::Section> (whatever that 
 and C<Pod::To::Markdown>, C<Pod::To::HTML> ended up installed.
 
 
+say-head "Use a variable";
+
 
 demo
 	"Use 'my' to declare local variables.",
@@ -73,6 +75,12 @@ sub demo(Str $text, Str $source is copy, Bool $eval=True) {
 			say "Error: $!"
 		}
 	}
+}
+
+sub say-head($title) {
+	say "";
+	say "## $title";
+	say "";
 }
 
 demo
@@ -232,11 +240,30 @@ demo
 
 C<given "some value" { ... }> results in the code within the braces
 being run with C<$_> set to C<"some value">
+
+Source: L<https://docs.raku.org/language/control#given>
 =end pod
 
-say "";
-say "Now let's try out `given`:";
+say-head "Now let's try out `given`";
 	
 given "Bob Ross\nGray and floofy" {
 	.lines.map({"  > a line: $_"}).join("\n").say
+}
+
+=begin pod
+=head2 gather/take
+
+Raku offers some other interesting control structures,
+like L<gather/take|https://docs.raku.org/language/control#gather/take>
+and L<supply/emit|https://docs.raku.org/language/control#wupply/emit>.
+I'm not yet sure how those are different.
+=end pod
+
+say-head "supply";
+
+my $supply = supply {
+    .emit for "foo", 42, .5;
+}
+$supply.tap: {
+    say "received {.^name} ($_)";
 }
