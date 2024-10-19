@@ -51,7 +51,7 @@ the point where they are called.
 =head2 Some Functions
 
 sub trime(Str $text) {
-	$text ~~ /^\n+(.*?)\s*$/;
+	$text ~~ /^\n*(.*?)\s*$/;
 	return $0;
 }
 
