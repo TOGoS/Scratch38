@@ -188,6 +188,11 @@ demo
 
 
 =begin pod
+=head2 Refinement types
+
+(At least that's what I think these are called,
+based on some CoRecursive episode.)
+
 Raku lets you define types in terms of constraints,
 which is something I like.
 
@@ -220,3 +225,18 @@ demo
 		my Three-letter $acronym = "FAFF";
 		say "Look, a TLA: '$acronym'";
 	], False;
+
+
+=begin pod
+=head2 given
+
+C<given "some value" { ... }> results in the code within the braces
+being run with C<$_> set to C<"some value">
+=end pod
+
+say "";
+say "Now let's try out `given`:";
+	
+given "Bob Ross\nGray and floofy" {
+	.lines.map({"  > a line: $_"}).join("\n").say
+}
