@@ -1,11 +1,31 @@
+=TITLE TOGoS Learns Perl6 aka Raku
+=AUTHOR TOGoS
+
+=comment This C<comment> won't show up in the documentation.
+
 =head1 TOGoS Learns Perl 6 aka Raku
 
 =para
-_Think Perl 6_ mentions `use Math::Trig`,
+U<Think Perl 6> mentions C<use Math::Trig>,
 but Raku doesn't know about it, so the following doesn't work:
 =begin code
 use Math::Trig;
 =end code
+=para
+This might be because I need to C<zef install> it.
+=begin code
+zef install Math::Trig
+=end code
+=para And maybe while you're at it,
+=begin code
+zef install Pod::To::HTML
+=end code
+=para so that you can
+=code raku --doc=HTML helloworld.raku
+=para
+I had some trouble with this, something about C<curl>,
+but eventually after trying to install C<Pod::To::HTML::Section> (whatever that is)
+and C<Pod::To::Markdown>, C<Pod::To::HTML> ended up installed.
 
 
 
@@ -27,6 +47,8 @@ demo
 =para
 Function definitions can come after
 the point where they are called.
+
+=head2 Some Functions
 
 #|<
 	Indicate a bit of source code to be evaled,
@@ -50,3 +72,40 @@ demo
 demo
 	"x repeats text.",
 	"'foo' x 5"
+
+=head2 Now how 'bout them tables?
+
+=begin table
+ Material |   Drying | Nozzle temp |      Bed |  Print | Needs     
+          | temp (C) |    temp (C) | temp (C) |  scale | glue?     
+===================================================================
+ PLA      |       55 |     190-210 |    50-60 | 1.0035 | sometimes,
+  |  |  |  |  | especially in the winter.
+-------------------------------------------------------------------
+ PETG     |       60 |     220-245 |       80 |  1.006 | yes       
+-------------------------------------------------------------------
+ TPU      |       65 |         230 |       60 |   1.00 | no        
+===================================================================
+ Socks    |       40 |             |          |   0.96 | no
+=end table
+
+=begin pod
+Note that, unlike in org-mode tables, pod6 table cells can span
+multiple lines of text.  Source cells don't need to line up, but
+it seems like bars must be separated by at least two spaces.
+
+Pod will also interpret C<+> as a column separator,
+so if you've got any plusses in there, escape them with a backslash.
+
+=begin table
+What you want to say | How you gotta say it
+===========================================
+\+                   | \\+
+\|                   | \\|
+\\+                  | \\\+
+\                    | \
+=end table
+
+Backslash is kinda weird because it's an escape character,
+but doesn't itself need to be escaped.
+=end pod
