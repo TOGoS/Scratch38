@@ -50,18 +50,28 @@ the point where they are called.
 
 =head2 Some Functions
 
+sub trime(Str $text) {
+	$text ~~ /^\n+(.*?)\s*$/;
+	return $0;
+}
+
 #|<
 	Indicate a bit of source code to be evaled,
 	then eval it and, if $eval is True, print the result.
 >
-sub demo(Str $text, Str $source, Bool $eval=True) {
+sub demo(Str $text, Str $source is copy, Bool $eval=True) {
+	my $f-source = trime($source).indent(*);
+	$f-source = $f-source.lines.map({ "> $_" }).join("\n");
 	say "";
 	say $text;
-	say "> $source";
+	say $f-source;
 	if $eval {
 		say "= ", $source.EVAL;
 	} else {
-		 $source.EVAL;
+		try $source.EVAL;
+		with $! {
+			say "Error: $!"
+		}
 	}
 }
 
@@ -175,3 +185,38 @@ say &compose.raku;
 demo
 	'Call that compose function.',
 	'compose(&double, &double)("Fred")';
+
+
+=begin pod
+Raku lets you define types in terms of constraints,
+which is something I like.
+
+=begin code
+subset Three-letter of Str where .chars == 3;
+my Three-letter $acronym = "FOF";
+=end code
+=end pod
+
+demo
+	'Define a type using a runtime check',
+	Q[
+		subset Three-letter of Str where .chars == 3;
+	], False;
+
+=begin comment
+Note that that type definition sticks around for later evals.
+=end comment
+
+demo
+	'Cram something into a Three-letter variable',
+	Q[
+		my Three-letter $acronym = "FOF";
+		say "Look, a TLA: '$acronym'";
+	], False;
+
+demo
+	'Try to cram four letters into a three-letter acronym',
+	Q[
+		my Three-letter $acronym = "FAFF";
+		say "Look, a TLA: '$acronym'";
+	], False;
