@@ -65,3 +65,16 @@ talk-about($pointy);
 
 talk-about($point, '$point (which is aliased by $pointy)');
 
+
+say "";
+say "Now for some delegation.";
+
+class NamedPoint2D does Tuple {
+	has Str $.name;
+	has Point2D $.point handles <components>
+}
+
+my $named-point = NamedPoint2D.new(name => 'Fred', point => $point);
+talk-about($named-point);
+say '$named-point will delegate calls to `.components`.';
+say '$named-point\'s components are ', $named-point.components.raku;
