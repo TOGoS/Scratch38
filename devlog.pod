@@ -1,0 +1,10 @@
+=begin pod
+=head1 TOGoS's Raku Learing Log
+
+Hello there.
+
+=head2 Installing stuff
+
+~zef install~ is slow and unreliable.
+
+=end pod
