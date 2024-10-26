@@ -31,8 +31,37 @@ class Point2D {
 		# :name(value) seems an alternative syntax to name => value
 		return Point2D.new(:abscissa(self.abscissa), ordinate => $ord);
 	}
+
+	method components {
+		return self.abscissa, self.ordinate;
+	}
+}
+
+# $thing is rw makes $thing an alias to the passed-in variable,
+# so that we can get its name.
+# I wonder if there's a way to do that without making it rw.
+multi sub talk-about( $thing is rw ) {
+	talk-about($thing, $thing.VAR.name);
+}
+multi sub talk-about( $thing, Str $name ) {
+	say "Value of {$name} is {$thing.raku}, a {$thing.WHAT.raku}"
 }
 
 my $point = Point2D.new(abscissa => 123, ordinate => 456);
-say $point.fuck-it-up(9).with-abscissa(22);
+talk-about($point);
+talk-about($point.fuck-it-up(9).with-abscissa(22), 'fucked up $point');
+
+
+role Tuple {
+	method components { ... }
+}
+
+say 'Now I\'ll make a Point2D, $pointy, that `does Tuple`.';
+say 'This only works because Point2D happened to define `components`.';
+my $pointy = $point;
+$pointy does Tuple;
+
+talk-about($pointy);
+
+talk-about($point, '$point (which is aliased by $pointy)');
 
