@@ -75,6 +75,10 @@ class NamedPoint2D does Tuple {
 }
 
 my $named-point = NamedPoint2D.new(name => 'Fred', point => $point);
-talk-about($named-point);
+# Can use colon instead of parentheses to indicate a function call:
+#   foo: bar, baz
+# is the same as:
+#   foo(bar, baz)
+talk-about: $named-point;
 say '$named-point will delegate calls to `.components`.';
 say '$named-point\'s components are ', $named-point.components.raku;
