@@ -3,6 +3,36 @@
 A relatively efficient format for storing Minecraft map data
 (i.e. spans of 4kb blocks).
 
+** Original notes
+
+From [[http://wherever-files.nuke24.net/uri-res/raw/urn:bitprint:KCABIKZALTFCIWSCJTVBTCNRI7FRYXLT.N7JPWPAAU43Q2ZWWVJLKFPNN7EOUZ3YG3MTYS3Y/S38S1-original-README.org][S0001/README.org]], last modified 2023-0905T13:34.
+Not sure why this was separate;
+maybe just started on a different computer before I
+made this Git repo for it.
+
+#+begin_quote
+#+TITLE: urn:oid:1.3.6.1.4.1.44868.261.38.1
+
+File format for relatively efficient storing
+of Minecraft map data (i.e. spans of 4kb blocks)
+
+Initial thoughts:
+- By default 'just a bunch of raw data, which you're more likely
+  to make sense of if it's chunked into 4kiB pieces'
+- Files must always be a multiple of 4kiB in length
+- Files can be concatenated together, and the result is
+  equivalent to the two original files
+  - Implication: No by-absolute-offset referencess between
+    chunks within the file
+- Blocks with a special pattern at the beginning of the 4kiB
+  can have special meaning, useful for providing chunks
+  of data that aren't simply 4kiB chunks of arbitrary data,
+  for example:
+  - a bunch of tigertree nodes
+  - [[http://www.nuke24.net/docs/2003/draft-jchapweske-thex-02.html][THEX data]]
+  - Properties file-style dictionary
+#+end_quote
+
 ** Basic idea
 
 Length-prefixed blocks which *happen* to be on 4kiB boundaries most of the time.
