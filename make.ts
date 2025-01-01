@@ -1,5 +1,10 @@
+/// <reference no-default-lib="true"/>
+/// <reference lib="deno.window"/>
+
 import Builder, { BuildContext, BuildRule } from 'https://deno.land/x/tdbuilder@0.5.14/Builder.ts';
 import Logger from 'https://deno.land/x/tdbuilder@0.5.14/Logger.ts';
+
+import bundlify from './bundlify.ts';
 
 export class PrefixLogger implements Logger {
 	public constructor(protected prefix: string, protected parent:Logger) {}
@@ -21,8 +26,10 @@ export class PrefixLogger implements Logger {
 const buildRules : {[name:string]: BuildRule} = {
 	"www/myapp.js": {
 		targetType: "file",
-		// TODO Find out why they removed 'bundle' and figure out what to use instead
-		cmd: [Deno.execPath(),"bundle","..."]
+		prereqs: ["src/main/ts"],
+		invoke: function(ctx) {
+			return bundlify(["./src/main/ts/myapp.ts"], "./www/myapp.js").then(() => {});
+		},
 	}
 }
 
@@ -31,7 +38,7 @@ if( import.meta.main ) {
 		logger: new PrefixLogger("SG-P2 builder:", console),
 		rules: buildRules,
 		globalPrerequisiteNames: ["make.ts"],
-		defaultTargetNames: Object.keys(buildRules).filter(targetName => /\/install$/.exec(targetName) != null),
+		defaultTargetNames: ["www/myapp.js"]
 	});
 	
 	Deno.exit(await builder.processCommandLine(Deno.args));
