@@ -82,7 +82,7 @@ top-level blocks must have lengths that are multiples of that chunk size, e.g. 4
 #+BEGIN_SRC
 block = block-header + block-metadata + payload + trailing-garbage
 
-block-header = "#S38.1:BLOCK:" + block-length
+block-header = "#S38.1:BLOCK:" + block-length + newline
 
 block-metadata = metadata-header* + newline
 
@@ -98,9 +98,22 @@ Notes:
 - Numbers are decimal-encoded.
 - The payload starts after the first blank line
 - "#" followed by anything other than space, newline, or exclamation point is reserved
-- ~content-length~ header indicates the length of the payload
-  (todo: for least surprise, this should be similar to HTTP semantics;
-  is this the length before or after decoding according to content-encoding?)
+- ~payload-length~ header indicates the length of the payload
+- ~payload-offset~ header, if present, indicates the offset of the payload
+  from the beginning of the block.  Otherwise, the payload starts directly
+  after the blank line after the headers.
+
+An earlier draft allowed payload offset and length and a tag to be indicated
+in the opening line of the block, which allowed for space in between the
+headers and the payload which could be used for something else.
+In that case:
+
+#+BEGIN_SRC
+block-header-with-payload-offset = "#S38.1:BLOCK:" + block-length + "," + payload-offset + payload+length + (" " + tag)? + newline~
+#+END_SRC
+
+For simplicity, I have removed it, and indicated 'payload-offset', instead.
+  
 
 Example:
 
