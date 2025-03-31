@@ -113,9 +113,8 @@ block-header-with-payload-offset = "#S38.1:BLOCK:" + block-length + "," + payloa
 #+END_SRC
 
 For simplicity, I have removed it, and indicated 'payload-offset', instead.
-  
 
-Example:
+*** Example
 
 #+BEGIN_SRC
 #S38.1:BLOCK:16384
