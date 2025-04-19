@@ -22,6 +22,7 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0012 :: Let's learn Raku
 - S0013 :: Deno-to-browser starter project (2024-12-31)
 - S0014 :: Attempt to set up a Scala / Mill / Http4s project
+- S0015 :: Attempt at a TUI in Deno
 
 ** Branching conventions
 
