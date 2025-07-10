@@ -26,6 +26,7 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0016 :: Are Danducers equivalent to JavaScript iterators?
 - S0017 :: Putz around with React
 - S0018 :: Putz aronud with Elm
+- S0019 :: HELP bridge, in Deno
 
 ** Branching conventions
 
