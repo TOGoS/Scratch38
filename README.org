@@ -27,6 +27,7 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0017 :: Putz around with React
 - S0018 :: Putz aronud with Elm
 - S0019 :: HELO bridge, in Deno
+- S0020 :: Haxe practice: Load some TSV files, or something
 
 ** Branching conventions
 
