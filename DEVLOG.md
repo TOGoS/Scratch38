@@ -19,3 +19,30 @@ inside the container.
 
 I guess maybe it doesn't matter exactly how much of VS code is running
 inside and out; the abstraction is that it doesn't matter.
+
+### Compile with -o
+
+```bash
+idris -o hello123 Hello.idr
+```
+
+does *not* create an executable file 'hello123'.
+
+But that file does appear in `build/exec'.
+
+I can force it to write it in a certain directory by using an absolute path.
+
+```bash
+idris2 -o "$(pwd)/hello" Hello.idr
+```
+
+### What next?
+
+What's my goal with this?
+
+Learn a better language for prototyping my funny ideas, I suppose,
+even if I end up having to rebuild them in another language.
+
+But maybe Idris's type system is powerful enough that I can
+use it to generate code in those other languages!  Hmm.
+Yeah, that'd be super.
