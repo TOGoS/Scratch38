@@ -28,6 +28,7 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0018 :: Putz aronud with Elm
 - S0019 :: HELO bridge, in Deno
 - S0020 :: Haxe practice: Load some TSV files, or something
+- S0021 :: Attempt at an Idris codebase
 
 ** Branching conventions
 
