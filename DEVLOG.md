@@ -151,3 +151,34 @@ jack : String
 jack = ?whoIsJack
 -- Ctrl+. does NOT work on ?whoIsJack, EVEN IF mane x is entirely commented-out or removed!
 ```
+
+### Continued
+
+Added `Uhm.idr`, saved a few things...
+
+Ooh, I got some output from 'Idris 2 LSP Client':
+
+```
+[Error - 6:06:25 PM] Request textDocument/codeAction failed.
+  Message: Cannot load ipkg file for file:///workspaces/Scratch38-S0021/Hello.idr: "Error: \ESC[1mExpected package name.\ESC[0m\n\n\ESC[38;5;12m\"Scratch38-S0021.ipkg\":1:9--1:26\ESC[0m\n \ESC[38;5;12m1 |\ESC[0m package \"Scratch38-S0021\"\n             \ESC[38;5;9;1m^^^^^^^^^^^^^^^^^\ESC[0m\n"
+  Code: 3 
+[Error - 6:06:26 PM] Request textDocument/codeAction failed.
+  Message: Cannot load ipkg file for file:///workspaces/Scratch38-S0021/Uhm.idr: "Error: \ESC[1mExpected package name.\ESC[0m\n\n\ESC[38;5;12m\"Scratch38-S0021.ipkg\":1:9--1:26\ESC[0m\n \ESC[38;5;12m1 |\ESC[0m package \"Scratch38-S0021\"\n             \ESC[38;5;9;1m^^^^^^^^^^^^^^^^^\ESC[0m\n"
+  Code: 3 
+```
+
+As if it finally decided my package name sucks.
+
+If I change it, will code actions and stuff suddenly become more reliable?
+
+Changed the first line of [Scratch38-S0021.ipkg](./Scratch38-S0021.ipkg) to:
+
+```ipkg
+package scratch38s21
+```
+
+...and yes, the IDE stuff seems to be working a lot better, now.
+It even shows more info about types when I hover over stuff,
+which I don't think it was doing at all before.
+
+![Screenshot showing some info about ?whatjack](http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:AT7MPUIPFLPTK3IKKNYW4UYB7YKKSHHR.VBCSPDYO3ZD2PAEJRPRLJUJELYU4DLXQIXIJ3AI/20250916T13-WhatJack.png)
