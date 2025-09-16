@@ -46,3 +46,24 @@ even if I end up having to rebuild them in another language.
 But maybe Idris's type system is powerful enough that I can
 use it to generate code in those other languages!  Hmm.
 Yeah, that'd be super.
+
+### Disable 'Chords' In Terminal
+
+By default, hitting Ctrl+k in the terminal inside VS Code just pops
+up a message at the bottom of the window that says:
+
+> (Ctrl+K) was pressed.  Waiting for second key of chord...
+
+Which, I don't know what these chords are, but that's not very useful to me,
+and certainly not when it prevents me from deleting text in the terminal.
+
+Found the solution [on stackoverflow](https://stackoverflow.com/questions/50569100/vscode-how-to-make-ctrlk-kill-till-the-end-of-line-in-the-terminal).
+
+```
+"terminal.integrated.allowChords": false
+```
+
+Or go to File → Preferences → Settings → User (tab), search for allowChords and uncheck it.
+
+I am curious what these 'chords' are for but my searches mostly just bring
+up people having problems with them.
