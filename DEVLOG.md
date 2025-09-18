@@ -271,3 +271,16 @@ Error: Undefined name l.
 (Interactive):1:11--1:12
  1 | the (Vect l t) [1,2,3]
 ```
+
+### SQLite?
+
+https://github.com/stefan-hoeck/idris2-sqlite3
+
+Maybe the stuff that I was going to do in Haxe (because Deno doesn't talk SQLite)
+could be done in Idris!
+
+I'd have to figure out how to install this package, of course.
+
+### TODO: Exit with non-zero exit code without throwing an exception
+
+If you can do this then Idris is better than Unison, lmao.
