@@ -246,3 +246,28 @@ Main> :t (3 :: (the (Vect 2 Nat) [1,2]))
 ```
 
 W00t.
+
+If you don't care to specify the length and type,
+you still need to put placeholders:
+
+```
+Main> :t (the (Vect _ _) [1,2,3])
+the (Vect 3 Integer) [1, 2, 3] : Vect 3 Integer
+```
+
+Using holes also works:
+
+```
+Main> the (Vect ?l ?t) [1,2,3]
+[1, 2, 3]
+```
+
+But unbound names does not work in this context:
+
+```
+Main> the (Vect l t) [1,2,3]
+Error: Undefined name l.
+
+(Interactive):1:11--1:12
+ 1 | the (Vect l t) [1,2,3]
+```
