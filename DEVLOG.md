@@ -205,3 +205,44 @@ Maybe I don't know how to use it properly yet.
 
 Anyway, kind of cool that I managed to write `makeStream` and `++`,
 and presumably, since they compiled, they will always work, because Idris.
+
+### Vect
+
+Vect doesn't seem to be part of the prelude.
+
+How to find packages?
+
+I resorted to
+
+```sh
+find /usr/local/lib/idris2//idris2-0.7.0/ -name 'Vect*'
+```
+
+Which said...
+
+```
+/usr/local/lib/idris2//idris2-0.7.0/base-0.7.0/Data/Vect
+/usr/local/lib/idris2//idris2-0.7.0/base-0.7.0/Data/Vect.idr
+/usr/local/lib/idris2//idris2-0.7.0/base-0.7.0/2023090800/Data/Vect.ttm
+/usr/local/lib/idris2//idris2-0.7.0/base-0.7.0/2023090800/Data/Vect
+/usr/local/lib/idris2//idris2-0.7.0/base-0.7.0/2023090800/Data/Vect.so
+/usr/local/lib/idris2//idris2-0.7.0/base-0.7.0/2023090800/Data/Vect.ttc
+/usr/local/lib/idris2//idris2-0.7.0/contrib-0.7.0/Data/Vect
+/usr/local/lib/idris2//idris2-0.7.0/contrib-0.7.0/2023090800/Data/Vect
+```
+
+Not sure what these different locations are about, but I guess it's in `Data`:
+
+```
+Main> :import Data.Vect
+Imported module Data.Vect
+```
+
+Yay.
+
+```
+Main> :t (3 :: (the (Vect 2 Nat) [1,2]))
+3 :: the (Vect 2 Nat) [1, 2] : Vect 3 Nat
+```
+
+W00t.
