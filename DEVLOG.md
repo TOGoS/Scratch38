@@ -182,3 +182,26 @@ It even shows more info about types when I hover over stuff,
 which I don't think it was doing at all before.
 
 ![Screenshot showing some info about ?whatjack](http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:AT7MPUIPFLPTK3IKKNYW4UYB7YKKSHHR.VBCSPDYO3ZD2PAEJRPRLJUJELYU4DLXQIXIJ3AI/20250916T13-WhatJack.png)
+
+## 2025-09-18
+
+### Streams
+
+A `Stream` is like a list, but infinite.  `head` and `tail` work on it the same way.
+
+You can't cast a `List` to a `Stream`, presumably because the `Stream` needs to keep going forever,
+but `cast` wouldn't know what to do past the end of the list.
+
+So to test out my understanding, I wrote `makeStream` and `(++)` functions in [Stream.idr](./Stream.idr).
+I was hoping the compiler could suggest implementations for me,
+but the best it did for `(++) : (l : List x) -> (s : Stream x) -> Stream x` was `s`:
+
+```
+Main> :ps 6 uhm
+s
+```
+
+Maybe I don't know how to use it properly yet.
+
+Anyway, kind of cool that I managed to write `makeStream` and `++`,
+and presumably, since they compiled, they will always work, because Idris.
