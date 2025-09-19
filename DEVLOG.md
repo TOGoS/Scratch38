@@ -281,6 +281,37 @@ could be done in Idris!
 
 I'd have to figure out how to install this package, of course.
 
-### TODO: Exit with non-zero exit code without throwing an exception
+## 2025-09-10
 
-If you can do this then Idris is better than Unison, lmao.
+### Done: Exit with non-zero exit code without throwing an exception
+
+```idris2
+module Exit
+
+import System
+
+exitCode : Int
+exitCode = 3
+
+main : IO ()
+main = do
+	putStrLn ("Exiting with status " ++ (cast exitCode))
+	exitWith (ExitFailure exitCode)
+```
+
+Then
+
+```bash
+idris2 -o Exit Exit.idr
+build/exec/Exit
+echo "Exited with status $?"
+```
+
+Results in:
+
+```
+Exiting with status 3
+Exited with status 3
+```
+
+w00t.  Why can't [[https://github.com/unisonweb/unison/issues/5398][Unison do that]], huh?
