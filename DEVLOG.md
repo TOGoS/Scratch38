@@ -315,3 +315,21 @@ Exited with status 3
 ```
 
 w00t.  Why can't [[https://github.com/unisonweb/unison/issues/5398][Unison do that]], huh?
+
+## 2025-09-17
+
+Worked through the exercises at the end of [TDDWI](https://www.manning.com/books/type-driven-development-with-idris) Chapter 2.  Results in [Ch2.idr](./Ch2.idr).
+
+## 2025-09-18
+
+While reading chapter 3 I got some ideas,
+one of which was to try to define a type that wraps
+strings and knows their length, like a `Vect`.
+
+Results of that in [LString.idr](./LString.idr).
+
+I got the basic constructor working, but haven't
+figured out how to make `++` work.
+Maybe I need to read further into the book.
+
+Work on actual content of chapter 3 is in [Ch3.idr](./Ch3.idr).
