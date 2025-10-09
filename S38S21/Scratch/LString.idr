@@ -1,3 +1,5 @@
+module S38S21.Scratch.LString
+
 -- data LString = 0 "" | 
 
 import Data.String

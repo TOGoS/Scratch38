@@ -1,9 +1,9 @@
-module Exit
+module S38S21.Scratch.Exit
 
 import System
 
 appVersion : String
-appVersion = "0.2";
+appVersion = "0.3";
 
 exitCode : Int
 exitCode = 3

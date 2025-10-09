@@ -1,6 +1,6 @@
 -- 3.2.1 - Refining the type of allLengths
 
-module Ch3
+module S38S21.TDDWI.Ch3.Exercises
 
 import Data.Vect
 

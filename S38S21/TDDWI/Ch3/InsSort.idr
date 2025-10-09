@@ -1,4 +1,4 @@
-module InsSort
+module S38S21.TDDWI.Ch3.InsSort
 
 import Data.Vect
 

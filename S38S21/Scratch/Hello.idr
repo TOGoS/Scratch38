@@ -1,4 +1,4 @@
-module Hello
+module S38S21.Scratch.Hello
 
 mane : String -> String
 mane x = case x of

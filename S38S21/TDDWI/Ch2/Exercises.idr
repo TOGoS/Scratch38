@@ -1,6 +1,6 @@
 -- Exercises from end of Type-Driven Development with Idris, Chapter 2
 
-module Ch2
+module S38S21.TDDWI.Ch2.Exercises
 
 import Data.String as DS
 import System.REPL

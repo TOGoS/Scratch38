@@ -333,3 +333,14 @@ figured out how to make `++` work.
 Maybe I need to read further into the book.
 
 Work on actual content of chapter 3 is in [Ch3.idr](./Ch3.idr).
+
+## 2025-10-09
+
+Namespacing the modules.
+
+e.g. `S38S21/TDDWI/Ch3/Exercises.idr` starts with
+```
+module S38S21.TDDWI.Ch3.Exercises
+```
+
+We'll see if this becomes awkward.

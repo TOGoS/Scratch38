@@ -1,3 +1,5 @@
+module S38S21.Scratch.Stream
+
 -- This also works, but I think `(x : Type) => ` is implicit.  That's what lowercase names are for.
 -- makeStream : (x : Type) => x -> Stream x
 makeStream : x -> Stream x
