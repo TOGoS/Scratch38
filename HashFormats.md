@@ -3,6 +3,8 @@
 ## TODO
 
 - [X] Add to https://www.nuke24.net/docs/ns/namespaces.tef
+- [ ] Maybe promote name to just http://ns.nuke24.net/Formats/HashFormat,
+  since it is referenced by http://ns.nuke24.net/Formats/TSVFileManifestV1
 - [ ] Document at http://www.nuke24.net/docs/2024/HashFormat.html
   so that you don't need to deep-link into some Git[Hub|Lab] project
 - [ ] Figure out what CRC32 means
