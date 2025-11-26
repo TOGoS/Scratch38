@@ -2,8 +2,9 @@
 
 ## TODO
 
-- [ ] Add to https://www.nuke24.net/docs/ns/namespaces.tef
-  - Also add ContentCouch, TScript34 while at it
+- [X] Add to https://www.nuke24.net/docs/ns/namespaces.tef
+- [ ] Document at http://www.nuke24.net/docs/2024/HashFormat.html
+  so that you don't need to deep-link into some Git[Hub|Lab] project
 - [ ] Figure out what CRC32 means
 
 ## Naming
