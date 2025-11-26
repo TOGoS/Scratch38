@@ -3,11 +3,16 @@
 ## TODO
 
 - [X] Add to https://www.nuke24.net/docs/ns/namespaces.tef
-- [ ] Maybe promote name to just http://ns.nuke24.net/Formats/HashFormat,
+- [ ] Maybe promote name to just http://ns.nuke24.net/Formats/SharpFormat
+  (avoiding 'hash' because that means other things)
   since it is referenced by http://ns.nuke24.net/Formats/TSVFileManifestV1
 - [ ] Document at http://www.nuke24.net/docs/2024/HashFormat.html
   so that you don't need to deep-link into some Git[Hub|Lab] project
 - [ ] Figure out what CRC32 means
+- [ ] Maybe, for hypothetical names / namespaces, instead of
+  `http://ns.nuke24.net/X-2024/` or whatever,
+  just use a tag URI, e.g. `tag:nuke24.net,2024-11:Formats#HashFormat`.
+  - This way names under `http://ns.nuke24.net/` can follow just one convention.
 
 ## Naming
 
