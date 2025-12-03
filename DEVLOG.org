@@ -1,0 +1,59 @@
+#+TITLE: Run Clojure via mvn?
+
+The goal is to determine if and how to use Clojure installed using Maven
+(rather than Clojure's own CLI tools),
+and/or how to use Clojure from another Maven project.
+
+** 2025-12-03T12:35
+
+After installing Clojure with Maven
+(by ~mvn compile~ing this project),
+this got me to a REPL:
+
+#+begin_src nushell
+java -cp 'C:\Users\TOGoS\.m2\repository\org\clojure\clojure\1.12.3\clojure-1.12.3.jar;C:\Users\TOGoS\.m2\repository\org\clojure\spec.alpha\0.5.238\spec.alpha-0.5.238.jar;C:\Users\TOGoS\.m2\repository\org\clojure\core.specs.alpha\0.4.74\core.specs.alpha-0.4.74.jar' clojure.main
+#+end_src
+
+Now to learn some Clojure
+
+*** First impressions
+
+Clojure's ~let~ is weird.
+
+#+begin_src clojure
+(let [foo [1 2 3 4] bar [5 6 7 8]] bar)
+#+end_src
+
+*** Hello world
+
+#+begin_src clojure
+(println "Hi there!")
+(println "Bye, now!")
+#+end_src
+
+Also this script to be sourced into nushell:
+
+#+begin_src nushell
+let clojure_cp = 'C:\Users\TOGoS\.m2\repository\org\clojure\clojure\1.12.3\clojure-1.12.3.jar;C:\Users\TOGoS\.m2\repository\org\clojure\spec.alpha\0.5.238\spec.alpha-0.5.238.jar;C:\Users\TOGoS\.m2\repository\org\clojure\core.specs.alpha\0.4.74\core.specs.alpha-0.4.74.jar'
+
+def --wrapped clojure [...rest] {
+	java -cp $clojure_cp clojure.main ...$rest
+}
+#+end_src
+
+Then I can
+
+#+begin_src nushell
+source .init-clojure-cp.nu
+
+clojure hello-world.clj
+#+end_src
+
+And out comes:
+
+#+begin_example
+Hi there!
+Bye, now!
+#+end_example
+
+So that's nice.
