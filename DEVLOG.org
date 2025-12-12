@@ -57,3 +57,31 @@ Bye, now!
 #+end_example
 
 So that's nice.
+
+** [2025-12-12]
+
+*** REPL stuff
+
+I wanted to see if I could get this [[https://calva.io/][Calva extension for VS Code]] to work
+without having ~clj~ installed.  Instead, it's talking to the server
+started by [[./nrepl-runner/run-repl.bat][run-repl.bat]], which hardcodes a bunch of JAR files instead of
+using...whatever command is normally used.
+
+After installing the packages and starting that daemon,
+I pointed Calva at it using the, uhm,
+- Ctrl+Shift+P
+- 'Calva: Connect to a running REPL server, not in project'
+- 'Generic'
+' localhost:9876
+
+Aside from a complaint that the REPL lacksan ~info~ command or something,
+it seems to be working.
+
+Then I can e.g. highlight some Clojure expression and Alt+Enter to evaluate it,
+which is kind of nice, I guess.
+
+Or F12 to rename a symbol and have it renamed everywhere.
+
+I should probably read https://calva.io/commands-top10/.
+
+It doesn't seem to know about the built-in functions like ~prn~, etc.  Hmm.
