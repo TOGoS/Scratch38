@@ -2,12 +2,6 @@
 
 ## TODO
 
-- [X] Add to https://www.nuke24.net/docs/ns/namespaces.tef
-- [ ] Maybe promote name to just http://ns.nuke24.net/Formats/SharpFormat
-  (avoiding 'hash' because that means other things)
-  since it is referenced by http://ns.nuke24.net/Formats/TSVFileManifestV1
-- [X] Document at http://www.nuke24.net/docs/2025/SharpFormat.html
-  so that you don't need to deep-link into some Git[Hub|Lab] project
 - [ ] Figure out what CRC32 means
 - [ ] Maybe, for hypothetical names / namespaces, instead of
   `http://ns.nuke24.net/X-2024/` or whatever,
@@ -215,3 +209,13 @@ Attributes:
 My as-yet-undocumented variation on TSV, which has a
 "#COLUMNS:foo	bar	baz" header.
 That could be its own HashFormat.
+
+
+## Done
+
+- [X] Add to https://www.nuke24.net/docs/ns/namespaces.tef
+- [X] Maybe promote name to just http://ns.nuke24.net/Formats/SharpFormat
+  (avoiding 'hash' because that means other things)
+  since it is referenced by http://ns.nuke24.net/Formats/TSVFileManifestV1
+- [X] Document at http://www.nuke24.net/docs/2025/SharpFormat.html
+  so that you don't need to deep-link into some Git[Hub|Lab] project
