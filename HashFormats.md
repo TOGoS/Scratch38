@@ -6,7 +6,7 @@
 - [ ] Maybe promote name to just http://ns.nuke24.net/Formats/SharpFormat
   (avoiding 'hash' because that means other things)
   since it is referenced by http://ns.nuke24.net/Formats/TSVFileManifestV1
-- [ ] Document at http://www.nuke24.net/docs/2024/HashFormat.html
+- [X] Document at http://www.nuke24.net/docs/2025/SharpFormat.html
   so that you don't need to deep-link into some Git[Hub|Lab] project
 - [ ] Figure out what CRC32 means
 - [ ] Maybe, for hypothetical names / namespaces, instead of
