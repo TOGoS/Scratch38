@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project
+	xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+>
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>net.nuke24.scratch38.s0025</groupId>
+	<artifactId>scratch38-s0025-c0100</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>Scratch38-S0025-C0100</name>
+	<description>Simple Scratch38-S0015 TUIAppFramework3-inspired framework for graphics demos</description>
+	
+	<properties>
+		<maven.compiler.source>8</maven.compiler.source>
+		<maven.compiler.target>8</maven.compiler.target>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+	
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.13.2</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+	
+	<build>
+		<sourceDirectory>src/c0100-main/java</sourceDirectory>
+		<testSourceDirectory>src/c0100-test/java</testSourceDirectory>
+		
+		<resources>
+			<resource>
+				<directory>src/c0100-main/resources</directory>
+				<filtering>true</filtering>
+			</resource>
+		</resources>
+		
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.8.1</version>
+				<!-- Version is implicitly controlled by maven.compiler.source and maven.compiler.target -->
+			</plugin>
+		</plugins>
+	</build>
+</project>
