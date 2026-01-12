@@ -31,6 +31,7 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0021 :: Attempt at an Idris codebase
 - S0023 :: Clojure?
 - S0024 :: Rambling about levels of abstraction; shadows, as it were
+- S0025 :: Stitchmaster (Clojure[JS] visual demo of polyhedron generation by stitching together portals)
 
 ** Branching conventions
 
