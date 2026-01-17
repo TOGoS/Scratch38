@@ -16,7 +16,7 @@ authors = "TOGoS"
 -- depends =
 
 -- modules to install
-modules = Hello
+modules = S38S21.Scratch.Hello
 
 -- main file (i.e. file to load at REPL)
 -- main =
