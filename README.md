@@ -1,10 +1,10 @@
 # TOGoS Learns Perl 6 a.k.a. Raku
 
-See [helloworld.raku](./helloworld.raku).
+See [demostuff.raku](./demostuff.raku).
 
 Run the script to demonstrate some stuff.
 
-Run `raku --doc helloworld.raku` for more notes.
+Run `raku --doc demostuff.raku` for more notes.
 
 ## Installing Raku
 
@@ -31,4 +31,4 @@ To set it up
 - Run `rakubrew switch moar-2026.02` (or whatever was installed)
 - Run `rakubrew rehash` to regenerate the shims directory
 
-After all that, you should be able to run `raku --doc helloworld.raku`.
+After all that, you should be able to run `raku --doc demostuff.raku`.
