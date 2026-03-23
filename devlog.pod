@@ -32,4 +32,17 @@ single semantic model."
 
 Oh this makes Raku sound very cool.
 
+=head3 Reading L<Why I'm Learning Perl 6|https://www.evanmiller.org/why-im-learning-perl-6.html>
+
+  =for input
+  "All work and no play makes Jack a dull boy" x 1000
+  
+  Doesn't make a thousand copies of the string, or even make a
+  thousand pointers to the same string. It's stored as a short string
+  and a repetition count, and the VM string functions know how to
+  operate efficiently on strings with repeated substrings. Pretty clever, right?
+  Make a hundred million copies; RAM usage barely budges.
+
+Also very cool, and the sort of thing I'd do.
+
 =end pod
