@@ -1,10 +1,35 @@
 =begin pod
 =head1 TOGoS's Raku Learing Log
 
-Hello there.
+Hello there.  Welcome to my devlog about learning Perl6 a.k.a. Raku,
+written in L<RakuDoc (a.k.a. Pod6)|https://docs.raku.org/language/pod> so that I can learn that, too.
 
 =head2 Installing stuff
 
-~zef install~ is slow and unreliable.
+C<zef install> is slow and unreliable.
+
+=head2 2026-03-23
+
+=head3 Can I compile to a JAR file?
+
+=for input
+"The JVM backend is experimental and requires a recent JDK."
+
+=comment
+As far as I can tell, there's no good way to do semantic blockquotes in POD6/RakuDoc.
+`=for input` seems to kinda do the job, but is semantically gross.
+So I'm just going with double quotes for now.
+
+So maybe not with the vanilla C<choco install rakudostar> distro that I have installed on Framey.
+
+=head3 Reading L<Raku's "core"|https://gist.github.com/raiph/849a4a9d8875542fb86df2b2eda89296>
+
+=for input
+"KnowHOW is a self-describing primitive that knows how to be
+and do just one thing: to be the sole KnowHOW from which both itself
+and all else can be bootstrapped, starting with implementation of the
+single semantic model."
+
+Oh this makes Raku sound very cool.
 
 =end pod
