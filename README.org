@@ -33,6 +33,7 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0024 :: Rambling about levels of abstraction; shadows, as it were
 - S0025 :: Stitchmaster (Clojure[JS] visual demo of polyhedron generation by stitching together portals)
 - S0026 :: 3D printing log/data ingestor in Clojure (a piece of 'TOGETL')
+- S0027 :: Nix scratch space
 
 ** Branching conventions
 
