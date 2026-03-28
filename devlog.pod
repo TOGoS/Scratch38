@@ -46,3 +46,16 @@ Oh this makes Raku sound very cool.
 Also very cool, and the sort of thing I'd do.
 
 =end pod
+
+=head2 2026-03-28
+
+=head3 I want to write a grammar for parsing JSON
+
+Let's start by parsing something slightly simpler, some S-expressions.
+
+Loosely following the JSON grammar in Think_Perl_6-1st_edition-v0.6.0.pdf, p263.
+
+Result: L<parse-sexp.raku|./parse-sexp.raku>.
+
+TODO: do something with the match other than just print the input string,
+maybe using 'actions'.
