@@ -1,3 +1,5 @@
+module S38S21.Scratch.HolePositions
+
 -- Let's do some super simple arithmetic on wall hole positions!
 
 import Data.Vect
