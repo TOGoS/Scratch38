@@ -8,6 +8,19 @@ import Data.Vect
 Position : Type
 Position = Double
 
+isInOrder : List Position -> Bool
+isInOrder Nil = True
+isInOrder (a :: Nil) = True
+isInOrder (a :: b :: rest) =
+	a <= b && isInOrder (b :: rest)
+
+data WallFeatureType = LeftEdge | Stud | Point | RightEdge
+
+record WallFeature where
+	constructor MkWallFeature
+	featureType : WallFeatureType
+	position : Position
+
 record WallHole where
 	constructor MkWallHole
 	stud : Bool
@@ -15,9 +28,14 @@ record WallHole where
 
 record WallSection where
 	constructor MkWallSection
-	leftPos : Double
+	leftPos : Position
 	holePositions : List WallHole
-	rightPos : Double
+	rightPos : Position
+	-- Want to declare that things are in order?
+	-- Just define a compile-time-only property of type `So (expression that must be true)`:
+	-- 0 inOrder : So (isInOrder ((leftPos :: (map (.pos) holePositions)) ++ [rightPos]))
+	-- It might be better if the left and right positions
+	-- were just wall features themselves.
 
 transformPositions : (Position -> Position) -> WallSection -> WallSection
 transformPositions xf sect =
@@ -31,6 +49,17 @@ putLeftAt pos sect = transformPositions (\pos => (.leftPos sect) - pos) sect
 
 fromLeft : WallSection -> WallSection
 fromLeft sect = putLeftAt (.leftPos sect) sect
+
+record WallSpan where
+	constructor MkRange
+	leftPosition : Position
+	rightPosition : Position
+	0 rightGteLeft : So (leftPosition <= rightPosition)
+
+record WallBoardProtoChart where
+	constructor MkWallBoardProtoChart
+	wallSection : WallSection
+	boardSpans : List WallSpan
 
 officeEastWall : WallSection
 officeEastWall = MkWallSection
