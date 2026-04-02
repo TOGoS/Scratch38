@@ -27,3 +27,9 @@ transposeMatrix [] = createEmpties
 transposeMatrix (x :: xs) =
 	let xsTrans = transposeMatrix xs
 	in transposeMatrixHalp x xsTrans
+
+mapMatrix : (a -> b) -> Vect m (Vect n a) -> Vect m (Vect n b)
+mapMatrix mapper mtrx = map (map mapper) mtrx
+
+addMatrix : Num a => a -> Vect m (Vect n a) -> Vect m (Vect n a)
+addMatrix delta = mapMatrix (+ delta)
