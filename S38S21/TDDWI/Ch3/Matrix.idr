@@ -33,3 +33,28 @@ mapMatrix mapper mtrx = map (map mapper) mtrx
 
 addMatrix : Num a => a -> Vect m (Vect n a) -> Vect m (Vect n a)
 addMatrix delta = mapMatrix (+ delta)
+
+multiplyMatrixCell : Num a => Vect n a -> Vect n a -> a
+multiplyMatrixCell [] [] = 0
+multiplyMatrixCell (left0 :: leftRest) (right0 :: rightRest) =
+	(left0 * right0) + (multiplyMatrixCell leftRest rightRest)
+
+multiplyMatrixRow : Num a => {n : _} ->
+	(leftRow : Vect m a) -> (rightCols : Vect p (Vect m a)) ->
+	Vect p a
+multiplyMatrixRow = ?something
+
+multiplyMatrixRx : Num a => {n : _} ->
+	(leftRows : Vect n (Vect m a)) -> (rightCols : Vect p (Vect m a)) ->
+	Vect n (Vect p a)
+multiplyMatrixRx [] rightCols = []
+-- multiplyMatrixRx leftRows [] = replicate n []
+multiplyMatrixRx (leftRow0 :: leftRowsRest) rightCols =
+	(multiplyMatrixRow leftRow0 rightCols) :: (multiplyMatrixRx leftRowsRest rightCols)
+
+multiplyMatrix : Num a =>
+	{n : _} -> {p : _} ->
+	Vect n (Vect m a) -> Vect m (Vect p a) ->
+	Vect n (Vect p a)
+multiplyMatrix left right =
+	multiplyMatrixRx left (transposeMatrix right)
