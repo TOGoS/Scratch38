@@ -59,6 +59,11 @@ record WallSpan where
 	-- you'd have to explicitly pass `Oh` as a parameter.
 	{auto 0 rightGteLeft : So (leftPosition <= rightPosition)}
 
+shiftWallSpan : Double -> WallSpan -> WallSpan
+shiftWallSpan n (MkWallSpan left right) =
+	MkWallSpan (left + n) (right + n)
+		{rightGteLeft = believe_me rightGteLeft}
+
 record WallBoardProtoChart where
 	constructor MkWallBoardProtoChart
 	wallSection : WallSection
