@@ -8,11 +8,15 @@ import Data.Vect
 Position : Type
 Position = Double
 
-isInOrder : List Position -> Bool
+isInOrder : Ord x => List x -> Bool
 isInOrder Nil = True
 isInOrder (a :: Nil) = True
 isInOrder (a :: b :: rest) =
 	a <= b && isInOrder (b :: rest)
+
+isNonEmpty : List n -> Bool
+isNonEmpty [] = False
+isNonEmpty _ = True
 
 data WallFeatureType = LeftEdge | Stud | Point | RightEdge
 
@@ -21,40 +25,39 @@ record WallFeature where
 	featureType : WallFeatureType
 	position : Position
 
-record WallHole where
-	constructor MkWallHole
-	stud : Bool
-	pos : Position
-
 record WallSection where
 	constructor MkWallSection
-	leftPos : Position
-	holePositions : List WallHole
-	rightPos : Position
+	features : List WallFeature
 	-- Want to declare that things are in order?
-	-- Just define a compile-time-only property of type `So (expression that must be true)`:
-	-- 0 inOrder : So (isInOrder ((leftPos :: (map (.pos) holePositions)) ++ [rightPos]))
-	-- It might be better if the left and right positions
-	-- were just wall features themselves.
+	-- Just define an 'auto' compile-time-only property of type `So (expression that must be true)`:
+	-- {auto 0 inOrder : So (isInOrder (map (WallFeature.position) features))}
+	-- There may be a better way to declare this
+	-- {auto 0 isNonEmpty : So (isNonEmpty features)}
+	-- Commented-out because I'd have to prove that transformPositions
+	-- obeys the constraint, which it doesn't if xf can be anything!
 
 transformPositions : (Position -> Position) -> WallSection -> WallSection
 transformPositions xf sect =
 	MkWallSection
-		(xf (.leftPos sect))
-		(map (\hole => MkWallHole (.stud hole) (xf (.pos hole))) (.holePositions sect))
-		(xf (.rightPos sect))
+		(map (\feat => MkWallFeature (.featureType feat) (xf (.position feat))) (.features sect))
+
+leftEdge : WallSection -> Position
+leftEdge (MkWallSection []) = 0
+leftEdge (MkWallSection (f :: fs)) = .position f
 
 putLeftAt : Position -> WallSection -> WallSection
-putLeftAt pos sect = transformPositions (\pos => (.leftPos sect) - pos) sect
+putLeftAt pos sect = transformPositions (\pos => (leftEdge sect) - pos) sect
 
 fromLeft : WallSection -> WallSection
-fromLeft sect = putLeftAt (.leftPos sect) sect
+fromLeft sect = putLeftAt (leftEdge sect) sect
 
 record WallSpan where
-	constructor MkRange
+	constructor MkWallSpan
 	leftPosition : Position
 	rightPosition : Position
-	0 rightGteLeft : So (leftPosition <= rightPosition)
+	-- {auto 0 ... : So ...}; without the braces and 'auto',
+	-- you'd have to explicitly pass `Oh` as a parameter.
+	{auto 0 rightGteLeft : So (leftPosition <= rightPosition)}
 
 record WallBoardProtoChart where
 	constructor MkWallBoardProtoChart
@@ -63,13 +66,21 @@ record WallBoardProtoChart where
 
 officeEastWall : WallSection
 officeEastWall = MkWallSection
-	(-116 - 5/8)
 	[
-		MkWallHole True (0-85),
-		MkWallHole True (0-69),
-		MkWallHole True (0-53.5),
-		MkWallHole True (0-37.5),
-		MkWallHole True (0-21.5),
-		MkWallHole True (0-5.5)
+		MkWallFeature LeftEdge (-116 - 5/8),
+		MkWallFeature Stud (0-85),
+		MkWallFeature Stud (0-69),
+		MkWallFeature Stud (0-53.5),
+		MkWallFeature Stud (0-37.5),
+		MkWallFeature Stud (0-21.5),
+		MkWallFeature Stud (0-5.5),
+		MkWallFeature RightEdge (0)
 	]
-	0
+
+aFrenchCleatSpan : WallSpan
+aFrenchCleatSpan = MkWallSpan
+	(-116 + 1/8)
+	(-116 + 1/8 + 96) -- Let's say
+
+aChart : WallBoardProtoChart
+aChart = MkWallBoardProtoChart officeEastWall [aFrenchCleatSpan]
