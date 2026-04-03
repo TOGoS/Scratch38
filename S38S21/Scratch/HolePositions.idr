@@ -20,10 +20,10 @@ isNonEmpty _ = True
 
 data WallFeatureType = LeftEdge | Stud | Point | RightEdge
 
-record WallFeature where
+record WallFeature pos where
 	constructor MkWallFeature
 	featureType : WallFeatureType
-	position : Position
+	position : pos
 
 wallFeatureTypeStr : WallFeatureType -> String
 wallFeatureTypeStr LeftEdge = "[";
@@ -31,12 +31,12 @@ wallFeatureTypeStr Stud = "S";
 wallFeatureTypeStr Point = ".";
 wallFeatureTypeStr RightEdge = "]";
 
-wallFeatureStr : WallFeature -> String
+wallFeatureStr : WallFeature _ -> String
 wallFeatureStr = wallFeatureTypeStr . featureType
 
-record WallSection where
+record WallSection pos where
 	constructor MkWallSection
-	features : List WallFeature
+	features : List (WallFeature pos)
 	-- Want to declare that things are in order?
 	-- Just define an 'auto' compile-time-only property of type `So (expression that must be true)`:
 	-- {auto 0 inOrder : So (isInOrder (map (WallFeature.position) features))}
@@ -45,40 +45,45 @@ record WallSection where
 	-- Commented-out because I'd have to prove that transformPositions
 	-- obeys the constraint, which it doesn't if xf can be anything!
 
-transformPositions : (Position -> Position) -> WallSection -> WallSection
+transformPositions : (posA -> posB) -> WallSection posA -> WallSection posB
 transformPositions xf sect =
 	MkWallSection
 		(map (\feat => MkWallFeature (.featureType feat) (xf (.position feat))) (.features sect))
 
-leftEdge : WallSection -> Position
-leftEdge (MkWallSection []) = 0
-leftEdge (MkWallSection (f :: fs)) = .position f
+leftEdge : pos -> WallSection pos -> pos
+leftEdge defalt (MkWallSection []) = defalt
+leftEdge defalt (MkWallSection (f :: fs)) = .position f
 
-putLeftAt : Position -> WallSection -> WallSection
-putLeftAt pos sect = transformPositions (\pos => (leftEdge sect) - pos) sect
+putLeftAt : (Num pos, Neg pos) => pos -> WallSection pos -> WallSection pos
+putLeftAt newLeftPosition sect =
+	let shift = (leftEdge 0 sect) - newLeftPosition
+	in transformPositions (+ shift) sect
 
-fromLeft : WallSection -> WallSection
-fromLeft sect = putLeftAt (leftEdge sect) sect
+fromLeft : (Num pos, Neg pos) => WallSection pos -> WallSection pos
+fromLeft sect = putLeftAt (leftEdge 0 sect) sect
 
-record WallSpan where
+record WallSpan pos where
 	constructor MkWallSpan
-	leftPosition : Position
-	rightPosition : Position
+	leftPosition : pos
+	rightPosition : pos
 	-- {auto 0 ... : So ...}; without the braces and 'auto',
 	-- you'd have to explicitly pass `Oh` as a parameter.
-	{auto 0 rightGteLeft : So (leftPosition <= rightPosition)}
+	-- {auto 0 rightGteLeft : So (leftPosition <= rightPosition)}
 
-shiftWallSpan : Double -> WallSpan -> WallSpan
-shiftWallSpan n (MkWallSpan left right) =
+shiftWallSpan : Num d => d -> WallSpan d -> WallSpan d
+shiftWallSpan n (MkWallSpan left right {- {ordPos} {rightGteLeft} -} ) =
 	MkWallSpan (left + n) (right + n)
+		{-
+		{ordPos}
 		{rightGteLeft = believe_me rightGteLeft}
+		-}
 
-record WallBoardProtoChart where
+record WallBoardProtoChart pos where
 	constructor MkWallBoardProtoChart
-	wallSection : WallSection
-	boardSpans : List WallSpan
+	wallSection : WallSection pos
+	boardSpans : List (WallSpan pos)
 
-wallFeaturesToAscii : (scale : Position -> Integer) -> List WallFeature -> (col0 : Nat) -> (length : Nat) -> String
+wallFeaturesToAscii : (scale : pos -> Integer) -> List (WallFeature pos) -> (col0 : Nat) -> (length : Nat) -> String
 wallFeaturesToAscii scale features col0 0 = ""
 wallFeaturesToAscii scale [] col0 (S lengthMinus1) = " " ++ (wallFeaturesToAscii scale [] (S col0) lengthMinus1)
 wallFeaturesToAscii scale (feat :: rest) col0 (S lengthMinus1) =
@@ -92,11 +97,11 @@ wallFeaturesToAscii scale (feat :: rest) col0 (S lengthMinus1) =
 	else
 		(wallFeatureStr feat) ++ (wallFeaturesToAscii scale rest (S col0) lengthMinus1)
 
-wallBoardChartToAscii : (scale : Position -> Integer) -> (width : Nat) -> WallBoardProtoChart -> String
+wallBoardChartToAscii : (Num pos, Neg pos) => (scale : pos -> Integer) -> (width : Nat) -> WallBoardProtoChart pos -> String
 wallBoardChartToAscii scale width chart =
 	wallFeaturesToAscii scale (.features (.wallSection chart)) 0 width
 
-officeEastWall : WallSection
+officeEastWall : WallSection Double
 officeEastWall = MkWallSection
 	[
 		MkWallFeature LeftEdge (-116 - 5/8),
@@ -110,12 +115,12 @@ officeEastWall = MkWallSection
 		MkWallFeature RightEdge (0)
 	]
 
-aFrenchCleatSpan : WallSpan
+aFrenchCleatSpan : WallSpan Double
 aFrenchCleatSpan = MkWallSpan
 	(-116 + 1/8)
 	(-116 + 1/8 + 96) -- Let's say
 
-aChart : WallBoardProtoChart
+aChart : WallBoardProtoChart Double
 aChart = MkWallBoardProtoChart officeEastWall [aFrenchCleatSpan]
 
 x : Nat
@@ -124,9 +129,9 @@ x = integerToNat (0-4)
 i : Integer
 i = cast (floor 42.0)
 
-Show WallBoardProtoChart where
+Show (WallBoardProtoChart Double) where
 	show chart =
-		let leftEdge = leftEdge (wallSection chart)
+		let leftEdge = leftEdge 0 (wallSection chart)
 		in wallBoardChartToAscii (cast . floor . (\x => x - leftEdge)) 120 chart
 
 main : IO ()
