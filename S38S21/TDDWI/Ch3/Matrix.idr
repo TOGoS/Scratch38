@@ -34,26 +34,28 @@ mapMatrix mapper mtrx = map (map mapper) mtrx
 addMatrix : Num a => a -> Vect m (Vect n a) -> Vect m (Vect n a)
 addMatrix delta = mapMatrix (+ delta)
 
-multiplyMatrixCell : Num a => Vect n a -> Vect n a -> a
+multiplyMatrixCell : Num a => {n : _} -> Vect n a -> Vect n a -> a
 multiplyMatrixCell [] [] = 0
 multiplyMatrixCell (left0 :: leftRest) (right0 :: rightRest) =
 	(left0 * right0) + (multiplyMatrixCell leftRest rightRest)
 
-multiplyMatrixRow : Num a => {n : _} ->
+multiplyMatrixRow : Num a => {m : _} -> {p : _} ->
 	(leftRow : Vect m a) -> (rightCols : Vect p (Vect m a)) ->
 	Vect p a
-multiplyMatrixRow = ?something
+multiplyMatrixRow leftRow [] = []
+multiplyMatrixRow leftRow (rightCol0 :: rightColsRest) =
+	(multiplyMatrixCell leftRow rightCol0) ::
+	(multiplyMatrixRow {m} {p = _} leftRow rightColsRest)
 
-multiplyMatrixRx : Num a => {n : _} ->
+multiplyMatrixRx : Num a => {n : _} -> {m : _} -> {p : _} ->
 	(leftRows : Vect n (Vect m a)) -> (rightCols : Vect p (Vect m a)) ->
 	Vect n (Vect p a)
 multiplyMatrixRx [] rightCols = []
--- multiplyMatrixRx leftRows [] = replicate n []
 multiplyMatrixRx (leftRow0 :: leftRowsRest) rightCols =
 	(multiplyMatrixRow leftRow0 rightCols) :: (multiplyMatrixRx leftRowsRest rightCols)
 
 multiplyMatrix : Num a =>
-	{n : _} -> {p : _} ->
+	{n : _} -> {m : _} -> {p : _} ->
 	Vect n (Vect m a) -> Vect m (Vect p a) ->
 	Vect n (Vect p a)
 multiplyMatrix left right =
