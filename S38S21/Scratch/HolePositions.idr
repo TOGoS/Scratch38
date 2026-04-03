@@ -25,6 +25,15 @@ record WallFeature where
 	featureType : WallFeatureType
 	position : Position
 
+wallFeatureTypeStr : WallFeatureType -> String
+wallFeatureTypeStr LeftEdge = "[";
+wallFeatureTypeStr Stud = "|";
+wallFeatureTypeStr Point = ".";
+wallFeatureTypeStr RightEdge = "]";
+
+wallFeatureStr : WallFeature -> String
+wallFeatureStr = wallFeatureTypeStr . featureType
+
 record WallSection where
 	constructor MkWallSection
 	features : List WallFeature
@@ -69,6 +78,24 @@ record WallBoardProtoChart where
 	wallSection : WallSection
 	boardSpans : List WallSpan
 
+wallFeaturesToAscii : (scale : Position -> Integer) -> List WallFeature -> (col0 : Nat) -> (length : Nat) -> String
+wallFeaturesToAscii scale features col0 0 = ""
+wallFeaturesToAscii scale [] col0 (S lengthMinus1) = " " ++ (wallFeaturesToAscii scale [] (S col0) lengthMinus1)
+wallFeaturesToAscii scale (feat :: rest) col0 (S lengthMinus1) =
+	let nextFeatCol = (scale (.position feat)) in
+	if nextFeatCol < (natToInteger col0) then
+		-- Skip it!
+		wallFeaturesToAscii scale rest col0 (S lengthMinus1)
+	else if nextFeatCol > (natToInteger col0) then
+		-- Space until we get there
+		" " ++ (wallFeaturesToAscii scale (feat :: rest) (S col0) lengthMinus1)
+	else
+		(wallFeatureStr feat) ++ (wallFeaturesToAscii scale rest (S col0) lengthMinus1)
+
+wallBoardChartToAscii : (scale : Position -> Integer) -> (width : Nat) -> WallBoardProtoChart -> String
+wallBoardChartToAscii scale width chart =
+	wallFeaturesToAscii scale (.features (.wallSection chart)) 0 width
+
 officeEastWall : WallSection
 officeEastWall = MkWallSection
 	[
@@ -89,3 +116,17 @@ aFrenchCleatSpan = MkWallSpan
 
 aChart : WallBoardProtoChart
 aChart = MkWallBoardProtoChart officeEastWall [aFrenchCleatSpan]
+
+x : Nat
+x = integerToNat (0-4)
+
+i : Integer
+i = cast (floor 42.0)
+
+Show WallBoardProtoChart where
+	show chart =
+		let leftEdge = leftEdge (wallSection chart)
+		in wallBoardChartToAscii (cast . floor . (\x => x - leftEdge)) 120 chart
+
+main : IO ()
+main = putStrLn (show aChart)
