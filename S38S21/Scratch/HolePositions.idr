@@ -27,7 +27,7 @@ record WallFeature where
 
 wallFeatureTypeStr : WallFeatureType -> String
 wallFeatureTypeStr LeftEdge = "[";
-wallFeatureTypeStr Stud = "|";
+wallFeatureTypeStr Stud = "S";
 wallFeatureTypeStr Point = ".";
 wallFeatureTypeStr RightEdge = "]";
 
@@ -100,6 +100,7 @@ officeEastWall : WallSection
 officeEastWall = MkWallSection
 	[
 		MkWallFeature LeftEdge (-116 - 5/8),
+		MkWallFeature Stud (0-85-16), -- Presumably!
 		MkWallFeature Stud (0-85),
 		MkWallFeature Stud (0-69),
 		MkWallFeature Stud (0-53.5),
