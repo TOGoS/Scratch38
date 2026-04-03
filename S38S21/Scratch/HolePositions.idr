@@ -97,6 +97,38 @@ wallFeaturesToAscii scale (feat :: rest) col0 (S lengthMinus1) =
 	else
 		(wallFeatureStr feat) ++ (wallFeaturesToAscii scale rest (S col0) lengthMinus1)
 
+
+positionsToLabels : (scale : pos -> Integer) -> (posToText : pos -> String) -> List pos -> List (Pair Integer String)
+positionsToLabels scale posToText =
+	map (\pos => MkPair (scale pos) (posToText pos))
+
+layOutLabel : Pair Integer String -> List (List (Pair Integer String)) -> List (List (Pair Integer String))
+layOutLabel label [] = [[label]]
+layOutLabel label ([] :: moreRows) = [label] :: moreRows -- This case probably won't happen!
+layOutLabel label ((nextLab :: restOfTopRow) :: moreRows) =
+	let MkPair labPos labText = label in
+	let labEnd = labPos + cast (length labText) in
+	let (MkPair nextPos nextText) = nextLab in
+	if labEnd >= nextPos then
+		(nextLab :: restOfTopRow) :: layOutLabel label moreRows
+	else
+		(label :: nextLab :: restOfTopRow) :: moreRows
+
+layOutLabels : List (Pair Integer String) -> List (List (Pair Integer String))
+layOutLabels [] = []
+layOutLabels (label :: moreLabels) =
+	layOutLabel label (layOutLabels moreLabels)
+
+labelsToAscii : List (Pair Integer String) -> (col0 : Nat) -> (length : Nat) -> String
+labelsToAscii labels col0 0 = ""
+labelsToAscii [] col0 (S lengthMinus1) = " " ++ labelsToAscii [] (S col0) lengthMinus1
+labelsToAscii (label :: moreLabels) col0 (S lengthMinus1) =
+	let MkPair labPos labText = label in
+	if labPos == cast col0 then
+		?uhhhhh
+	else
+		" " ++ labelsToAscii (label :: moreLabels) (S col0) lengthMinus1
+
 wallBoardChartToAscii : (Num pos, Neg pos) => (scale : pos -> Integer) -> (width : Nat) -> WallBoardProtoChart pos -> String
 wallBoardChartToAscii scale width chart =
 	wallFeaturesToAscii scale (.features (.wallSection chart)) 0 width
