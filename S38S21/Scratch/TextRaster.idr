@@ -16,7 +16,9 @@ indexedMap : (firstIndex : Nat) -> (f : (index : Nat) -> x -> y) -> Vect l x -> 
 indexedMap i f [] = []
 indexedMap i f (x :: xs) = f i x :: indexedMap (S i) f xs
 
-renderOnto : {w : Nat} -> {h : Nat} -> TextRaster2D w h -> (minY : Integer) -> (maxY : Integer) -> (minX : Integer) -> (maxX : Integer) -> ((x : Nat) -> (y : Nat) -> StyledChar) -> TextRaster2D w h
+renderOnto : {w : Nat} -> {h : Nat} -> TextRaster2D w h ->
+	(minY : Integer) -> (maxY : Integer) -> (minX : Integer) -> (maxX : Integer) ->
+	((x : Nat) -> (y : Nat) -> StyledChar) -> TextRaster2D w h
 renderOnto {w} {h} baseRaster minY maxY minX maxX update =
 	if maxY <= 0 then baseRaster
 	else if maxY >= (cast h) then baseRaster
@@ -24,12 +26,16 @@ renderOnto {w} {h} baseRaster minY maxY minX maxX update =
 		let MkTextRaster2D baseRows = baseRaster in
 		MkTextRaster2D	(indexedMap 0 rewriteRow baseRows) where
 			rewriteRow : Nat -> Vect w StyledChar -> Vect w StyledChar
-			rewriteRow y = indexedMap 0 rewriteCell where
-				rewriteCell : Nat -> StyledChar -> StyledChar
-				rewriteCell x oldSc =
-					let MkStyledChar newChar newStyle = update x y in
-					if newChar == '\0' then oldSc
-					else MkStyledChar newChar newStyle
+			rewriteRow y row =
+				if (cast y) < minY || (cast y) >= maxY then row
+				else indexedMap 0 rewriteCell row where
+					rewriteCell : Nat -> StyledChar -> StyledChar
+					rewriteCell x oldSc =
+						if (cast x) < minX || (cast x) >= maxX then oldSc
+						else
+							let MkStyledChar newChar newStyle = update x y in
+							if newChar == '\0' then oldSc
+							else MkStyledChar newChar newStyle
 
 rowToString : Vect l StyledChar -> String
 rowToString [] = ""
@@ -51,4 +57,9 @@ someOldRaster = MkTextRaster2D [
 main : IO ()
 main = do
 	putStrLn "Some old raster:"
-	putStrLn (show someOldRaster)
+	putStrLn (show (
+		renderOnto someOldRaster 1 2 1 4
+			(\x => (\y => if x == y then a else b))))
+		where
+			a = MkStyledChar 'A' Silver
+			b = MkStyledChar 'B' Green
