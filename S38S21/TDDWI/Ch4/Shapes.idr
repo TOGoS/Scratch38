@@ -13,6 +13,7 @@ data Shape
 
 -- The 'more verbose, but more general and flexible' syntax:
 ||| Represents some stupid shapes lol
+public export
 data Shape : Type where
 	||| A dumbass triangle, defined by its base and height
 	Triangle : Double -> Double -> Shape
@@ -21,6 +22,7 @@ data Shape : Type where
 	||| A sucky circle, defined by its craptacular radius
 	Circle : Double -> Shape
 
+public export
 area : Shape -> Double
 area (Triangle base height) = base * height
 area (Rectangle length height) = length * height
