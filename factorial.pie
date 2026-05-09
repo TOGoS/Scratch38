@@ -1,0 +1,28 @@
+#lang pie
+
+(claim + (-> Nat Nat Nat))
+(define +
+  (lambda (a b)
+    (iter-Nat a
+      b
+      (lambda (a-1+b)
+        (add1 a-1+b)))))
+
+(claim * (-> Nat Nat Nat))
+(define *
+  (lambda (a b)
+    (rec-Nat a
+      0
+      (lambda (a-1 almost)
+        (+ b almost)))))
+
+(claim step-factorial (-> Nat Nat Nat))
+(define step-factorial
+  (lambda (n-1 almost)
+    (* (add1 n-1) almost)))
+
+(claim factorial (-> Nat Nat))
+(define factorial
+  (lambda (n)
+    (rec-Nat n 1 step-factorial)))
+
