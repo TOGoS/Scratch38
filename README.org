@@ -28,12 +28,13 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0018 :: Putz aronud with Elm
 - S0019 :: HELO bridge, in Deno
 - S0020 :: Haxe practice: Load some TSV files, or something
-- S0021 :: Attempt at an Idris codebase
-- S0023 :: Clojure?
+- S0021 :: [[https://www.idris-lang.org/][Idris]] scratch space
+- S0023 :: Clojure scratch space
 - S0024 :: Rambling about levels of abstraction; shadows, as it were
 - S0025 :: Stitchmaster (Clojure[JS] visual demo of polyhedron generation by stitching together portals)
 - S0026 :: 3D printing log/data ingestor in Clojure (a piece of 'TOGETL')
 - S0027 :: Nix scratch space
+- S0028 :: [[https://docs.racket-lang.org/pie/index.html][Pie]] scratch space
 
 ** Branching conventions
 
