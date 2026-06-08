@@ -39,14 +39,14 @@ processBytesWithDucer (Step step) chunkSize file = do
 					processBuf step buf 0 n
 
 ducerMcSteppy :
-	(f : (acc -> input -> Maybe acc)) ->
+	(f : (acc -> input -> Either acc rez)) ->
 	(init : acc) ->
-	Ducer input (Maybe acc)
+	Ducer input (Maybe rez)
 ducerMcSteppy f init = Step (\input =>
 	let nextS = f init input in
 	case nextS of
-		Just r => Left (ducerMcSteppy f r)
-		Nothing => Right (Just init))
+		Left acc => Left (ducerMcSteppy f acc)
+		Right rez => Right (Just rez))
 
 -----
 
@@ -81,24 +81,25 @@ processBytesWithState step state chunkSize file = do
 					processBuf state buf 0 n
 
 stateyMcSteppy :
-	(s -> input -> Maybe s) ->
-	input -> State s (Maybe s)
+	{0 acc : Type} ->
+	(acc -> input -> Either acc rez) ->
+	input -> State acc (Maybe rez)
 stateyMcSteppy f b = do
-	st <- get
-	case f st b of
-		Just st' => do
+	acc <- get
+	case f acc b of
+		Left st' => do
 			put st'
 			pure Nothing
-		Nothing => pure (Just st)
+		Right rez => pure (Just rez)
 
 -----
 
 -- Note a silliness here:
 -- This function can return 'Nothing' to indicate doneness,
 -- but then it can't indicate a result!  Dumb!
-summy : Int -> Maybe Bits8 -> Maybe Int
-summy sum Nothing = Nothing
-summy sum (Just nextByte) = Just (sum + cast nextByte)
+summy : Int -> Maybe Bits8 -> Either Int Int -- Left is intermediate, Right is done
+summy sum Nothing = Right sum
+summy sum (Just nextByte) = Left (sum + cast nextByte)
 
 main : IO ()
 main = do
