@@ -1,5 +1,21 @@
 -- How to read raw data from a stream?
 
+-- TODO: Split off a simple implementation of 'SumBytes'
+-- without all the scaffolding to support multiple engines
+-- and yielding non-final results, and ignore the rest
+-- of these TODOs.
+
+-- TODO: Command-line arguments to
+-- `-`, filename: indicate file(s) or STDIN from which to read
+-- `--ducer` or `--state`: indicate which engine to use
+-- `--self-test`: Run a self-test that sums bytes from some hardcoded buffer
+-- using each engine and asserts that the result is as expected
+
+-- TODO: Update Ducer definition so that 'already done'
+-- is representable without having to apply the step function, first.
+
+-- TODO: Update the Sate-based engine to...make more sense.
+
 import System.File
 import Data.Buffer
 import Control.Monad.State.State
@@ -67,7 +83,7 @@ ducerMcSteppy f init = Step (\input =>
 -- as soon as the step function returns one and does not
 -- continue to read input after that.
 
-processBytesWithState : {s : Type} -> {r : Type} -> (Maybe Bits8 -> State s (Maybe r)) -> s -> Int -> File -> IO (Either FileError r)
+processBytesWithState : {s : Type} -> {r : Type} -> (Maybe Bits8 -> State s (Maybe r)) -> s -> (chunkSize : Int) -> File -> IO (Either FileError r)
 processBytesWithState step state chunkSize file = do
 	Just buf <- newBuffer chunkSize | Nothing => pure (Left FileReadError)
 	go state buf
