@@ -3,8 +3,15 @@
 import System.File
 import Data.Buffer
 import Control.Monad.State.State
-import Control.Monad.State.Interface -- For stateyStep
+import Control.Monad.State.Interface
 import Control.Monad.Identity
+
+-----
+
+-- 'Ducer' method: Use my hand-crafted `Ducer` type,
+-- which encapsulates a step function that returns either
+-- (Left) the next Ducer, or
+-- (Right) the final result.
 
 data Ducer : (i : Type) -> (o : Type) -> Type where
 	Step : (i -> Either (Ducer i o) o) -> Ducer i o
@@ -50,6 +57,16 @@ ducerMcSteppy f init = Step (\input =>
 
 -----
 
+-- 'State' methpd: Use the predefined `State` type, in which
+-- each instance includes both the next state and the result.
+-- 
+-- The 'State' type is actually slightly more flexible than the 'Ducer'
+-- defined earlier, since this machine can produce results
+-- and continue working.  That said, processBytesWithState
+-- does not take advantage of this ability; it returns the result
+-- as soon as the step function returns one and does not
+-- continue to read input after that.
+
 processBytesWithState : {s : Type} -> {r : Type} -> (Maybe Bits8 -> State s (Maybe r)) -> s -> Int -> File -> IO (Either FileError r)
 processBytesWithState step state chunkSize file = do
 	Just buf <- newBuffer chunkSize | Nothing => pure (Left FileReadError)
@@ -94,9 +111,9 @@ stateyMcSteppy f b = do
 
 -----
 
--- Note a silliness here:
--- This function can return 'Nothing' to indicate doneness,
--- but then it can't indicate a result!  Dumb!
+-- Take current sum, Just the next byte or Nothing to indicate end of stream,
+-- and return Either (Left) the running sum or (Right) the running sum, but
+-- indicating that we are done.
 summy : Int -> Maybe Bits8 -> Either Int Int -- Left is intermediate, Right is done
 summy sum Nothing = Right sum
 summy sum (Just nextByte) = Left (sum + cast nextByte)
