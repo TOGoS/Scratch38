@@ -364,3 +364,8 @@ node ~/.ccouch/data/build/SS/SSGPLP5T5VFT4X4PSSD535762JHN7QXQ
 ```
 
 And that worked.  Okay, this little task is done.
+
+### TODO : Model a process network
+
+...in such a way that you could launch it.
+Or compile it to Bash, maybe.
