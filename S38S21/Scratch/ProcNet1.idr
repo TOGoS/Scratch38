@@ -8,59 +8,49 @@ data ProcID = OSPID Int | InternalPID Int
 public export
 data Exit = Exited Int | Signaled Int -- Attempt at mirroring Unix model; might need work
 
-public export
-record ProcessIOSignature where
-	constructor MkProcessIOSignature
-	readsStdin   : Bool
-	writesStdout : Bool
-	writesStderr : Bool
+data ChannelType = Bytes | TextLines | ExitEvent | UnitValue | SysReq | SysRes
 
 public export
-mergeSig : ProcessIOSignature -> ProcessIOSignature -> ProcessIOSignature
-mergeSig a b = MkProcessIOSignature
-	(a.readsStdin   || b.readsStdin)
-	(a.writesStdout || b.writesStdout)
-	(a.writesStderr || b.writesStderr)
+record ProcessInterface where
+	constructor MkProcessInterface
+	ins  : List ChannelType
+	outs : List ChannelType
 
-public export
-noIoSig : ProcessIOSignature
-noIoSig = MkProcessIOSignature False False False
-
-public export
-stdoutIoSig : ProcessIOSignature
-stdoutIoSig = MkProcessIOSignature True False False
-
-public export
 data PortDir = In | Out
 
-public export
-record Port where
-	constructor MkPort
-	nodeId : Nat
-	dir    : PortDir
-	ix     : Nat
+data NetworkPortNode = NodeIndex Nat | NetworkBoundary
 
 public export
-record Edge where
+record NetworkPort where
+	constructor MkNetworkPort
+	-- Note that a network input is represented as a port with node = NetworkBoundary and direction = Out.
+	-- i.e. the network's inputs appear as outputs, and vice-versa, from the perspective of its internal edges.
+	node      : NetworkPortNode
+	dir       : PortDir
+	portIndex : Nat
+
+public export
+record NetworkEdge where
 	constructor MkEdge
-	from : Port
-	to   : Port
+	from : NetworkPort
+	to   : NetworkPort
 
 mutual
+	data ProtoProcess : (iface : ProcessInterface) -> Type where
+		-- TODO: OSCommand should have a whole environment, too.
+		OSCommand : (argv : List String) -> ProtoProcess (MkProcessInterface [Bytes, SysRes] [Bytes, Bytes, SysReq])
+		PureExit : (run : Unit -> Int) -> ProtoProcess (MkProcessInterface [] [ExitEvent])
+		Net : Network iface -> ProtoProcess iface
+		-- TODO: Internal commands that can create/launch sub-processes
+	
 	public export
-	record Network (inSig : ProcessIOSignature) (outSig : ProcessIOSignature) where
+	record NetworkNode where
+		constructor MkNetworkNode
+		iface : ProcessInterface
+		body : ProtoProcess iface
+
+	public export
+	record Network (iface : ProcessInterface) where
 		constructor MkNetwork
-		nodes : List Node
-		edge : List Edge
-
-
-	data ProtoProcess : ProcessIOSignature -> Type where
-		OSCommand : (argv : List String) -> ProtoProcess sig
-		JustExit : (run : Unit -> Int) -> ProtoProcess noIoSig
-		Net : Network inSig outSig -> ProtoProcess (mergeSig inSig outSig)
-
-	public export
-	record Node where
-		constructor MkNode
-		sig : ProcessIOSignature
-		body : ProtoProcess sig
+		nodes : List NetworkNode
+		edge  : List NetworkEdge
