@@ -16,30 +16,35 @@ record ProcessInterface where
 	ins  : List ChannelType
 	outs : List ChannelType
 
-data PortDir = In | Out
+data PortDir = In | Out -- Into a node, and out of a node, repsectively.
 
 data NetworkPortNode = NodeIndex Nat | NetworkBoundary
 
 public export
-record NetworkPort where
+record NetworkPort (direction : PortDir) (channelType : ChannelType) where
 	constructor MkNetworkPort
 	-- Note that a network input is represented as a port with node = NetworkBoundary and direction = Out.
-	-- i.e. the network's inputs appear as outputs, and vice-versa, from the perspective of its internal edges.
+	-- i.e. the network's inputs appear as outputs, and outputs appear as inputs, from the perspective of its internal edges.
 	node      : NetworkPortNode
-	dir       : PortDir
 	portIndex : Nat
 
 public export
-record NetworkEdge where
+record NetworkEdge (channelType : ChannelType) where
 	constructor MkEdge
-	from : NetworkPort
-	to   : NetworkPort
+	from : NetworkPort Out channelType
+	to   : NetworkPort In channelType
+
+public export
+record SomeNetworkEdge where
+	constructor MkSomeNetworkEdge
+	channelType : ChannelType
+	edge : NetworkEdge channelType
 
 mutual
 	data ProtoProcess : (iface : ProcessInterface) -> Type where
 		-- TODO: OSCommand should have a whole environment, too.
 		OSCommand : (argv : List String) -> ProtoProcess (MkProcessInterface [Bytes, SysRes] [Bytes, Bytes, SysReq])
-		PureExit : (run : Unit -> Int) -> ProtoProcess (MkProcessInterface [] [ExitEvent])
+		PureExit : (exitCode : Int) -> ProtoProcess (MkProcessInterface [] [ExitEvent])
 		Net : Network iface -> ProtoProcess iface
 		-- TODO: Internal commands that can create/launch sub-processes
 	
@@ -48,9 +53,9 @@ mutual
 		constructor MkNetworkNode
 		iface : ProcessInterface
 		body : ProtoProcess iface
-
+	
 	public export
 	record Network (iface : ProcessInterface) where
 		constructor MkNetwork
 		nodes : List NetworkNode
-		edge  : List NetworkEdge
+		edges : List SomeNetworkEdge
