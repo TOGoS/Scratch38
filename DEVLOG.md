@@ -344,3 +344,23 @@ module S38S21.TDDWI.Ch3.Exercises
 ```
 
 We'll see if this becomes awkward.
+
+## 2026-07-01
+
+### DONE : Compile an Idris 2 program to Node, run it on another computer.
+
+Let's use SumBytes as an example, because it's in my Bash history:
+
+```
+idris2 S38S21/Scratch/SumBytes.idr --codegen node -o sumbytes
+```
+
+build\exec\sumbytes = urn:bitprint:SSGPLP5T5VFT4X4PSSD535762JHN7QXQ.W7CTY4INRAEA3OOSCA3E7M4OQTY3FCBK2RF466I
+
+Downloaded on another computer, ran
+
+```
+node ~/.ccouch/data/build/SS/SSGPLP5T5VFT4X4PSSD535762JHN7QXQ
+```
+
+And that worked.  Okay, this little task is done.
