@@ -8,20 +8,34 @@ data ProcID = OSPID Int | InternalPID Int
 public export
 data Exit = Exited Int | Signaled Int -- Attempt at mirroring Unix model; might need work
 
-data ChannelType = Bytes | TextLines | ExitEvent | UnitValue | SysReq | SysRes
+data ChannelType = Chunks Type | ExitEvent | UnitValue | SysReq | SysRes
+
+bytes : ChannelType
+bytes = Chunks Bits8
+
+data PortDirection = In | Out -- Into a node, and out of a node, repspectively.
+
+public export
+record ProcessPort where
+	constructor MkProcessPort
+	direction : PortDirection
+	channelType : ChannelType
+
+bytesIn   = MkProcessPort In bytes
+bytesOut  = MkProcessPort Out bytes
+sysReqOut = MkProcessPort Out SysReq
+sysResIn  = MkProcessPort In SysRes
+exitOut   = MkProcessPort Out ExitEvent
 
 public export
 record ProcessInterface where
 	constructor MkProcessInterface
-	ins  : List ChannelType
-	outs : List ChannelType
-
-data PortDir = In | Out -- Into a node, and out of a node, repsectively.
+	ports : List ProcessPort
 
 data NetworkPortNode = NodeIndex Nat | NetworkBoundary
 
 public export
-record NetworkPort (direction : PortDir) (channelType : ChannelType) where
+record NetworkPort (direction : PortDirection) (channelType : ChannelType) where
 	constructor MkNetworkPort
 	-- Note that a network input is represented as a port with node = NetworkBoundary and direction = Out.
 	-- i.e. the network's inputs appear as outputs, and outputs appear as inputs, from the perspective of its internal edges.
@@ -43,8 +57,8 @@ record SomeNetworkEdge where
 mutual
 	data ProtoProcess : (iface : ProcessInterface) -> Type where
 		-- TODO: OSCommand should have a whole environment, too.
-		OSCommand : (argv : List String) -> ProtoProcess (MkProcessInterface [Bytes, SysRes] [Bytes, Bytes, SysReq])
-		PureExit : (exitCode : Int) -> ProtoProcess (MkProcessInterface [] [ExitEvent])
+		OSCommand : (argv : List String) -> ProtoProcess (MkProcessInterface [bytesIn, bytesOut, bytesOut, sysReqOut, sysResIn])
+		PureExit : (exitCode : Int) -> ProtoProcess (MkProcessInterface [exitOut])
 		Net : Network iface -> ProtoProcess iface
 		-- TODO: Internal commands that can create/launch sub-processes
 	
