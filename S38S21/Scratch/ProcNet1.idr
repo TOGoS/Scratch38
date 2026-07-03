@@ -8,12 +8,30 @@ data ProcID = OSPID Int | InternalPID Int
 public export
 data Exit = Exited Int | Signaled Int -- Attempt at mirroring Unix model; might need work
 
-data ChannelType = Chunks Type | ExitEvent | UnitValue | SysReq | SysRes
+-- I'd like to be able to have data channels that can carry any
+-- payload type, but that complicates `Eq ChannelType`.
+-- So for now there's just ByteChunk.
+data ChannelType = ByteChunk | ExitEvent | UnitValue | SysReq | SysRes
+Eq ChannelType where
+	ByteChunk == ByteChunk = True
+	ExitEvent == ExitEvent = True
+	UnitValue == UnitValue = True
+	SysRes    == SysRes    = True
+	SysReq    == SysReq    = True
+	x         == y         = False
 
 bytes : ChannelType
-bytes = Chunks Bits8
+bytes = ByteChunk
 
 data PortDirection = In | Out -- Into a node, and out of a node, repspectively.
+Eq PortDirection where
+	In  == In  = True
+	Out == Out = True
+	a   == b   = False
+
+invertPortDirection : PortDirection -> PortDirection
+invertPortDirection In  = Out
+invertPortDirection Out =  In
 
 public export
 record ProcessPort where
@@ -32,21 +50,28 @@ record ProcessInterface where
 	constructor MkProcessInterface
 	ports : List ProcessPort
 
-data NetworkPortNode = NodeIndex Nat | NetworkBoundary
+data NetworkPortNodeRef = NodeIndex Nat | NetworkBoundary
 
 public export
-record NetworkPort (direction : PortDirection) (channelType : ChannelType) where
-	constructor MkNetworkPort
+record NetworkPortRef (direction : PortDirection) (channelType : ChannelType) where
+	constructor MkNetworkPortRef
 	-- Note that a network input is represented as a port with node = NetworkBoundary and direction = Out.
 	-- i.e. the network's inputs appear as outputs, and outputs appear as inputs, from the perspective of its internal edges.
-	node      : NetworkPortNode
+	nodeRef   : NetworkPortNodeRef
 	portIndex : Nat
+
+public export
+record SomeNetworkPortRef where
+	constructor MkSomeNetworkPortRef
+	direction : PortDirection
+	channelType : ChannelType
+	portRef : NetworkPortRef direction channelType
 
 public export
 record NetworkEdge (channelType : ChannelType) where
 	constructor MkEdge
-	from : NetworkPort Out channelType
-	to   : NetworkPort In channelType
+	from : NetworkPortRef Out channelType
+	to   : NetworkPortRef In channelType
 
 public export
 record SomeNetworkEdge where
@@ -73,3 +98,52 @@ mutual
 		constructor MkNetwork
 		nodes : List NetworkNode
 		edges : List SomeNetworkEdge
+
+data NetworkProblemDetail
+	= BadNodeIndex Nat
+	| BadPortIndex Nat
+	| DirectionMismatch PortDirection PortDirection -- expected, actual
+	| ChannelTypeMismatch ChannelType ChannelType   -- expected, actual
+
+-- TODO: Define a type that encapsulates a problem and a source location
+
+itemAt : (index : Nat) -> List x -> Maybe x
+itemAt index [] = Nothing
+itemAt 0 (a :: rest) = Just a
+itemAt (S indexMinusOne) (a :: rest) = itemAt indexMinusOne rest
+
+invertPortPortDirection : ProcessPort -> ProcessPort
+invertPortPortDirection (MkProcessPort direction channelType) = MkProcessPort (invertPortDirection direction) channelType
+
+invertInterfacePortDirections : (iface : ProcessInterface) -> ProcessInterface
+invertInterfacePortDirections (MkProcessInterface ports) =
+	MkProcessInterface (map invertPortPortDirection ports)
+
+getNetworkNodeInterface : {iface : ProcessInterface} -> Network iface -> NetworkPortNodeRef -> Either NetworkProblemDetail ProcessInterface 
+getNetworkNodeInterface net (NodeIndex k) = ?hmm_0
+getNetworkNodeInterface net NetworkBoundary = ?hmm_1
+
+getNetworkProcessPort : Network iface -> NetworkPortRef direction channelType -> Either NetworkProblemDetail ProcessPort
+getNetworkProcessPort net (MkNetworkPortRef nodeRef portIndex) = ?hmm
+
+getEdgePortRef : {channelType : ChannelType} -> PortDirection -> NetworkEdge channelType -> SomeNetworkPortRef
+getEdgePortRef Out edge = MkSomeNetworkPortRef Out channelType edge.from
+getEdgePortRef In  edge = MkSomeNetworkPortRef In  channelType edge.to
+
+validateEdgePort : Network iface -> PortDirection -> SomeNetworkEdge -> List NetworkProblemDetail
+validateEdgePort net portDirection someEdge =
+	let portRef = getEdgePortRef portDirection someEdge.edge in
+		case getNetworkProcessPort net portRef.portRef of
+			Left problemDetail => [problemDetail]
+			Right port =>
+				(if port.channelType == portRef.channelType then [] else [ChannelTypeMismatch portRef.channelType port.channelType]) ++
+				(if port.direction   == portDirection       then [] else [DirectionMismatch   portDirection       port.direction  ])
+
+validateNetworkEdge : Network iface -> SomeNetworkEdge -> List NetworkProblemDetail
+validateNetworkEdge net someEdge =
+	(validateEdgePort net Out someEdge) ++ (validateEdgePort net In someEdge)
+	-- Any other validations needed here?
+
+validateNetwork : Network iface -> List NetworkProblemDetail
+validateNetwork net =
+	foldl (++) [] (map (validateNetworkEdge net) net.edges)

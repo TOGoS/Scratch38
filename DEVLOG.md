@@ -365,7 +365,15 @@ node ~/.ccouch/data/build/SS/SSGPLP5T5VFT4X4PSSD535762JHN7QXQ
 
 And that worked.  Okay, this little task is done.
 
-### TODO : Model a process network
+## 2026-07-03
 
-...in such a way that you could launch it.
-Or compile it to Bash, maybe.
+Modeling a process network in ProcNet1.
+
+Have started to write validation functions.
+There are still some holes.
+
+CoPilot suggested that would reveal problems with the shape
+of the types, and it was right.
+
+I am thinking that 'iface' should generally not be 'indexed'
+on types, but just be runtime fields.
