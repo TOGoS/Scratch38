@@ -94,10 +94,14 @@ mutual
 		body : ProtoProcess iface
 	
 	public export
-	record Network (iface : ProcessInterface) where
+	record Network (tiface : ProcessInterface) where
 		constructor MkNetwork
+		iface : ProcessInterface
+		0 ifaceMatches : iface = tiface
 		nodes : List NetworkNode
 		edges : List SomeNetworkEdge
+
+---- Validation
 
 data NetworkProblemDetail
 	= BadNodeIndex Nat
@@ -119,12 +123,21 @@ invertInterfacePortDirections : (iface : ProcessInterface) -> ProcessInterface
 invertInterfacePortDirections (MkProcessInterface ports) =
 	MkProcessInterface (map invertPortPortDirection ports)
 
-getNetworkNodeInterface : {iface : ProcessInterface} -> Network iface -> NetworkPortNodeRef -> Either NetworkProblemDetail ProcessInterface 
-getNetworkNodeInterface net (NodeIndex k) = ?hmm_0
-getNetworkNodeInterface net NetworkBoundary = ?hmm_1
+getNetworkNodeInterface : Network iface -> NetworkPortNodeRef -> Either NetworkProblemDetail ProcessInterface
+getNetworkNodeInterface net (NodeIndex k) =
+	case itemAt k net.nodes of
+		Nothing => Left (BadNodeIndex k)
+		Just node => Right node.iface
+getNetworkNodeInterface net NetworkBoundary = Right (invertInterfacePortDirections net.iface)
 
 getNetworkProcessPort : Network iface -> NetworkPortRef direction channelType -> Either NetworkProblemDetail ProcessPort
-getNetworkProcessPort net (MkNetworkPortRef nodeRef portIndex) = ?hmm
+getNetworkProcessPort net (MkNetworkPortRef nodeRef portIndex) =
+	case getNetworkNodeInterface net nodeRef of
+		Left err => Left err
+		Right nodeIface =>
+			case itemAt portIndex nodeIface.ports of
+				Nothing => Left (BadPortIndex portIndex)
+				Just port => Right port
 
 getEdgePortRef : {channelType : ChannelType} -> PortDirection -> NetworkEdge channelType -> SomeNetworkPortRef
 getEdgePortRef Out edge = MkSomeNetworkPortRef Out channelType edge.from
@@ -147,3 +160,27 @@ validateNetworkEdge net someEdge =
 validateNetwork : Network iface -> List NetworkProblemDetail
 validateNetwork net =
 	foldl (++) [] (map (validateNetworkEdge net) net.edges)
+
+---- Demonstration
+
+EchoIface : ProcessInterface
+EchoIface = MkProcessInterface [bytesOut]
+
+echoHelloNode : NetworkNode
+echoHelloNode = MkNetworkNode
+	(MkProcessInterface [bytesIn, bytesOut, bytesOut, sysReqOut, sysResIn])
+	(OSCommand ["echo", "hello world"])
+
+echoToBoundary : SomeNetworkEdge
+echoToBoundary = MkSomeNetworkEdge bytes (MkEdge
+	(MkNetworkPortRef (NodeIndex 0) 1)
+	(MkNetworkPortRef NetworkBoundary 0))
+
+echoHelloNetwork : Network EchoIface
+echoHelloNetwork = MkNetwork EchoIface Refl [echoHelloNode] [echoToBoundary]
+
+main : IO ()
+main =
+	case validateNetwork echoHelloNetwork of
+		[] => putStrLn "Echo network is valid"
+		problems => putStrLn ("Echo network is invalid. Problems: " ++ show (length problems))

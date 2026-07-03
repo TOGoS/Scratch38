@@ -369,11 +369,9 @@ And that worked.  Okay, this little task is done.
 
 Modeling a process network in ProcNet1.
 
-Have started to write validation functions.
-There are still some holes.
+CoPilot suggested that writing validation functions would reveal
+problems with the shape of the types, and it was right.
 
-CoPilot suggested that would reveal problems with the shape
-of the types, and it was right.
-
-I am thinking that 'iface' should generally not be 'indexed'
-on types, but just be runtime fields.
+The indexed types feel a bit clunky in places.
+But I do like the idea of the shape of these ProtoProcesses
+being part of their type, so will see if I can keep that, for now.
