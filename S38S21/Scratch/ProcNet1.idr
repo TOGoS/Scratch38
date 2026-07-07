@@ -99,6 +99,7 @@ mutual
 		-- TODO: OSCommand should have a whole environment, too.
 		OSCommand : (argv : List String) -> ProtoProcess (MkProcessInterface [bytesIn, bytesOut, bytesOut, sysReqOut, sysResIn])
 		PureExit : (exitCode : Int) -> ProtoProcess (MkProcessInterface [exitOut])
+		Program : ProcProgram iface ExitData -> ProtoProcess iface
 		Net : Network iface -> ProtoProcess iface
 		-- TODO: Internal commands that can create/launch sub-processes
 	
@@ -116,6 +117,33 @@ mutual
 		constructor MkNetwork
 		nodes : List NetworkNode
 		edges : List SomeNetworkEdge
+	
+	public export
+	data ProcProgram : ProcessInterface -> Type -> Type where
+		Return : a -> ProcProgram iface a
+		Then : ProcProgram iface a -> (a -> ProcProgram iface b) -> ProcProgram iface b
+		Parallel : ProcProgram iface a -> ProcProgram iface b -> (a -> b -> c) -> ProcProgram iface c
+		ReadBytes : ProcessPortRef In ByteChunk -> ProcProgram iface (List Bits8)
+		WriteBytes : ProcessPortRef Out ByteChunk -> List Bits8 -> ProcProgram iface ()
+		RunProcess : ProtoProcess iface -> ProcProgram iface ExitData
+
+Functor (ProcProgram iface) where
+	map f program = Then program (\result => Return (f result))
+
+-- Applicative composition models independent work:
+-- evaluate both sides in parallel, then apply the resulting function.
+-- Use Monad/Then when later steps depend on earlier results.
+Applicative (ProcProgram iface) where
+	pure = Return
+	-- Applicative f means: (<*>) : f (a -> b) -> f a -> f b.
+	-- i.e. pf returns a function that gets applied to the result of pa,
+	-- which means you can evaluate the two in parallel, but without needing
+	-- a separate operation to recombine the results.
+	-- Note that (\f => \a => f a) is the identity function.
+	pf <*> pa = Parallel pf pa (\f => \a => f a)
+
+Monad (ProcProgram iface) where
+	(>>=) = Then
 
 ---- Validation
 
@@ -207,6 +235,8 @@ validateNetwork net =
 	foldl (++) [] (mapWithIndex
 		(\idx => \edge => (map (MkLocated (Edge idx)) (validateNetworkEdge net edge)))
 		0 net.edges)
+	-- TODO: Validate nodes, including that ProcPrograms only reference
+	-- ports that are part of their interface.
 
 ---- Demonstration
 
