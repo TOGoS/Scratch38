@@ -6,7 +6,7 @@ public export
 data ProcID = OSPID Int | InternalPID Int
 
 public export
-data Exit = Exited Int | Signaled Int -- Attempt at mirroring Unix model; might need work
+data ExitData = Exited Int | Signaled Int -- Attempt at mirroring Unix model; might need work
 
 -- I'd like to be able to have data channels that can carry any
 -- payload type, but that complicates `Eq ChannelType`.
@@ -19,6 +19,12 @@ Eq ChannelType where
 	SysRes    == SysRes    = True
 	SysReq    == SysReq    = True
 	x         == y         = False
+Show ChannelType where
+	show ByteChunk = "ByteChunk"
+	show ExitEvent = "ExitEvent"
+	show UnitValue = "UnitValue"
+	show SysReq    = "SysReq"
+	show SysRes    = "SysRes"
 
 bytes : ChannelType
 bytes = ByteChunk
@@ -28,6 +34,10 @@ Eq PortDirection where
 	In  == In  = True
 	Out == Out = True
 	a   == b   = False
+
+Show PortDirection where
+	show In  = "in"
+	show Out = "out"
 
 invertPortDirection : PortDirection -> PortDirection
 invertPortDirection In  = Out
@@ -49,6 +59,11 @@ public export
 record ProcessInterface where
 	constructor MkProcessInterface
 	ports : List ProcessPort
+
+public export
+record ProcessPortRef (direction : PortDirection) (channelType : ChannelType) where
+	constructor MkProcessPortRef
+	portIndex : Nat
 
 data NetworkPortNodeRef = NodeIndex Nat | NetworkBoundary
 
@@ -110,7 +125,32 @@ data NetworkProblemDetail
 	| DirectionMismatch PortDirection PortDirection -- expected, actual
 	| ChannelTypeMismatch ChannelType ChannelType   -- expected, actual
 
--- TODO: Define a type that encapsulates a problem and a source location
+Show NetworkProblemDetail where
+	show (BadNodeIndex n) = "bad node index " ++ (show n)
+	show (BadPortIndex n) = "bad port index " ++ (show n)
+	show (DirectionMismatch expected actual) = "port direction mismatch: " ++ (show expected) ++ "; actual port direction is " ++ (show actual)
+	show (ChannelTypeMismatch expected actual) = "channel type mismatch: " ++ (show expected) ++ "; actual port channel type is " ++ (show actual)
+
+public export
+record Located l t where
+	constructor MkLocated
+	location : l
+	payload : t
+
+data NetworkItemLocation = Node Nat | Port Nat Nat | Edge Nat | EdgeEnd Nat PortDirection
+	
+NetworkProblem : Type
+NetworkProblem = Located NetworkItemLocation NetworkProblemDetail
+
+Show NetworkItemLocation where
+	show (Node nodeIndex) = "node " ++ (show nodeIndex)
+	show (Port nodeIndex portIndex) = "node " ++ (show nodeIndex) ++ ", port " ++ (show portIndex)
+	show (Edge edgeIndex) = "edge " ++ (show edgeIndex)
+	show (EdgeEnd edgeIndex Out) = "edge " ++ (show edgeIndex) ++ ", source end"
+	show (EdgeEnd edgeIndex In)  = "edge " ++ (show edgeIndex) ++ ", destination end"
+
+Show NetworkProblem where
+	show prob = (show prob.payload) ++ " @ " ++ (show prob.location)
 
 itemAt : (index : Nat) -> List x -> Maybe x
 itemAt index [] = Nothing
@@ -158,23 +198,38 @@ validateNetworkEdge net someEdge =
 	(validateEdgePort net Out someEdge) ++ (validateEdgePort net In someEdge)
 	-- Any other validations needed here?
 
-validateNetwork : {iface : ProcessInterface} -> Network iface -> List NetworkProblemDetail
+mapWithIndex : (Nat -> i -> o) -> Nat -> List i -> List o
+mapWithIndex func i [] = []
+mapWithIndex func i (a :: rest) = (func i a) :: mapWithIndex func (S i) rest
+
+validateNetwork : {iface : ProcessInterface} -> Network iface -> List NetworkProblem
 validateNetwork net =
-	foldl (++) [] (map (validateNetworkEdge net) net.edges)
+	foldl (++) [] (mapWithIndex
+		(\idx => \edge => (map (MkLocated (Edge idx)) (validateNetworkEdge net edge)))
+		0 net.edges)
 
 ---- Demonstration
+
+-- TODO: Fix to properly UTF-8 encode!
+stringToBytes : String -> List Bits8
+stringToBytes s = map (cast . ord) (unpack s)
 
 EchoIface : ProcessInterface
 EchoIface = MkProcessInterface [bytesOut]
 
 echoHelloNode : NetworkNode
+-- echoHelloNode = MkNetworkNode
+-- 	(MkProcessInterface [bytesIn, bytesOut, bytesOut, sysReqOut, sysResIn])
+-- 	(OSCommand ["echo", "hello world"])
 echoHelloNode = MkNetworkNode
-	(MkProcessInterface [bytesIn, bytesOut, bytesOut, sysReqOut, sysResIn])
-	(OSCommand ["echo", "hello world"])
+	(MkProcessInterface [bytesOut, exitOut])
+	(Program (do
+		(WriteBytes (MkProcessPortRef 0) (stringToBytes "Hello, world!\n"))
+		pure (Exited 0)))
 
 echoToBoundary : SomeNetworkEdge
 echoToBoundary = MkSomeNetworkEdge bytes (MkEdge
-	(MkNetworkPortRef (NodeIndex 0) 1)
+	(MkNetworkPortRef (NodeIndex 0) 0)
 	(MkNetworkPortRef NetworkBoundary 0))
 
 echoHelloNetwork : Network EchoIface
@@ -184,4 +239,12 @@ main : IO ()
 main =
 	case validateNetwork echoHelloNetwork of
 		[] => putStrLn "Echo network is valid"
-		problems => putStrLn ("Echo network is invalid. Problems: " ++ show (length problems))
+		problems => do
+			putStrLn ("Echo network is invalid. Problems:")
+			printItems problems
+			where
+				printItems : Show t => List t -> IO ()
+				printItems [] = pure ()
+				printItems (i :: rest) = do
+					putStrLn ("- " ++ (show i))
+					printItems rest
