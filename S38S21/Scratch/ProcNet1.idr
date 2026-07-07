@@ -99,8 +99,6 @@ mutual
 	public export
 	record Network (tiface : ProcessInterface) where
 		constructor MkNetwork
-		iface : ProcessInterface -- TODO: Maybe not here; `SomeNetwork` to hold this at runtime if needed
-		0 ifaceMatches : iface = tiface
 		nodes : List NetworkNode
 		edges : List SomeNetworkEdge
 
@@ -126,14 +124,14 @@ invertInterfacePortDirections : (iface : ProcessInterface) -> ProcessInterface
 invertInterfacePortDirections (MkProcessInterface ports) =
 	MkProcessInterface (map invertPortPortDirection ports)
 
-getNetworkNodeInterface : Network iface -> NetworkPortNodeRef -> Either NetworkProblemDetail ProcessInterface
+getNetworkNodeInterface : {iface : ProcessInterface} -> Network iface -> NetworkPortNodeRef -> Either NetworkProblemDetail ProcessInterface
 getNetworkNodeInterface net (NodeIndex k) =
 	case itemAt k net.nodes of
 		Nothing => Left (BadNodeIndex k)
 		Just node => Right node.iface
-getNetworkNodeInterface net NetworkBoundary = Right (invertInterfacePortDirections net.iface)
+getNetworkNodeInterface net NetworkBoundary = Right (invertInterfacePortDirections iface)
 
-getNetworkProcessPort : Network iface -> NetworkPortRef direction channelType -> Either NetworkProblemDetail ProcessPort
+getNetworkProcessPort : {iface : ProcessInterface} -> Network iface -> NetworkPortRef direction channelType -> Either NetworkProblemDetail ProcessPort
 getNetworkProcessPort net (MkNetworkPortRef nodeRef portIndex) =
 	case getNetworkNodeInterface net nodeRef of
 		Left err => Left err
@@ -146,7 +144,7 @@ getEdgePortRef : {channelType : ChannelType} -> PortDirection -> NetworkEdge cha
 getEdgePortRef Out edge = MkSomeNetworkPortRef Out channelType edge.from
 getEdgePortRef In  edge = MkSomeNetworkPortRef In  channelType edge.to
 
-validateEdgePort : Network iface -> PortDirection -> SomeNetworkEdge -> List NetworkProblemDetail
+validateEdgePort : {iface : ProcessInterface} -> Network iface -> PortDirection -> SomeNetworkEdge -> List NetworkProblemDetail
 validateEdgePort net portDirection someEdge =
 	let portRef = getEdgePortRef portDirection someEdge.edge in
 		case getNetworkProcessPort net portRef.portRef of
@@ -155,12 +153,12 @@ validateEdgePort net portDirection someEdge =
 				(if port.channelType == portRef.channelType then [] else [ChannelTypeMismatch portRef.channelType port.channelType]) ++
 				(if port.direction   == portDirection       then [] else [DirectionMismatch   portDirection       port.direction  ])
 
-validateNetworkEdge : Network iface -> SomeNetworkEdge -> List NetworkProblemDetail
+validateNetworkEdge : {iface : ProcessInterface} -> Network iface -> SomeNetworkEdge -> List NetworkProblemDetail
 validateNetworkEdge net someEdge =
 	(validateEdgePort net Out someEdge) ++ (validateEdgePort net In someEdge)
 	-- Any other validations needed here?
 
-validateNetwork : Network iface -> List NetworkProblemDetail
+validateNetwork : {iface : ProcessInterface} -> Network iface -> List NetworkProblemDetail
 validateNetwork net =
 	foldl (++) [] (map (validateNetworkEdge net) net.edges)
 
@@ -180,7 +178,7 @@ echoToBoundary = MkSomeNetworkEdge bytes (MkEdge
 	(MkNetworkPortRef NetworkBoundary 0))
 
 echoHelloNetwork : Network EchoIface
-echoHelloNetwork = MkNetwork EchoIface Refl [echoHelloNode] [echoToBoundary]
+echoHelloNetwork = MkNetwork [echoHelloNode] [echoToBoundary]
 
 main : IO ()
 main =
