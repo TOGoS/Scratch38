@@ -93,10 +93,13 @@ mutual
 		iface : ProcessInterface
 		body : ProtoProcess iface
 	
+	-- Static representation of a process implemented as a collection of child processes with ports connected via 'edges'.
+	-- A network process will live until the last child has exited,
+	-- even if an ExitEvent flows to its own ExitEvent output port before that.
 	public export
 	record Network (tiface : ProcessInterface) where
 		constructor MkNetwork
-		iface : ProcessInterface
+		iface : ProcessInterface -- TODO: Maybe not here; `SomeNetwork` to hold this at runtime if needed
 		0 ifaceMatches : iface = tiface
 		nodes : List NetworkNode
 		edges : List SomeNetworkEdge
