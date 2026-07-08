@@ -11,6 +11,7 @@ data ExitData = Exited Int | Signaled Int -- Attempt at mirroring Unix model; mi
 -- I'd like to be able to have data channels that can carry any
 -- payload type, but that complicates `Eq ChannelType`.
 -- So for now there's just ByteChunk.
+public export
 data ChannelType = ByteChunk | ExitEvent | UnitValue | SysReq | SysRes
 Eq ChannelType where
 	ByteChunk == ByteChunk = True
@@ -29,12 +30,14 @@ Show ChannelType where
 bytes : ChannelType
 bytes = ByteChunk
 
+public export
 data PortDirection = In | Out -- Into a node, and out of a node, repspectively.
 Eq PortDirection where
 	In  == In  = True
 	Out == Out = True
 	a   == b   = False
 
+public export
 Show PortDirection where
 	show In  = "in"
 	show Out = "out"
@@ -49,10 +52,20 @@ record ProcessPort where
 	direction : PortDirection
 	channelType : ChannelType
 
+public export
+bytesIn   : ProcessPort
 bytesIn   = MkProcessPort In bytes
+public export
+bytesOut  : ProcessPort
 bytesOut  = MkProcessPort Out bytes
+public export
+sysReqOut : ProcessPort
 sysReqOut = MkProcessPort Out SysReq
+public export
+sysResIn  : ProcessPort
 sysResIn  = MkProcessPort In SysRes
+public export
+exitOut   : ProcessPort
 exitOut   = MkProcessPort Out ExitEvent
 
 public export
@@ -95,6 +108,7 @@ record SomeNetworkEdge where
 	edge : NetworkEdge channelType
 
 mutual
+	public export
 	data ProtoProcess : (iface : ProcessInterface) -> Type where
 		-- TODO: OSCommand should have a whole environment, too.
 		OSCommand : (argv : List String) -> ProtoProcess (MkProcessInterface [bytesIn, bytesOut, bytesOut, sysReqOut, sysResIn])
@@ -127,9 +141,11 @@ mutual
 		WriteBytes : ProcessPortRef Out ByteChunk -> List Bits8 -> ProcProgram iface ()
 		RunProcess : ProtoProcess iface -> ProcProgram iface ExitData
 
+public export
 Functor (ProcProgram iface) where
 	map f program = Then program (\result => Return (f result))
 
+public export
 -- Applicative composition models independent work:
 -- evaluate both sides in parallel, then apply the resulting function.
 -- Use Monad/Then when later steps depend on earlier results.
@@ -142,6 +158,7 @@ Applicative (ProcProgram iface) where
 	-- Note that (\f => \a => f a) is the identity function.
 	pf <*> pa = Parallel pf pa (\f => \a => f a)
 
+public export
 Monad (ProcProgram iface) where
 	(>>=) = Then
 
