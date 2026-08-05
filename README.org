@@ -35,6 +35,8 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0026 :: 3D printing log/data ingestor in Clojure (a piece of 'TOGETL')
 - S0027 :: Nix scratch space
 - S0028 :: [[https://docs.racket-lang.org/pie/index.html][Pie]] scratch space
+- S0029 :: [[https://elm-lang.org/][Elm]] scratch space??
+- S0030 :: TOG font generator / visualizer, in TypeScript
 
 ** Branching conventions
 
