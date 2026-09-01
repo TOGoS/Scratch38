@@ -3,8 +3,7 @@ package net.nuke24.scratch38.s0029;
 import java.security.MessageDigest;
 
 /**
- * Self-contained SHA-1 as a streaming {@link MessageDigest}, no javax.crypto,
- * so the same block-at-a-time logic can be ported to C++ later.
+ * Self-contained SHA-1 as a streaming {@link MessageDigest}
  */
 public class SHA1MessageDigest extends MessageDigest {
 	public static final int BLOCK_SIZE = 64;
