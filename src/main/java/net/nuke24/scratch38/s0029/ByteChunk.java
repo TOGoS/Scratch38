@@ -11,6 +11,11 @@ public class ByteChunk {
 		this.length = length;
 	}
 	
+	/** View of the entire given array. */
+	public static ByteChunk of(byte[] buffer) {
+		return new ByteChunk(buffer, 0, buffer.length);
+	}
+	
 	@Override
 	public boolean equals(Object obj) {
 		if( this == obj ) return true;
