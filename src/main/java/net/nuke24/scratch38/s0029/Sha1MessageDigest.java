@@ -6,7 +6,7 @@ import java.security.MessageDigest;
  * Self-contained SHA-1 as a streaming {@link MessageDigest}, no javax.crypto,
  * so the same block-at-a-time logic can be ported to C++ later.
  */
-public class Sha1MessageDigest extends MessageDigest {
+public class SHA1MessageDigest extends MessageDigest {
 	public static final int BLOCK_SIZE = 64;
 	public static final int DIGEST_SIZE = 20;
 	
@@ -16,7 +16,7 @@ public class Sha1MessageDigest extends MessageDigest {
 	private long byteCount;
 	private final int[] w = new int[80];
 	
-	public Sha1MessageDigest() {
+	public SHA1MessageDigest() {
 		super("SHA-1");
 		engineReset();
 	}

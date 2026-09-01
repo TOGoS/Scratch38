@@ -4,9 +4,9 @@ import java.security.MessageDigest;
 
 /**
  * HMAC (RFC 2104) over any streaming {@link MessageDigest}, plus SHA-1
- * conveniences backed by {@link Sha1MessageDigest}.
+ * conveniences backed by {@link SHA1MessageDigest}.
  */
-public class HmacSha1 {
+public class HMACSHA1Util {
 	/**
 	 * HMAC of {@code message} under {@code key}, using {@code md} as the hash and
 	 * {@code blockSize} as the hash's input block size (64 for SHA-1).
@@ -36,13 +36,13 @@ public class HmacSha1 {
 	}
 	
 	public static byte[] sha1(byte[] message) {
-		MessageDigest md = new Sha1MessageDigest();
+		MessageDigest md = new SHA1MessageDigest();
 		md.update(message);
 		return md.digest();
 	}
 	
 	public static byte[] hmacSha1(byte[] key, byte[] message) {
-		return hmac(new Sha1MessageDigest(), Sha1MessageDigest.BLOCK_SIZE, key, message);
+		return hmac(new SHA1MessageDigest(), SHA1MessageDigest.BLOCK_SIZE, key, message);
 	}
 	
 	public static String toHex(byte[] bytes) {
