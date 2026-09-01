@@ -3,7 +3,7 @@ package net.nuke24.scratch38.s0029;
 import junit.framework.TestCase;
 
 public class ByteChunkTest extends TestCase {
-	private static byte[] ascii(int padding, String s) {
+	private static ByteChunk ascii(int padding, String s) {
 		byte[] pad = new byte[padding];
 		byte[] content;
 		try {
@@ -13,54 +13,54 @@ public class ByteChunkTest extends TestCase {
 		}
 		byte[] buf = new byte[pad.length + content.length];
 		System.arraycopy(content, 0, buf, pad.length, content.length);
-		return buf;
+		return new ByteChunk(buf, padding, content.length);
 	}
 	
 	public void testEqualsAndHashCode_sameContentDifferentBuffers() {
-		ByteChunk a = new ByteChunk(ascii(7, "hello"), 7, 5);
-		ByteChunk b = new ByteChunk(ascii(7, "hello"), 7, 5);
+		ByteChunk a = ascii(7, "hello");
+		ByteChunk b = ascii(7, "hello");
 		assertEquals(a, b);
 		assertEquals(a.hashCode(), b.hashCode());
 	}
 	
 	public void testEqualsAndHashCode_sameContentDifferentOffsets() {
-		byte[] buf = ascii(7, "helloXXXhello");
-		ByteChunk a = new ByteChunk(buf, 7, 5);
-		ByteChunk b = new ByteChunk(buf, 15, 5);
+		ByteChunk buf = ascii(7, "helloXXXhello");
+		ByteChunk a = new ByteChunk(buf.buffer, 7, 5);
+		ByteChunk b = new ByteChunk(buf.buffer, 15, 5);
 		assertEquals(a, b);
 		assertEquals(a.hashCode(), b.hashCode());
 	}
 	
 	public void testEquals_reflexive() {
-		ByteChunk a = new ByteChunk(ascii(7, "hello"), 7, 5);
+		ByteChunk a = ascii(7, "hello");
 		assertEquals(a, a);
 	}
 	
 	public void testNotEquals_differentLength() {
-		ByteChunk a = new ByteChunk(ascii(7, "hello"), 7, 5);
-		ByteChunk b = new ByteChunk(ascii(7, "hell"), 7, 4);
+		ByteChunk a = ascii(7, "hello");
+		ByteChunk b = ascii(7, "hell");
 		assertFalse(a.equals(b));
 	}
 	
 	public void testNotEquals_differentContent() {
-		ByteChunk a = new ByteChunk(ascii(7, "hello"), 7, 5);
-		ByteChunk b = new ByteChunk(ascii(7, "jello"), 7, 5);
+		ByteChunk a = ascii(7, "hello");
+		ByteChunk b = ascii(7, "jello");
 		assertFalse(a.equals(b));
 	}
 	
 	public void testNotEquals_otherTypesAndNull() {
-		ByteChunk a = new ByteChunk(ascii(7, "hello"), 7, 5);
+		ByteChunk a = ascii(7, "hello");
 		assertFalse(a.equals("hello"));
 		assertFalse(a.equals(null));
 	}
 	
 	public void testToString_empty() {
-		ByteChunk c = new ByteChunk(ascii(7, ""), 7, 0);
+		ByteChunk c = ascii(7, "");
 		assertEquals("ByteChunk{data:,%7D", c.toString());
 	}
 	
 	public void testToString_withBraces() {
-		ByteChunk c = new ByteChunk(ascii(7, "a{b}c"), 7, 5);
+		ByteChunk c = ascii(7, "a{b}c");
 		assertEquals("ByteChunk{data:,a%7Bb%7Dc%7D", c.toString());
 	}
 }
