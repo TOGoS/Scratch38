@@ -49,6 +49,38 @@ public class ByteBlobs
 		return null;
 	}
 	
+	/** Returns the [from,to) sub-range of a ByteBlob's logical content, without copying bytes. */
+	public static ByteBlob slice(ByteBlob blob, int from, int to) {
+		if( from == to ) return ByteChunk.EMPTY;
+		
+		List<ByteBlob> pieces = new ArrayList<>();
+		int pos = 0;
+		for( ByteChunk c : blob.getChunks() ) {
+			int chunkStart = pos, chunkEnd = pos + c.length;
+			int pieceStart = Math.max(from, chunkStart);
+			int pieceEnd = Math.min(to, chunkEnd);
+			if( pieceStart < pieceEnd ) pieces.add(new ByteChunk(c.buffer, c.offset + (pieceStart - chunkStart), pieceEnd - pieceStart));
+			pos = chunkEnd;
+			if( pos >= to ) break;
+		}
+		return concat(pieces);
+	}
+	
+	/** Index of the first occurrence of {@code b} at or after {@code from}, or -1. */
+	public static int indexOf(ByteBlob blob, byte b, int from) {
+		int pos = 0;
+		for( ByteChunk c : blob.getChunks() ) {
+			int chunkStart = pos, chunkEnd = pos + c.length;
+			pos = chunkEnd;
+			if( chunkEnd <= from ) continue;
+			int start = Math.max(from, chunkStart);
+			for( int i=start; i<chunkEnd; ++i ) {
+				if( c.buffer[c.offset + (i - chunkStart)] == b ) return i;
+			}
+		}
+		return -1;
+	}
+	
 	public static ByteBlob concat(List<ByteBlob> blobs) {
 		// Don't bother stream/filtering an empty list!
 		if( blobs.size() == 0 ) return ByteChunk.EMPTY;
