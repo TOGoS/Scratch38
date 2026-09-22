@@ -27,12 +27,12 @@ public class TaggedListsTest extends TestCase {
 	
 	public void testSimplifyAdjacent_emptyList() {
 		List<Tagged<HELOChunkType,ByteBlob>> tokens = Collections.emptyList();
-		assertSame(tokens, TaggedLists.simplifyAdjacent(tokens, EnumSet.of(HELOChunkType.DELIMITER)));
+		assertSame(tokens, TaggedLists.mergeMergeable(tokens, EnumSet.of(HELOChunkType.DELIMITER)));
 	}
 	
 	public void testSimplifyAdjacent_singleToken() {
 		List<Tagged<HELOChunkType,ByteBlob>> tokens = Collections.singletonList(tagged(HELOChunkType.DELIMITER, "a"));
-		assertSame(tokens, TaggedLists.simplifyAdjacent(tokens, EnumSet.of(HELOChunkType.DELIMITER)));
+		assertSame(tokens, TaggedLists.mergeMergeable(tokens, EnumSet.of(HELOChunkType.DELIMITER)));
 	}
 	
 	public void testSimplifyAdjacent_mergesWithinMergeableSet() {
@@ -40,7 +40,7 @@ public class TaggedListsTest extends TestCase {
 			tagged(HELOChunkType.DELIMITER, "a"),
 			tagged(HELOChunkType.DELIMITER, "b")
 		);
-		List<Tagged<HELOChunkType,ByteBlob>> result = TaggedLists.simplifyAdjacent(tokens, EnumSet.of(HELOChunkType.DELIMITER));
+		List<Tagged<HELOChunkType,ByteBlob>> result = TaggedLists.mergeMergeable(tokens, EnumSet.of(HELOChunkType.DELIMITER));
 		assertEquals(1, result.size());
 		assertEquals(HELOChunkType.DELIMITER, result.get(0).tag);
 		assertEquals("ab", contentString(result.get(0)));
@@ -52,7 +52,7 @@ public class TaggedListsTest extends TestCase {
 			tagged(HELOChunkType.DELIMITER, "b"),
 			tagged(HELOChunkType.DELIMITER, "c")
 		);
-		List<Tagged<HELOChunkType,ByteBlob>> result = TaggedLists.simplifyAdjacent(tokens, EnumSet.of(HELOChunkType.DELIMITER));
+		List<Tagged<HELOChunkType,ByteBlob>> result = TaggedLists.mergeMergeable(tokens, EnumSet.of(HELOChunkType.DELIMITER));
 		assertEquals(1, result.size());
 		assertEquals("abc", contentString(result.get(0)));
 	}
@@ -63,7 +63,7 @@ public class TaggedListsTest extends TestCase {
 			tagged(HELOChunkType.HEADER_NAME, "b")
 		);
 		Set<HELOChunkType> mergeableTags = EnumSet.of(HELOChunkType.DELIMITER);
-		List<Tagged<HELOChunkType,ByteBlob>> result = TaggedLists.simplifyAdjacent(tokens, mergeableTags);
+		List<Tagged<HELOChunkType,ByteBlob>> result = TaggedLists.mergeMergeable(tokens, mergeableTags);
 		assertEquals(2, result.size());
 		assertSame(tokens, result);
 	}
@@ -74,7 +74,7 @@ public class TaggedListsTest extends TestCase {
 			tagged(HELOChunkType.HEADER_NAME, "b")
 		);
 		Set<HELOChunkType> mergeableTags = EnumSet.of(HELOChunkType.DELIMITER, HELOChunkType.HEADER_NAME);
-		List<Tagged<HELOChunkType,ByteBlob>> result = TaggedLists.simplifyAdjacent(tokens, mergeableTags);
+		List<Tagged<HELOChunkType,ByteBlob>> result = TaggedLists.mergeMergeable(tokens, mergeableTags);
 		assertEquals(2, result.size());
 		assertSame(tokens, result);
 	}
@@ -86,7 +86,7 @@ public class TaggedListsTest extends TestCase {
 			tagged(HELOChunkType.HEADER_NAME, "auth"),
 			tagged(HELOChunkType.DELIMITER, "c")
 		);
-		List<Tagged<HELOChunkType,ByteBlob>> result = TaggedLists.simplifyAdjacent(tokens, EnumSet.of(HELOChunkType.DELIMITER));
+		List<Tagged<HELOChunkType,ByteBlob>> result = TaggedLists.mergeMergeable(tokens, EnumSet.of(HELOChunkType.DELIMITER));
 		assertEquals(3, result.size());
 		assertEquals(HELOChunkType.DELIMITER, result.get(0).tag);
 		assertEquals("ab", contentString(result.get(0)));

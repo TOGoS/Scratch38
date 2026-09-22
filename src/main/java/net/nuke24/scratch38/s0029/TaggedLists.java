@@ -11,7 +11,7 @@ public class TaggedLists {
 	 * Merges adjacent tokens sharing the same tag, but only for tags in {@code mergeableTags};
 	 * tokens with any other tag are left as-is, even when adjacent to a same-tagged token.
 	 */
-	public static <T> List<Tagged<T,ByteBlob>> simplifyAdjacent(List<Tagged<T,ByteBlob>> tokens, Set<T> mergeableTags) {
+	public static <T> List<Tagged<T,ByteBlob>> mergeMergeable(List<Tagged<T,ByteBlob>> tokens, Set<T> mergeableTags) {
 		if( tokens.size() == 0 ) return tokens;
 		
 		List<Tagged<T,ByteBlob>> result = new ArrayList<Tagged<T,ByteBlob>>();
