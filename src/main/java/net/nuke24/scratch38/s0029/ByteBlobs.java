@@ -1,11 +1,39 @@
 package net.nuke24.scratch38.s0029;
 
-import java.nio.channels.ByteChannel;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ByteBlobs
 {
+	/** Content-based equality, consistent across any combination of {@link ByteBlob} implementations. */
+	public static boolean contentEquals(ByteBlob a, ByteBlob b) {
+		if( a == b ) return true;
+		if( a.length() != b.length() ) return false;
+		
+		List<ByteChunk> aChunks = a.getChunks();
+		List<ByteChunk> bChunks = b.getChunks();
+		int ai = 0, ap = 0;
+		int bi = 0, bp = 0;
+		while( ai < aChunks.size() && bi < bChunks.size() ) {
+			ByteChunk ac = aChunks.get(ai);
+			ByteChunk bc = bChunks.get(bi);
+			if( ap == ac.length ) { ++ai; ap = 0; continue; }
+			if( bp == bc.length ) { ++bi; bp = 0; continue; }
+			if( ac.buffer[ac.offset+ap] != bc.buffer[bc.offset+bp] ) return false;
+			++ap; ++bp;
+		}
+		return true;
+	}
+	
+	/** Content-based hash, consistent across any combination of {@link ByteBlob} implementations. */
+	public static int contentHashCode(ByteBlob blob) {
+		int hash = 1;
+		for( ByteChunk c : blob.getChunks() ) {
+			for( int i=0; i<c.length; ++i ) hash = 31 * hash + c.buffer[c.offset+i];
+		}
+		return hash;
+	}
+	
 	public static ByteBlob simplifyAdjacent(ByteBlob left, ByteBlob right) {
 		if( left.length() == 0 ) return right;
 		if( right.length() == 0 ) return left;

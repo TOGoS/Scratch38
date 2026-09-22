@@ -25,16 +25,12 @@ public class ByteChunk implements ByteBlob {
 		return new ByteChunk(buffer, 0, buffer.length);
 	}
 	
+	/** Content-based, consistent with any other {@link ByteBlob} implementation. */
 	@Override
 	public boolean equals(Object obj) {
 		if( this == obj ) return true;
-		if( !(obj instanceof ByteChunk) ) return false;
-		ByteChunk other = (ByteChunk)obj;
-		if( this.length != other.length ) return false;
-		for( int i=0; i<this.length; ++i ) {
-			if( this.buffer[this.offset+i] != other.buffer[other.offset+i] ) return false;
-		}
-		return true;
+		if( !(obj instanceof ByteBlob) ) return false;
+		return ByteBlobs.contentEquals(this, (ByteBlob)obj);
 	}
 	
 	public @Override int length() { return length; }
@@ -43,11 +39,7 @@ public class ByteChunk implements ByteBlob {
 	
 	@Override
 	public int hashCode() {
-		int hash = 1;
-		for( int i=0; i<this.length; ++i ) {
-			hash = 31 * hash + this.buffer[this.offset+i];
-		}
-		return hash;
+		return ByteBlobs.contentHashCode(this);
 	}
 	
 	private static final char[] HEX_DIGITS = "0123456789ABCDEF".toCharArray();

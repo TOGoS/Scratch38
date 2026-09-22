@@ -110,4 +110,46 @@ public class ByteBlobsTest extends TestCase {
 		assertEquals(2, chunks.size());
 		assertEquals("helloworldfoo", contentString(result));
 	}
+	
+	public void testContentEquals_sameContentDifferentBuffers() {
+		ByteChunk a = ascii(7, "hello");
+		ByteChunk b = ascii(3, "hello");
+		assertTrue(ByteBlobs.contentEquals(a, b));
+		assertEquals(ByteBlobs.contentHashCode(a), ByteBlobs.contentHashCode(b));
+	}
+	
+	public void testContentEquals_chunkEqualsEquivalentCompound() {
+		ByteChunk whole = ascii(7, "helloworld");
+		ByteBlob compound = new CompoundByteBlob(Arrays.<ByteBlob>asList(ascii(7, "hello"), ascii(2, "world")));
+		assertTrue(ByteBlobs.contentEquals(whole, compound));
+		assertTrue(ByteBlobs.contentEquals(compound, whole));
+		assertEquals(ByteBlobs.contentHashCode(whole), ByteBlobs.contentHashCode(compound));
+	}
+	
+	public void testContentEquals_differentSplitsOfSameContent() {
+		ByteBlob a = new CompoundByteBlob(Arrays.<ByteBlob>asList(ascii(7, "he"), ascii(1, "llo"), ascii(4, "world")));
+		ByteBlob b = new CompoundByteBlob(Arrays.<ByteBlob>asList(ascii(2, "hellowor"), ascii(9, "ld")));
+		assertTrue(ByteBlobs.contentEquals(a, b));
+		assertEquals(ByteBlobs.contentHashCode(a), ByteBlobs.contentHashCode(b));
+	}
+	
+	public void testContentEquals_differentLength() {
+		ByteChunk a = ascii(7, "hello");
+		ByteChunk b = ascii(7, "hell");
+		assertFalse(ByteBlobs.contentEquals(a, b));
+	}
+	
+	public void testContentEquals_differentContentSameLength() {
+		ByteChunk a = ascii(7, "hello");
+		ByteBlob b = new CompoundByteBlob(Arrays.<ByteBlob>asList(ascii(7, "je"), ascii(3, "llo")));
+		assertFalse(ByteBlobs.contentEquals(a, b));
+	}
+	
+	public void testByteChunkEquals_toEquivalentCompound() {
+		ByteChunk whole = ascii(7, "helloworld");
+		ByteBlob compound = new CompoundByteBlob(Arrays.<ByteBlob>asList(ascii(7, "hello"), ascii(2, "world")));
+		assertEquals(whole, compound);
+		assertEquals(compound, whole);
+		assertEquals(whole.hashCode(), compound.hashCode());
+	}
 }
