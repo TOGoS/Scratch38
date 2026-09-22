@@ -5,7 +5,7 @@ enum HELOAuthChunkType {
 	/** Just the "auth" at the beginning of a header line */
 	AUTH_HEADER,
 	AUTH_SCHEME,
-	/** Indicates the value in the auth header following a unrecognized auth scheme */
+	/** Indicates the value in the auth header when scheme is not understood */
 	AUTH_UNKNOWN_DATA,
 	/** Minimum / maxumum nonce values, sent from server */
 	NONCE_MIN,

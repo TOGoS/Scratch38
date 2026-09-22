@@ -39,7 +39,7 @@ public class HELOAuthTokenizer {
 		int length = value.length();
 		int spaceIndex = ByteBlobs.indexOf(value, (byte)' ', 0);
 		if( spaceIndex < 0 ) {
-			addIfNonEmpty(result, HELOAuthChunkType.AUTH_SCHEME, value);
+			addIfNonEmpty(result, HELOAuthChunkType.AUTH_UNKNOWN_DATA, value);
 			return result;
 		}
 		

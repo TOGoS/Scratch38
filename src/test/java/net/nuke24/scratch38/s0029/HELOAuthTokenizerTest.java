@@ -82,6 +82,11 @@ public class HELOAuthTokenizerTest extends TestCase {
 		assertEquals(i, result.size());
 	}
 	
+	/**
+	 * Assuming for now that a single token in the auth header
+	 * is not useful as a 'scheme'.  If it turns out that it is,
+	 * we can change this to expect the chunk type to be AUTH_SCHEME.
+	*/
 	public void testSchemeOnlyWithNoValueAtAll() {
 		List<Tagged<HELOChunkType,ByteBlob>> input = new ArrayList<Tagged<HELOChunkType,ByteBlob>>();
 		input.add(tagged(HELOChunkType.HEADER_NAME, "auth"));
@@ -93,7 +98,7 @@ public class HELOAuthTokenizerTest extends TestCase {
 		int i = 0;
 		assertToken(result.get(i++), HELOAuthChunkType.AUTH_HEADER, "auth");
 		assertToken(result.get(i++), HELOAuthChunkType.NORMAL, " ");
-		assertToken(result.get(i++), HELOAuthChunkType.AUTH_SCHEME, "NHS1");
+		assertToken(result.get(i++), HELOAuthChunkType.AUTH_UNKNOWN_DATA, "NHS1");
 		assertEquals(i, result.size());
 	}
 	
