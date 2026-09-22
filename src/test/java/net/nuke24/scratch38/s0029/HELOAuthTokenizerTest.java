@@ -97,7 +97,7 @@ public class HELOAuthTokenizerTest extends TestCase {
 		assertEquals(i, result.size());
 	}
 	
-	public void testNonAuthHeadersAreLeftAsNormal() {
+	public void testNonAuthHeadersAreMergedIntoOneNormalSpan() {
 		List<Tagged<HELOChunkType,ByteBlob>> input = new ArrayList<Tagged<HELOChunkType,ByteBlob>>();
 		input.add(tagged(HELOChunkType.HEADER_NAME, "reqid"));
 		input.add(tagged(HELOChunkType.DELIMITER, " "));
@@ -106,10 +106,9 @@ public class HELOAuthTokenizerTest extends TestCase {
 		
 		List<Tagged<HELOAuthChunkType,ByteBlob>> result = HELOAuthTokenizer.tokenize(input);
 		
-		assertEquals(input.size(), result.size());
-		for( int i=0; i<input.size(); ++i ) {
-			assertToken(result.get(i), HELOAuthChunkType.NORMAL, contentString(input.get(i).content));
-		}
+		// Adjacent NORMAL tokens merge, regardless of how the source tokenizer split them up.
+		assertEquals(1, result.size());
+		assertToken(result.get(0), HELOAuthChunkType.NORMAL, "reqid jeffk123\n");
 	}
 	
 	public void testEndToEndWithHELOTokenizer() {
@@ -128,27 +127,18 @@ public class HELOAuthTokenizerTest extends TestCase {
 		for( Tagged<HELOAuthChunkType,ByteBlob> t : auth ) authContent.append(contentString(t.content));
 		assertEquals(heloContent.toString(), authContent.toString());
 		
-		HELOAuthChunkType[] expectedTagsInOrder = {
-			HELOAuthChunkType.NORMAL, // "#HELO"
-			HELOAuthChunkType.NORMAL, // "/"
-			HELOAuthChunkType.NORMAL, // "PUT"
-			HELOAuthChunkType.NORMAL, // " "
-			HELOAuthChunkType.NORMAL, // "/switch1/state"
-			HELOAuthChunkType.NORMAL, // "\n"
-			HELOAuthChunkType.AUTH_HEADER, // "auth"
-			HELOAuthChunkType.NORMAL, // " "
-			HELOAuthChunkType.AUTH_SCHEME, // "NHS1"
-			HELOAuthChunkType.NORMAL, // " "
-			HELOAuthChunkType.NONCE, // "12346"
-			HELOAuthChunkType.NORMAL, // ";"
-			HELOAuthChunkType.HASH, // "XXXX...XX"
-			HELOAuthChunkType.NORMAL, // "\n"
-			HELOAuthChunkType.NORMAL, // "\n"
-			HELOAuthChunkType.NORMAL, // "on\n"
-		};
-		assertEquals(expectedTagsInOrder.length, auth.size());
-		for( int i=0; i<expectedTagsInOrder.length; ++i ) {
-			assertEquals("token " + i, expectedTagsInOrder[i], auth.get(i).tag);
-		}
+		// Merging collapses runs of adjacent NORMAL tokens, so this isn't sensitive to
+		// exactly how HELOTokenizer split up the non-auth parts of the message.
+		int i = 0;
+		assertToken(auth.get(i++), HELOAuthChunkType.NORMAL, "#HELO/PUT /switch1/state\n");
+		assertToken(auth.get(i++), HELOAuthChunkType.AUTH_HEADER, "auth");
+		assertToken(auth.get(i++), HELOAuthChunkType.NORMAL, " ");
+		assertToken(auth.get(i++), HELOAuthChunkType.AUTH_SCHEME, "NHS1");
+		assertToken(auth.get(i++), HELOAuthChunkType.NORMAL, " ");
+		assertToken(auth.get(i++), HELOAuthChunkType.NONCE, "12346");
+		assertToken(auth.get(i++), HELOAuthChunkType.NORMAL, ";");
+		assertToken(auth.get(i++), HELOAuthChunkType.HASH, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+		assertToken(auth.get(i++), HELOAuthChunkType.NORMAL, "\n\non\n");
+		assertEquals(i, auth.size());
 	}
 }

@@ -1,16 +1,21 @@
 package net.nuke24.scratch38.s0029;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Re-tags the "auth" header's name and value from a generic {@link HELOChunkType}
  * token stream into {@link HELOAuthChunkType} spans (scheme/nonce/hash); every
  * other token is passed through untouched, tagged {@link HELOAuthChunkType#NORMAL}.
+ * Adjacent NORMAL spans are merged, since callers shouldn't care how the "don't
+ * care" parts of the message happened to get split up by earlier stages.
  */
 public class HELOAuthTokenizer {
 	private static final ByteChunk AUTH_HEADER_NAME = ByteChunk.of(ByteArrayUtil.ascii("auth"));
 	private static final ByteChunk NHS1_SCHEME = ByteChunk.of(ByteArrayUtil.ascii("NHS1"));
+	private static final Set<HELOAuthChunkType> MERGEABLE_TAGS = EnumSet.of(HELOAuthChunkType.NORMAL);
 	
 	public static List<Tagged<HELOAuthChunkType,ByteBlob>> tokenize(List<Tagged<HELOChunkType,ByteBlob>> tokens) {
 		List<Tagged<HELOAuthChunkType,ByteBlob>> result = new ArrayList<Tagged<HELOAuthChunkType,ByteBlob>>();
@@ -25,7 +30,7 @@ public class HELOAuthTokenizer {
 				result.add(new Tagged<HELOAuthChunkType,ByteBlob>(HELOAuthChunkType.NORMAL, token.content));
 			}
 		}
-		return result;
+		return TaggedLists.mergeMergeable(result, MERGEABLE_TAGS);
 	}
 	
 	/** Splits an "auth" header's value into scheme/nonce/hash, or scheme + unknown data. */
