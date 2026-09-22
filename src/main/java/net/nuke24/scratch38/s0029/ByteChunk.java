@@ -1,14 +1,23 @@
 package net.nuke24.scratch38.s0029;
 
-public class ByteChunk {
+import java.util.Collections;
+import java.util.List;
+
+public class ByteChunk implements ByteBlob {
+	static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
+	public static final ByteChunk EMPTY = new ByteChunk(EMPTY_BYTE_ARRAY, 0, 0);
+	
 	public final byte[] buffer;
 	public final int offset;
 	public final int length;
+	
+	protected final List<ByteChunk> listOfSelf;
 	
 	public ByteChunk(byte[] buffer, int offset, int length) {
 		this.buffer = buffer;
 		this.offset = offset;
 		this.length = length;
+		this.listOfSelf = length == 0 ? Collections.emptyList() : Collections.singletonList(this);
 	}
 	
 	/** View of the entire given array. */
@@ -27,6 +36,10 @@ public class ByteChunk {
 		}
 		return true;
 	}
+	
+	public @Override int length() { return length; }
+	
+	public @Override List<ByteChunk> getChunks() { return this.listOfSelf; }
 	
 	@Override
 	public int hashCode() {
