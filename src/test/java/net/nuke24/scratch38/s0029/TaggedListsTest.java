@@ -10,7 +10,7 @@ import junit.framework.TestCase;
 
 public class TaggedListsTest extends TestCase {
 	private static ByteBlob chunk(String s) {
-		return ByteChunk.of(Main.ascii(s));
+		return ByteChunk.of(ByteArrayUtil.ascii(s));
 	}
 	
 	private static Tagged<HELOChunkType,ByteBlob> tagged(HELOChunkType tag, String s) {

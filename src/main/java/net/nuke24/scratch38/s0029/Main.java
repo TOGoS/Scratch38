@@ -8,22 +8,11 @@ import java.security.MessageDigest;
 import java.util.Collections;
 import java.util.List;
 
+import static net.nuke24.scratch38.s0029.ByteArrayUtil.ascii;
+import static net.nuke24.scratch38.s0029.ByteArrayUtil.repeat;
+
 public class Main {
 	static int failures = 0;
-	
-	static byte[] ascii(String s) {
-		try {
-			return s.getBytes("US-ASCII");
-		} catch( UnsupportedEncodingException e ) {
-			throw new RuntimeException(e);
-		}
-	}
-	
-	static byte[] repeat(int value, int count) {
-		byte[] b = new byte[count];
-		for( int i = 0; i < count; ++i ) b[i] = (byte)value;
-		return b;
-	}
 	
 	/** Wraps a single array as a one-chunk message, for the common non-fragmented case. */
 	static List<ByteChunk> chunk(byte[] b) {
