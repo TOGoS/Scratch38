@@ -4,7 +4,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.util.Collections;
 import java.util.List;
@@ -40,13 +39,14 @@ public class Main {
 	public static byte[] hmacSha1(byte[] key, List<ByteChunk> message) {
 		return HMACUtil.hmac(new SHA1MessageDigest(), SHA1MessageDigest.BLOCK_SIZE, key, message);
 	}
-	
-	
-	static final Charset UTF8 = Charset.forName("UTF-8");
-	
+		
 	protected static PrintStream printStream(OutputStream os) {
 		if( os instanceof PrintStream ) return (PrintStream)os;
-		return new PrintStream(os, true, UTF8);
+		try {
+			return new PrintStream(os, true, "UTF-8");
+		} catch( UnsupportedEncodingException e ) {
+			throw new RuntimeException(e);
+		}
 	}
 	
 	interface ProtoProcess<T> {
