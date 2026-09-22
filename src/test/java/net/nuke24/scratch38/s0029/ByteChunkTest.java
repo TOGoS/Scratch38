@@ -56,11 +56,11 @@ public class ByteChunkTest extends TestCase {
 	
 	public void testToString_empty() {
 		ByteChunk c = ascii(7, "");
-		assertEquals("ByteChunk{data:,%7D", c.toString());
+		assertEquals("ByteChunk{data:,}", c.toString());
 	}
 	
 	public void testToString_withBraces() {
 		ByteChunk c = ascii(7, "a{b}c");
-		assertEquals("ByteChunk{data:,a%7Bb%7Dc%7D", c.toString());
+		assertEquals("ByteChunk{data:,a%7Bb%7Dc}", c.toString());
 	}
 }

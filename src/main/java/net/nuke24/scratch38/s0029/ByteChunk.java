@@ -70,7 +70,7 @@ public class ByteChunk implements ByteBlob {
 				sb.append(HEX_DIGITS[b & 0xF]);
 			}
 		}
-		sb.append("%7D");
+		sb.append("}");
 		return sb.toString();
 	}
 }
