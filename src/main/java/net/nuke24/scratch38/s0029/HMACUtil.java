@@ -12,7 +12,7 @@ public class HMACUtil {
 	 * HMAC of {@code message} under {@code key}, using {@code md} as the hash and
 	 * {@code blockSize} as the hash's input block size (64 for SHA-1).
 	 */
-	public static byte[] hmac(MessageDigest md, int blockSize, byte[] key, List<ByteChunk> message) {
+	public static byte[] hmac(MessageDigest md, int blockSize, byte[] key, ByteBlob message) {
 		if( key.length > blockSize ) {
 			md.reset();
 			key = md.digest(key);
@@ -27,7 +27,7 @@ public class HMACUtil {
 		
 		md.reset();
 		md.update(iKeyPad);
-		for( ByteChunk chunk : message ) {
+		for( ByteChunk chunk : message.getChunks() ) {
 			md.update(chunk.buffer, chunk.offset, chunk.length);
 		}
 		byte[] innerHash = md.digest();

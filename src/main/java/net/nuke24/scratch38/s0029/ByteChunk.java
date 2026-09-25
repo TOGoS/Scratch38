@@ -22,7 +22,9 @@ public class ByteChunk implements ByteBlob {
 	
 	/** View of the entire given array. */
 	public static ByteChunk of(byte[] buffer) {
-		return new ByteChunk(buffer, 0, buffer.length);
+		return
+			buffer.length == 0 ? EMPTY :
+			new ByteChunk(buffer, 0, buffer.length);
 	}
 	
 	/** Content-based, consistent with any other {@link ByteBlob} implementation. */

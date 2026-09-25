@@ -9,4 +9,8 @@ public class StringUtil {
 		}
 		return sb.toString();
 	}
+	
+	public static ByteChunk byteChunk(String str) {
+		return ByteChunk.of(ByteArrayUtil.ascii(str));
+	}
 }
