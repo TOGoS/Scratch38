@@ -24,11 +24,11 @@ public class HelloWorldMojo extends AbstractMojo
 {
 	/** File to write the greeting to. */
 	@Parameter(property = "scratch38-s0032.outputFile", defaultValue = "${project.build.directory}/hello.txt")
-	private Path outputFile;
+	Path outputFile;
 	
 	/** The greeting text to write. */
 	@Parameter(property = "scratch38-s0032.greeting", defaultValue = "Hello, world!")
-	private String greeting;
+	String greeting;
 	
 	@Override
 	public void execute() throws MojoExecutionException {
