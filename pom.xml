@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project
+	xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+>
+	<modelVersion>4.0.0</modelVersion>
+	
+	<groupId>net.nuke24.scratch38.s0032</groupId>
+	<artifactId>scratch38-s0032-demo</artifactId>
+	<version>0.1.3-SNAPSHOT</version>
+	<packaging>jar</packaging>
+	
+	<name>Scratch38-S0032 Demo</name>
+	<description>Demonstrate usage of S38-S0032</description>
+	
+	<properties>
+		<maven.compiler.release>1.8</maven.compiler.release>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.version>3.9.9</maven.version>
+	</properties>
+	
+	<dependencies>
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-plugin-api</artifactId>
+			<version>${maven.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>net.nuke24.scratch38.s0032</groupId>
+			<artifactId>scratch38-s0032-maven-plugin</artifactId>
+			<version>0.1.2</version>
+			<scope>compile</scope>
+		</dependency>
+	</dependencies>
+	
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>net.nuke24.scratch38.s0032</groupId>
+				<artifactId>scratch38-s0032-maven-plugin</artifactId>
+				<version>0.1.1-SNAPSHOT</version>
+				<executions>
+					<execution>
+						<id>say-hello</id>
+						<!-- Optional: defaults to generate-resources (the Mojo's defaultPhase). -->
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>hello</goal>
+						</goals>
+						<configuration>
+							<greeting>Hello from the build!</greeting>
+							<outputFile>${project.build.directory}/hello.txt</outputFile>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>
