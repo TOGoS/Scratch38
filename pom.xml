@@ -8,7 +8,7 @@
 	
 	<groupId>net.nuke24.scratch38.s0032</groupId>
 	<artifactId>scratch38-s0032-maven-plugin</artifactId>
-	<version>0.1.2</version>
+	<version>0.1.3-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 	
 	<name>Scratch38-S0032 Maven Plugin</name>
