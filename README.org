@@ -39,6 +39,7 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
   - Was previously 'Elm scratch space' but I already have S0018 for that!
 - S0030 :: TOG font generator / visualizer, in TypeScript
 - S0031 :: Gridbeam panel hole pattern generator
+- S0032 :: Can I write a Maven plugin?
 
 ** Branching conventions
 
