@@ -1,13 +1,9 @@
 # Some File Formats
 
-## Namespacing: `http://ns.nuke24.net/X-2024/` + whatever
+## Namespacing: `tag:nuke24.net,` + year + `:` + whatever
 
-- Avoids polluting the root nuke24.net namespace with experimental stuff
-- Don't overthink it
-- Can always declare 'nicer' names later, with the old ones as aliases
-  - Advice for parsers: Does adding or removing "X-2024/" from an
-    identifier make it something you know about?
-    Emit a warning and assume that's the meaning.
+- Previously `http://ns.nulke24.net/X-` + year + `/` + whatever,
+  but that's exactly what `tag:` is for.
 - Canonical UUIDs for formats can be generated from the original
   URI.  These can be generated using `uuidgen --sha1 --namespace '@url' --name $url`.
   e.g. the UUID for `http://ns.nuke24.net/X-2024/Formats/FooFormat`
