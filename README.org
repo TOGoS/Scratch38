@@ -41,6 +41,8 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0031 :: Gridbeam panel hole pattern generator
 - S0032 :: Can I write a Maven plugin?
 - S0034 :: CSV utility thing in Java
+- S0035 :: Junk Bin Tracker project planning (schema?)
+- S0036 :: TEF to TOGETLTSV tool in Java
 
 ** Branching conventions
 
