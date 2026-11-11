@@ -62,3 +62,38 @@ bootdev --version
 #+begin_example
 bootdev version v1.32.6
 #+end_example
+
+#+begin_quote
+3. Login to the CLI
+#+end_quote
+(sic)
+
+#+begin_example
+# Big, colorful "@"-based bear-with-wizard-hat pic
+Logged in successfully!
+#+end_example
+
+Whoopee.
+
+Maybe I can do the first step of the actual course, now.
+
+#+begin_src
+bootdev run -s c33ba490-ccaf-4e50-a306-43c5bf721ea5
+#+end_src
+
+#+begin_example
+Submitting lesson:
+1.1 - Learn AI Coding
+[checkmark]  Echo prints successfully [more bullshit emojis]
+
+All tests passed! [party emoji]
+
+Gained +380 XP
++180 XP (Lesson)
++200 XP (Daily Bonus)
+
+Return to your browser to continue with the next lesson.
+
+Tip: When you reach your next CLI lesson, you can skip copying its ID:
+  bootdev run
+#+end_example
