@@ -97,3 +97,50 @@ Return to your browser to continue with the next lesson.
 Tip: When you reach your next CLI lesson, you can skip copying its ID:
   bootdev run
 #+end_example
+
+*** 1.3. [[https://www.boot.dev/lessons/ef186775-c596-455e-84e8-bc53f1a55f91][Installing OpenCode]]
+
+Time to install more shit.
+
+#+begin_src
+curl -fsSL https://opencode.ai/v2/install | bash
+curl -fsSL https://docs.astral.sh/uv/install.sh | bash
+# To refresh the PATH:
+exec $SHELL
+opencode --version
+uv --version
+#+end_src
+
+#+begin_example
+opencode v2.2.7
+uv 0.13.7 (x86_64-unknown-linux-gnu)
+#+end_example
+
+Hooray.
+
+Now I'm to start ~opencode~ and (using the pre-selected free model) tell it to
+"Use uv to run examples/hello.slop using the sloperator.py interpreter. Don't change any files."
+
+#+begin_example
+Done. The command uv run sloperator.py examples/hello.slop ran successfully and printed:
+hello, slop
+The program is a simple SlopLang script that calls hallucinate("hello, slop") (the language's print function). No files were modified.
+#+end_example
+
+Ctrl+C quit out of opencode.  I guess ~/exit~ would also have worked.
+What a TUI!  It even knows about the mouse cursor.
+
+#+begin_src sh
+bootdev run -s ef186775-c596-455e-84e8-bc53f1a55f91
+#+end_src
+
+*** 1.4. [[https://www.boot.dev/lessons/710f43a7-c8e5-4139-8633-e760960da12c][OpenCode Console]]
+
+Blah blah, it had me run ~/models~ and look at the list.
+
+*** 1.5. [[https://www.boot.dev/lessons/6be39ae6-99e1-4acd-b233-905902b8daf4][The Unix Philosophy]]
+
+I told OpenCode to tell me about available commands
+and then to run ~ruff~ to fix some formatting.
+~bootdev~ checked that things were in order.
+Hooray.
