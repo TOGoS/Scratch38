@@ -144,3 +144,24 @@ I told OpenCode to tell me about available commands
 and then to run ~ruff~ to fix some formatting.
 ~bootdev~ checked that things were in order.
 Hooray.
+
+*** 1.6. [[https://www.boot.dev/lessons/3f823c2f-234f-46be-9130-e98df5e5338d][OpenCode Config]]
+
+Multiline input is, uhm.
+C-enter submitted.  Next time I'll try C-j. 
+
+Anyway, this lesson involved pasting some stuff into the OpenCode terminal.
+C-v is captured by the TUI and it somehow reads the clipboard
+and creates sort of a link to the contents.
+
+*** 1.7. Learn about cli.jsonc
+
+Cool, cool.
+
+*** 1.8. [[https://www.boot.dev/lessons/3786602e-7461-4a01-993e-e6585b4c0c6b][opencode run]]
+
+#+begin_src sh
+opencode run --model "opencode/big-pickle" "Me either.   Well, back to the course.  Please read docs/spec.md and examples/hello.slop.  Create a new examples/arithmetic.slop file that prints the result of 1 + 2 * 3.  Change only that example.  Run it, confirm it prints 7, and run `uv run pytest tests/test_examples.py -q`."
+#+end_src
+
+Perhaps time to quit for the night.
