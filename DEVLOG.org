@@ -222,3 +222,49 @@ opentunnel route remove 6efff984c37c2211
 #+end_src
 
 All cleaned up.  Hooray.
+
+*** 1.11. [[https://www.boot.dev/lessons/5cf07c09-fd73-4814-85b6-6bc6820914c6][Remote Server]]
+
+This took me some tinkering (and talking to opencode itself) to figure out.
+Here's the summary I eventually got out of it:
+
+#+begin_quote
+The distinction that actually matters is the flag, not the timing:
+
++ ~opencode serve --service~ :: registers itself; becomes the shared service; pair and bare opencode will use it.
++ ~opencode serve~ :: private, unregistered, invisible to discovery; only reachable via explicit --server + password.
+
+So the hypothetical you'd want is "~serve --service~ first, then pair"
+-- that's one registered service, one process, no
+duplication. (Unverified: whether a second ~--service~ would refuse or
+take over the registration. I'd expect takeover-or-fail, but I haven't
+tested it.)
+
+X "Two at once will likely mangle the database." Too strong, and
+empirically already false -- both of these are writing to the same
+opencode.db right now (the WAL picked up changes at 14:58 during this
+chat) and nothing is mangled. SQLite in WAL mode is built for
+multi-process access; writes serialize, and the DB stays consistent.
+
+What you should actually avoid is narrower:
+
+- Two servers driving the same session :: divergent in-memory state,
+  interleaved writes, last-writer-wins on that session record. Not
+  corruption, but a messy session.
+- Two agents in the same working tree :: tool-level file races. This is
+  the real practical danger, and it's a filesystem problem, not a
+  database one.
+
+So revised summary: one server per active session/working tree;
+multiple servers are fine as long as they stay in separate lanes; the
+registry -- not start order -- decides what pair and the TUI connect to.
+#+end_quote
+
+In summary:
+
+#+begin_quote
+- ~serve~ starts a server
+- ~--service~ files it under ~service.json~ so clients find it
+- clients auto-spawn a ~--service~ server only when the registry is empty or stale
+- ~pair~ bridges a browser to whatever is registered.
+#+end_quote
