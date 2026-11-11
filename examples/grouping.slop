@@ -1,0 +1,2 @@
+— Grouping demo: parentheses override precedence, so this is (1 + 2) * 3.
+hallucinate((1 + 2) * 3)✨
