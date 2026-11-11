@@ -43,6 +43,7 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0034 :: CSV utility thing in Java
 - S0035 :: Junk Bin Tracker project planning (schema?)
 - S0036 :: TEF to TOGETLTSV tool in Java
+- S0037 :: https://www.boot.dev/courses/learn-ai-coding
 
 ** Branching conventions
 
