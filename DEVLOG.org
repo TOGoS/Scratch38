@@ -1,0 +1,64 @@
+#+TITLE: Lean AI Coding
+
+** Setting up a container ([2026-11-10])
+
+https://www.boot.dev/lessons/c33ba490-ccaf-4e50-a306-43c5bf721ea5
+
+First things first, they want me to install the bootdev CLI.
+And who knows what other crap we're going to be dumping on my machine.
+So let's isolate it at least a little bit.
+
+Duck.ai suggested that Debian would be the best WSL distro to make a
+somewhat-isolated space for the course tools.
+
+I changed ~/etc/wsl.conf~ somewhat:
+
+#+begin_src
+[boot]
+systemd=true
+
+[interop]
+appendWindowsPath=false
+
+[automount]
+# From https://superuser.com/questions/1802973/how-do-i-restrict-certain-drives-from-auto-mounting-in-windows-subsystem-for-lin
+# Automatically mount Windows drive when the distribution is launched plus /etc/fstab
+enabled = false
+# Sets the `/etc/fstab` file to be processed when a WSL distribution is launched.
+# Redundant if enabled = true
+mountFsTab = true
+#+end_src
+
+#+begin_src sh
+sudo apt update
+sudo apt install git
+sudo apt install curl
+
+ssh-keygen # and so on
+#+end_src
+
+Maybe now I can start doing the steps in https://github.com/bootdotdev/bootdev?tab=readme-ov-file#installation
+
+#+begin_quote
+To use the Boot.dev CLI, you need an up-to-date Golang toolchain installed on your system.
+#+end_quote
+
+#+begin_src sh
+curl -sS https://webi.sh/golang | sh
+# Blah blah blah
+# "Copy, paste & run the following command" it said:
+source ~/.config/envman/PATH.env
+#+end_src
+
+#+begin_quote
+2. Install the Boot.dev CLI
+#+end_quote
+
+#+begin_src sh
+go install github.com/bootdotdev/bootdev@latest
+bootdev --version
+#+end_src
+
+#+begin_example
+bootdev version v1.32.6
+#+end_example
