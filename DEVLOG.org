@@ -165,3 +165,60 @@ opencode run --model "opencode/big-pickle" "Me either.   Well, back to the cours
 #+end_src
 
 Perhaps time to quit for the night.
+
+*** 1.9. The web interface
+
+It's a little buggy--dialogs tend to disappear when I move the mouse over them--but I got it done.
+
+*** 1.10. Work on it from toilet.
+
+It wants me to make a [[https://opentunnel.xyz/][opentunnel]].
+
+#+begin_src sh
+curl -fsSL https://opentunnel.xyz/install | sh
+#+end_src
+
+#+begin_example
+Creating tunnel...
+Generating private key...
+Generating certificate request...
+Requesting certificate...
+Waiting for certificate verification (this can take a few minutes)..........
+Saving tunnel identity...
+Tunnel is ready.
+#+end_example
+
+...followed by some codes that maybe shouldn't be published.
+
+Pairing took some fiddling to figure out, because the instructions didn't work.
+I was able to get it to work by using the ~/auth/...~ part of the pairing link from ~opencode pair~
+and glomming it onto the end of ~https://6efff984c37c2211.s2phodx7ochh.opentunnel.xyz/~.
+
+~opencode pair~ didn't show me a QR code,
+the web interface does not have the 'Settings -> Pairing' screen that the lesson talks about,
+and a QR code wouldn't work anyway because it'd probably say "127.0.0.1",
+so I Signalled myself the link.
+Don't let Signal preview it, because it can only be used once!
+
+Oh, maybe because I forgot to say ~--remote~ after ~opencode pair~.
+
+If I ~opencode pair --remote~ then it does the ~opentunnel~ bit itself
+and dumps out a public URL and QR code.
+
+That's a separate opentunnel, so I guess I have two tunnels going, now.
+
+The QR code worked.  Mostly.
+
+#+begin_src sh
+opencode service set remote false
+#+end_src
+
+Seems to have closed (a) the tunnel it made, and (b) the web interface.
+The opentunnel that I manually created is still hanging around
+according to ~opentunnel route list~.
+
+#+begin_src sh
+opentunnel route remove 6efff984c37c2211
+#+end_src
+
+All cleaned up.  Hooray.
