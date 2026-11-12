@@ -6,5 +6,5 @@ import java.io.IOException;
  * Turns one header value into one or more statements.
  */
 public interface ValueParser {
-    void parse(ValueParserContext context) throws IOException;
+	void parse(ValueParserContext context) throws IOException;
 }

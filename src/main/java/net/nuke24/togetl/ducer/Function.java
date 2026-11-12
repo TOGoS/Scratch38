@@ -9,5 +9,5 @@ package net.nuke24.togetl.ducer;
  * (MIT) so the build has no external parser dependency.
  */
 public interface Function<T, R> {
-    R apply(T value);
+	R apply(T value);
 }

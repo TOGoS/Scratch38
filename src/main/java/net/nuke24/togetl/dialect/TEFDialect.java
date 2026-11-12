@@ -11,12 +11,12 @@ import net.nuke24.togetl.tef.TEFDocument;
  * Maps parsed TEF entries to statements.
  */
 public interface TEFDialect {
-    String getName();
-
-    void map(
-            TEFDocument document,
-            SourceDocument source,
-            StatementConsumer out,
-            ImportReport report
-    ) throws IOException;
+	String getName();
+	
+	void map(
+			TEFDocument document,
+			SourceDocument source,
+			StatementConsumer out,
+			ImportReport report
+	) throws IOException;
 }

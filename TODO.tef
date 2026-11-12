@@ -72,11 +72,12 @@ request: Treat entry `tef:content` as notes/description of the object being desc
 acceptance: The terminology of the output makes clear the relationship between the subject and the content text
 
 =task S36CR-005
-status: pending
+status: done
 priority: low
 kind: style
 scope: Java source files
 title: Java indentation conventions
 request: Use tabs for indentation, with spaces only for alignment after tabs when needed.
 acceptance: Java files follow a single-tab indent rule consistently.
+notes: Enforced with .editorconfig and scripts/format-java-indent.sh; run the script when new Java files are added.
 
