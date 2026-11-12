@@ -92,4 +92,8 @@ public final class TOGETLTSVWriter implements Closeable {
         out.flush();
         out.close();
     }
+
+    public void flush() throws IOException {
+        out.flush();
+    }
 }

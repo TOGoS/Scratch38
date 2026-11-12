@@ -24,13 +24,22 @@ The build targets Java 8 and does not require Maven.
 - TEF reader: BOM handling, strict UTF-8 validation, source spans, comments,
   directives, tolerance levels, and recovery for orphan continuations and
   malformed header lines.
-- Import commands, vocabulary reporting, SQLite loading, and the PHP browser are
-  added in later milestones.
+- Generic TEF dialect: captures document metadata, entries, headers, comments,
+  directives, and parse issues without dropping source data, and reports the
+  entry types and fields that a domain dialect still needs to map.
+- Import command: `togetl import` writes deterministic, self-contained streams.
+- Parts and namespaces dialects, vocabulary reporting, SQLite loading, and the
+  PHP browser are added in later milestones.
 
 ## Usage
 
 ```sh
 ./togetl version
+
+./togetl import --input fixtures/upstream/3DPrintingData.tef \
+    --output out/3dprinting-data.togetltsv \
+    --report out/3dprinting-data-unmapped.tsv
 ```
 
-Import and database commands are added in later milestones.
+`import` defaults to the `generic` dialect and `warn` tolerance. Local files
+are identified by their absolute `file:` URL unless `--source-url` overrides it.

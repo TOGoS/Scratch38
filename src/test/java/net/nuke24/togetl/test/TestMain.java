@@ -3,14 +3,23 @@ package net.nuke24.togetl.test;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import net.nuke24.togetl.cli.ImportCommand;
+import net.nuke24.togetl.dialect.GenericTEFDialect;
+import net.nuke24.togetl.etl.ImportReport;
+import net.nuke24.togetl.etl.SourceDocument;
+import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.rdf.BlankNode;
 import net.nuke24.togetl.rdf.IRI;
 import net.nuke24.togetl.rdf.Literal;
 import net.nuke24.togetl.rdf.Location;
 import net.nuke24.togetl.rdf.Statement;
+import net.nuke24.togetl.rdf.StatementConsumer;
 import net.nuke24.togetl.tef.TEFDocument;
 import net.nuke24.togetl.tef.TEFEntry;
 import net.nuke24.togetl.tef.TEFHeader;
@@ -22,6 +31,7 @@ import net.nuke24.togetl.togetltsv.TOGETLTSVReader;
 import net.nuke24.togetl.togetltsv.TOGETLTSVWriter;
 import net.nuke24.togetl.util.PercentCoder;
 import net.nuke24.togetl.util.Tolerance;
+import net.nuke24.togetl.vocab.Vocab;
 
 /**
  * Minimal test runner. Keeps the build dependency-free.
@@ -64,6 +74,10 @@ public final class TestMain {
         run("tef invalid utf-8", TestMain::testTefInvalidUtf8);
         run("tef spans", TestMain::testTefSpans);
         run("tef crlf", TestMain::testTefCrLf);
+        run("identifiers", TestMain::testIdentifiers);
+        run("generic dialect", TestMain::testGenericDialect);
+        run("generic dialect round trip", TestMain::testGenericDialectRoundTrip);
+        run("import command", TestMain::testImportCommand);
 
         System.out.println();
         if (failures > 0) {
@@ -399,6 +413,195 @@ public final class TestMain {
         TEFEntry entry = document.getEntries().get(0);
         assertEquals("Bob", entry.getHeaders().get(0).getValue(), "header value");
         assertEquals("content\r\n", entry.getContent(), "content preserves CRLF");
+    }
+
+    private static void testIdentifiers() throws Exception {
+        String url = "https://example.com/a b.tef";
+        String documentIri = Identifiers.documentIri(url);
+        String prefix = Identifiers.TAG_PREFIX + "document:";
+        check(documentIri.startsWith(prefix), "document IRI prefix: " + documentIri);
+        assertEquals(prefix.length() + 16, documentIri.length(), "document hash length");
+        assertEquals(documentIri, Identifiers.documentIri(url), "document IRI is deterministic");
+        check(!documentIri.equals(Identifiers.documentIri(url + "x")), "different URLs differ");
+
+        String entryIri = Identifiers.tefEntryIri(documentIri, 7);
+        check(entryIri.startsWith(Identifiers.TAG_PREFIX + "tef-entry:"), "entry IRI prefix");
+        check(entryIri.endsWith(":7"), "entry ordinal suffix");
+
+        assertEquals(
+                "tag:nuke24.net,2026-11:togetl:part:a%2fb",
+                Identifiers.mint("part", "a/b"),
+                "slash is encoded");
+        assertEquals(
+                "tag:nuke24.net,2026-11:togetl:part:a:b",
+                Identifiers.mint("part", "a:b"),
+                "colon is kept");
+    }
+
+    private static void testGenericDialect() throws Exception {
+        String text =
+                "#format x\n"
+                + "#custom y\n"
+                + "# a note\n"
+                + "=part p1\n"
+                + "name: Widget\n"
+                + "tag: a\n"
+                + "tag: b\n"
+                + "\n"
+                + "content\n";
+        byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+        String sourceUrl = "https://example.com/data.tef";
+        TEFDocument document = TEFReader.read(sourceUrl, bytes);
+        SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+        ImportReport report = new ImportReport();
+
+        List<Statement> statements = collect(new GenericTEFDialect(), document, source, report);
+        String doc = source.getIri();
+        String entry = Identifiers.tefEntryIri(doc, 0);
+
+        check(has(statements, doc, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT.toString()),
+                "document type statement");
+        check(has(statements, doc, Vocab.TOGETL_SHA256, Literal.of(Identifiers.sha256(bytes)).toString()),
+                "document hash statement");
+        check(has(statements, entry, Vocab.TEF_ENTRY_TYPE, Literal.of("part").toString()),
+                "entry type statement");
+        check(has(statements, entry, Vocab.TEF_ENTRY_VALUE, Literal.of("p1").toString()),
+                "entry value statement");
+        check(has(statements, entry, Vocab.TEF_CONTENT, Literal.of("content\n").toString()),
+                "entry content statement");
+
+        assertEquals(2, countObject(statements, Vocab.TEF_KEY, Literal.of("tag").toString()),
+                "both repeated headers captured");
+        assertEquals(1, countObject(statements, Vocab.TEF_TEXT, Literal.of("# a note").toString()),
+                "document comment captured");
+        assertEquals(1, countObject(statements, Vocab.TEF_NAME, Literal.of("custom").toString()),
+                "directive captured");
+
+        check(reportHas(report, "unmapped-entry-type", "part", ""), "entry type reported");
+        check(reportHas(report, "unmapped-field", "part", "name"), "name field reported");
+        check(reportHas(report, "unmapped-field", "part", "tag"), "tag field reported");
+        check(reportHas(report, "unmapped-directive", "", "custom"), "custom directive reported");
+        check(!reportHas(report, "unmapped-directive", "", "format"), "format directive is known");
+    }
+
+    private static void testGenericDialectRoundTrip() throws Exception {
+        String text = "=part p1\nname: Widget\ntag: a\ntag: b\n\ncontent\n";
+        byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+        String sourceUrl = "https://example.com/data.tef";
+        TEFDocument document = TEFReader.read(sourceUrl, bytes);
+        SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+        ImportReport report = new ImportReport();
+
+        List<Statement> statements = collect(new GenericTEFDialect(), document, source, report);
+        StringWriter out = new StringWriter();
+        TOGETLTSVWriter writer = new TOGETLTSVWriter(out, AliasTable.withDefaults());
+        try {
+            for (Statement statement : statements) {
+                writer.write(statement);
+            }
+        } finally {
+            writer.close();
+        }
+
+        List<Statement> read = TOGETLTSVReader.readAll(new StringReader(out.toString()));
+        assertEquals(statements, read, "generic statements round trip");
+    }
+
+    private static void testImportCommand() throws Exception {
+        Path dir = Files.createTempDirectory("togetl-test");
+        Path input = dir.resolve("data.tef");
+        Path first = dir.resolve("first.togetltsv");
+        Path second = dir.resolve("second.togetltsv");
+        Path report = dir.resolve("report.tsv");
+        dir.toFile().deleteOnExit();
+        input.toFile().deleteOnExit();
+        first.toFile().deleteOnExit();
+        second.toFile().deleteOnExit();
+        report.toFile().deleteOnExit();
+
+        String text = "=part p1\nname: Widget\n\ncontent\n";
+        Files.write(input, text.getBytes(StandardCharsets.UTF_8));
+
+        assertEquals(0, ImportCommand.run(new String[] {
+                "--input", input.toString(),
+                "--output", first.toString(),
+                "--report", report.toString()
+        }), "first import exit code");
+
+        assertEquals(0, ImportCommand.run(new String[] {
+                "--input", input.toString(),
+                "--output", second.toString()
+        }), "second import exit code");
+
+        byte[] firstBytes = Files.readAllBytes(first);
+        byte[] secondBytes = Files.readAllBytes(second);
+        check(java.util.Arrays.equals(firstBytes, secondBytes), "import output is deterministic");
+
+        List<Statement> read = TOGETLTSVReader.readAll(
+                new StringReader(new String(firstBytes, StandardCharsets.UTF_8)));
+        check(read.size() > 0, "import produced statements");
+
+        List<String> reportLines = Files.readAllLines(report, StandardCharsets.UTF_8);
+        assertEquals(
+                "kind\tentryType\tfield\tcount\tfirstLocation",
+                reportLines.get(0),
+                "report header");
+        check(reportLines.size() > 1, "report has rows");
+    }
+
+    private static List<Statement> collect(
+            GenericTEFDialect dialect,
+            TEFDocument document,
+            SourceDocument source,
+            ImportReport report
+    ) throws Exception {
+        final List<Statement> statements = new ArrayList<Statement>();
+        StatementConsumer consumer = new StatementConsumer() {
+            @Override
+            public void accept(Statement statement) {
+                statements.add(statement);
+            }
+        };
+        dialect.map(document, source, consumer, report);
+        return statements;
+    }
+
+    private static boolean has(List<Statement> statements, String subject, IRI predicate, String object) {
+        for (Statement statement : statements) {
+            if (statement.getSubject().toString().equals(subject)
+                    && statement.getPredicate().equals(predicate)
+                    && statement.getObject().toString().equals(object)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int countObject(List<Statement> statements, IRI predicate, String object) {
+        int count = 0;
+        for (Statement statement : statements) {
+            if (statement.getPredicate().equals(predicate)
+                    && statement.getObject().toString().equals(object)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static boolean reportHas(
+            ImportReport report,
+            String kind,
+            String entryType,
+            String field
+    ) {
+        for (ImportReport.Row row : report.getRows()) {
+            if (row.getKind().equals(kind)
+                    && row.getEntryType().equals(entryType)
+                    && row.getField().equals(field)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static TEFDocument readTef(String text) throws Exception {
