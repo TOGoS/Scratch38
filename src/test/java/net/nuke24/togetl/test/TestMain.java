@@ -551,11 +551,13 @@ public final class TestMain {
 				"second tag");
 		check(has(statements, part, Vocab.TOGETL_MEMBER_OF,
 				Identifiers.referenceIri("p2")), "member-of resolves to a part IRI");
-		String stlResource = "http://3dp-files.nuke24.net/uri-res/raw/urn:bitprint:ABC/p1.stl";
+		String stlResource = "http://wherever-files.nuke24.net/uri-res/raw/urn:bitprint:ABC/p1.stl";
 		check(has(statements, part, Vocab.TOGETL_STL_FILE, stlResource),
 				"stl file resource URL");
-		check(has(statements, stlResource, Vocab.TOGETL_FILENAME,
-				Literal.of("p1.stl").toString()), "stl file name");
+		check(!has(statements, stlResource, Vocab.TOGETL_FILENAME,
+				Literal.of("p1.stl").toString()), "canonical file URL does not duplicate filename");
+		check(!has(statements, stlResource, Vocab.RDF_TYPE,
+				Vocab.TOGETL_FILE.toString()), "canonical file URL does not duplicate file type");
 		check(has(statements, part, Vocab.TOGETL_OPENSCAD_RENDERING,
 				"http://example.com/p1.png"), "rendering reference");
 		check(has(statements, part, Vocab.RDFS_COMMENT,

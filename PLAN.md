@@ -296,7 +296,7 @@ Source: `music.txt`. It is TEF-shaped but not marked with `#format`.
   `=version-log`, `=quote`, `=narrative`.
 - `file:` values are tab- or space-separated `filename<TAB>urn:...`; both forms are
   parsed. When the value includes `filename + urn:bitprint:...`, import maps it to a
-  canonical URL-shaped file resource (`http://3dp-files.nuke24.net/uri-res/raw/<urn>/<filename>`)
+  canonical URL-shaped file resource (`http://wherever-files.nuke24.net/uri-res/raw/<urn>/<filename>`)
   so part/file predicates point directly at a regular resource IRI.
 - `dir:` values may use `x-rdf-subject:` pseudo-URIs.
 - Indented content under `=category` is an orphan continuation and must warn, not fail.

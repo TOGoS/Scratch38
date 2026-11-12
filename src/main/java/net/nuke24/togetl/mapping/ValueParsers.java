@@ -155,10 +155,17 @@ public final class ValueParsers {
 				object = context.blankNode("file", 0);
 			}
 			context.emit(object);
-			if (ref.name != null && !ref.name.isEmpty()) {
+			boolean isCanonicalGatewayResource =
+					(object instanceof IRI)
+					&& object.toString().startsWith(FILE_GATEWAY_PREFIX);
+			if (!isCanonicalGatewayResource
+					&& ref.name != null
+					&& !ref.name.isEmpty()) {
 				context.emitRaw(object, Vocab.TOGETL_FILENAME, Literal.of(ref.name));
 			}
-			context.emitRaw(object, Vocab.RDF_TYPE, Vocab.TOGETL_FILE);
+			if (!isCanonicalGatewayResource) {
+				context.emitRaw(object, Vocab.RDF_TYPE, Vocab.TOGETL_FILE);
+			}
 			if (ref.uri != null && !isAcceptableIri(ref.uri)) {
 				context.report("invalid-iri");
 				context.emitRaw(context.getSubject(), Vocab.TOGETL_AS_WRITTEN, Literal.of(ref.uri));
