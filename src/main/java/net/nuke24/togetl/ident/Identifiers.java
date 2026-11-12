@@ -52,6 +52,24 @@ public final class Identifiers {
         return mint("tef-entry", documentKey(documentIri) + ":" + ordinal);
     }
 
+    /**
+     * Interprets a source reference key. This is the single place where the
+     * provisional identifier scheme for project IDs is decided.
+     */
+    public static String referenceIri(String key) {
+        if (key == null) {
+            throw new IllegalArgumentException("Reference key must not be null");
+        }
+        String trimmed = key.trim();
+        if (trimmed.startsWith("WSPROJECT-")) {
+            return mint("project", trimmed);
+        }
+        if (trimmed.startsWith("WSITEM-")) {
+            return mint("item", trimmed);
+        }
+        return mint("part", trimmed);
+    }
+
     /** The part of a minted IRI after the common prefix, used to scope blank nodes. */
     public static String documentKey(String documentIri) {
         if (documentIri == null || !documentIri.startsWith(TAG_PREFIX)) {

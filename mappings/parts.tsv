@@ -1,0 +1,48 @@
+# Parts dialect for 3DPrintingData.tef.
+#
+# Part-like entries share one IRI space so that member-of, members, see-also,
+# and obsoleted-by references resolve to the entries that define them. The
+# entry type is still recorded through rdf:type.
+
+#entry
+entryType	subjectTemplate	type	note
+part	tag:nuke24.net,2026-11:togetl:part:${valueEncoded}	togetl:Part
+part-category	tag:nuke24.net,2026-11:togetl:part:${valueEncoded}	togetl:PartCategory
+part-set	tag:nuke24.net,2026-11:togetl:part:${valueEncoded}	togetl:PartSet
+category	tag:nuke24.net,2026-11:togetl:part:${valueEncoded}	togetl:Category
+p1rt	tag:nuke24.net,2026-11:togetl:part:${valueEncoded}	togetl:Part	asWritten=p1rt
+standard	tag:nuke24.net,2026-11:togetl:standard:${valueEncoded}	togetl:Standard
+narration	tag:nuke24.net,2026-11:togetl:narration:${valueEncoded}	togetl:Narration
+
+#field
+field	entryType	header	predicate	valueParser	cardinality	note
+field	*	name	togetl:name	plain	1
+field	*	short-description	togetl:shortDescription	plain	1
+field	*	short-descripiton	togetl:shortDescription	plain	1	asWritten=short-descripiton
+field	*	title	togetl:title	plain	1
+field	*	doc-ref	togetl:docRef	iri	*
+field	*	demo-ref	togetl:demoRef	iri	*
+field	*	project-homepage-url	togetl:projectHomepageUrl	iri	1
+field	*	created	togetl:created	plain	1
+field	*	alias	togetl:alias	plain	*
+field	*	subformat-of	togetl:subformatOf	iri	1
+field	*	tef:content-type	togetl:contentType	plain	1
+field	*	tags	togetl:tag	csv	*
+field	*	keywords	togetl:keyword	csv	*
+field	*	member-of	togetl:memberOf	csvPartRef	*
+field	*	members	togetl:member	csvPartRef	*
+field	*	see-also	togetl:seeAlso	csvPartRef	*
+field	*	obsoleted-by	togetl:obsoletedBy	csvPartRef	1
+field	*	stl-file	togetl:stlFile	fileRef	*
+field	*	sytl-file	togetl:stlFile	fileRef	*	asWritten=sytl-file
+field	*	stl-ref	togetl:stlFile	fileRef	*	asWritten=stl-ref
+field	*	csg-file	togetl:csgFile	fileRef	*
+field	*	file	togetl:file	fileRef	*
+field	*	image-ref	togetl:imageRef	iri	*
+field	*	photo-ref	togetl:photoRef	iri	*
+field	*	openscad-rendering-ref	togetl:openscadRenderingRef	fileRef	*
+field	*	oopenscad-rendering-ref	togetl:openscadRenderingRef	fileRef	*	asWritten=oopenscad-rendering-ref
+field	*	openscad-rendering	togetl:openscadRendering	iri	*
+field	*	openscad-design-ref	togetl:openscadDesignRef	iri	*
+field	*	mirror	togetl:mirror	iri	*
+field	*	source	togetl:source	iri	*

@@ -1,0 +1,27 @@
+# Namespaces dialect for namespaces.tef and vocab/*.tef.
+#
+# Entry values are already absolute IRIs, so they are used as subjects without
+# further encoding.
+
+#entry
+entryType	subjectTemplate	type	note
+namespace	${value}	togetl:Namespace
+type	${value}	rdfs:Class
+attribute	${value}	rdf:Property
+datatype	${value}	rdfs:Datatype
+format	${value}	togetl:Format
+projbase	${value}	togetl:ProjectBase
+
+#field
+field	entryType	header	predicate	valueParser	cardinality	note
+field	*	name	togetl:name	plain	1
+field	*	short-description	togetl:shortDescription	plain	1
+field	*	short-descripiton	togetl:shortDescription	plain	1	asWritten=short-descripiton
+field	*	title	togetl:title	plain	1
+field	*	doc-ref	togetl:docRef	iri	*
+field	*	demo-ref	togetl:demoRef	iri	*
+field	*	project-homepage-url	togetl:projectHomepageUrl	iri	1
+field	*	alias	togetl:alias	iri	*
+field	*	subformat-of	togetl:subformatOf	iri	1
+field	*	tef:content-type	togetl:contentType	plain	1
+field	*	created	togetl:created	plain	1

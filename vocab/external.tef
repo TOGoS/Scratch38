@@ -1,0 +1,47 @@
+#format http://ns.nuke24.net/TEF/Formats/SyntaxV0.3
+# External vocabulary terms used by mappings and the generic dialect.
+
+=namespace http://www.w3.org/1999/02/22-rdf-syntax-ns#
+short-description: RDF syntax vocabulary.
+
+=namespace http://www.w3.org/2000/01/rdf-schema#
+short-description: RDF Schema vocabulary.
+
+=namespace http://www.w3.org/2001/XMLSchema#
+short-description: XML Schema datatypes.
+
+=type http://www.w3.org/1999/02/22-rdf-syntax-ns#Property
+short-description: The class of RDF properties.
+
+=attribute http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+short-description: The subject is an instance of the object class.
+
+=type http://www.w3.org/2000/01/rdf-schema#Class
+short-description: The class of RDF classes.
+
+=type http://www.w3.org/2000/01/rdf-schema#Datatype
+short-description: The class of RDF datatypes.
+
+=attribute http://www.w3.org/2000/01/rdf-schema#comment
+short-description: A human-readable description of a resource.
+
+=attribute http://www.w3.org/2000/01/rdf-schema#label
+short-description: A human-readable name for a resource.
+
+=datatype http://www.w3.org/2001/XMLSchema#integer
+short-description: An integer literal.
+
+=datatype http://www.w3.org/2001/XMLSchema#boolean
+short-description: A boolean literal.
+
+=datatype http://www.w3.org/2001/XMLSchema#string
+short-description: A string literal.
+
+=datatype http://www.w3.org/2001/XMLSchema#date
+short-description: A calendar date literal.
+
+=datatype http://www.w3.org/2001/XMLSchema#dateTime
+short-description: A date and time literal.
+
+=datatype http://www.w3.org/2001/XMLSchema#decimal
+short-description: A decimal literal.

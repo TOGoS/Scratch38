@@ -1,0 +1,167 @@
+#format http://ns.nuke24.net/TEF/Formats/SyntaxV0.3
+# TOGETL project vocabulary.
+
+=namespace http://ns.nuke24.net/TOGETL/
+short-description: Terms minted for the TOGETL ETL project.
+
+=type http://ns.nuke24.net/TOGETL/Document
+short-description: A source document that was read by an importer.
+
+=type http://ns.nuke24.net/TOGETL/ParseIssue
+short-description: A problem encountered while reading a source document.
+
+=type http://ns.nuke24.net/TOGETL/File
+short-description: A file referenced by a source document.
+
+=type http://ns.nuke24.net/TOGETL/Part
+short-description: A 3D-printable part.
+
+=type http://ns.nuke24.net/TOGETL/PartCategory
+short-description: A category of parts.
+
+=type http://ns.nuke24.net/TOGETL/PartSet
+short-description: A named set of parts.
+
+=type http://ns.nuke24.net/TOGETL/Category
+short-description: A general category record.
+
+=type http://ns.nuke24.net/TOGETL/Standard
+short-description: A standard or specification record.
+
+=type http://ns.nuke24.net/TOGETL/Narration
+short-description: A narrative note attached to project data.
+
+=type http://ns.nuke24.net/TOGETL/Format
+short-description: A data format.
+
+=type http://ns.nuke24.net/TOGETL/Namespace
+short-description: An RDF namespace or ontology.
+
+=type http://ns.nuke24.net/TOGETL/ProjectBase
+short-description: A project base record.
+
+=attribute http://ns.nuke24.net/TOGETL/sourceUrl
+short-description: The canonical URL of a source document.
+
+=attribute http://ns.nuke24.net/TOGETL/sha256
+short-description: SHA-256 of the source document bytes.
+
+=attribute http://ns.nuke24.net/TOGETL/byteLength
+short-description: Length of the source document in bytes.
+
+=attribute http://ns.nuke24.net/TOGETL/format
+short-description: The detected or declared source format.
+
+=attribute http://ns.nuke24.net/TOGETL/parserVersion
+short-description: Version of the parser that read the document.
+
+=attribute http://ns.nuke24.net/TOGETL/hasBom
+short-description: Whether the source began with a UTF-8 byte order mark.
+
+=attribute http://ns.nuke24.net/TOGETL/document
+short-description: Links a derived resource to its source document.
+
+=attribute http://ns.nuke24.net/TOGETL/parseIssue
+short-description: Links a document to one of its parse issues.
+
+=attribute http://ns.nuke24.net/TOGETL/severity
+short-description: Severity of a parse issue.
+
+=attribute http://ns.nuke24.net/TOGETL/code
+short-description: Machine-readable code for a parse issue.
+
+=attribute http://ns.nuke24.net/TOGETL/message
+short-description: Human-readable parse issue message.
+
+=attribute http://ns.nuke24.net/TOGETL/raw
+short-description: Raw source text associated with a parse issue.
+
+=attribute http://ns.nuke24.net/TOGETL/unmappedEntry
+short-description: An entry type that the selected dialect did not map.
+
+=attribute http://ns.nuke24.net/TOGETL/unmappedField
+short-description: A header that the selected dialect did not map.
+
+=attribute http://ns.nuke24.net/TOGETL/asWritten
+short-description: The original spelling or value before normalization.
+
+=attribute http://ns.nuke24.net/TOGETL/filename
+short-description: The file name recorded alongside a file reference.
+
+=attribute http://ns.nuke24.net/TOGETL/name
+short-description: A short name.
+
+=attribute http://ns.nuke24.net/TOGETL/title
+short-description: A human-readable title.
+
+=attribute http://ns.nuke24.net/TOGETL/shortDescription
+short-description: A one-line description.
+
+=attribute http://ns.nuke24.net/TOGETL/tag
+short-description: A tag or label.
+
+=attribute http://ns.nuke24.net/TOGETL/keyword
+short-description: A keyword.
+
+=attribute http://ns.nuke24.net/TOGETL/memberOf
+short-description: A set or category that a resource belongs to.
+
+=attribute http://ns.nuke24.net/TOGETL/member
+short-description: A member of a set.
+
+=attribute http://ns.nuke24.net/TOGETL/seeAlso
+short-description: A related resource.
+
+=attribute http://ns.nuke24.net/TOGETL/obsoletedBy
+short-description: A resource that replaces this one.
+
+=attribute http://ns.nuke24.net/TOGETL/stlFile
+short-description: An STL model file.
+
+=attribute http://ns.nuke24.net/TOGETL/csgFile
+short-description: A CSG model file.
+
+=attribute http://ns.nuke24.net/TOGETL/file
+short-description: A file associated with a resource.
+
+=attribute http://ns.nuke24.net/TOGETL/imageRef
+short-description: An image reference.
+
+=attribute http://ns.nuke24.net/TOGETL/photoRef
+short-description: A photograph reference.
+
+=attribute http://ns.nuke24.net/TOGETL/docRef
+short-description: A documentation reference.
+
+=attribute http://ns.nuke24.net/TOGETL/demoRef
+short-description: A demonstration reference.
+
+=attribute http://ns.nuke24.net/TOGETL/openscadRenderingRef
+short-description: A rendering produced from an OpenSCAD model.
+
+=attribute http://ns.nuke24.net/TOGETL/openscadRendering
+short-description: An OpenSCAD rendering reference.
+
+=attribute http://ns.nuke24.net/TOGETL/openscadDesignRef
+short-description: An OpenSCAD design source reference.
+
+=attribute http://ns.nuke24.net/TOGETL/mirror
+short-description: A mirror of a resource.
+
+=attribute http://ns.nuke24.net/TOGETL/alias
+short-description: An alternative identifier or location.
+
+=attribute http://ns.nuke24.net/TOGETL/created
+short-description: A creation date or date description.
+
+=attribute http://ns.nuke24.net/TOGETL/source
+short-description: A source reference for a resource.
+
+=attribute http://ns.nuke24.net/TOGETL/projectHomepageUrl
+short-description: The home page of a project.
+
+=attribute http://ns.nuke24.net/TOGETL/subformatOf
+short-description: A format that this format is a subformat of.
+
+=attribute http://ns.nuke24.net/TOGETL/contentType
+short-description: A content type declaration.

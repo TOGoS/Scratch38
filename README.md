@@ -27,19 +27,51 @@ The build targets Java 8 and does not require Maven.
 - Generic TEF dialect: captures document metadata, entries, headers, comments,
   directives, and parse issues without dropping source data, and reports the
   entry types and fields that a domain dialect still needs to map.
+- Declarative mapping dialects driven by TSV tables under `mappings/`:
+  - `parts` for `3DPrintingData.tef` — parts, categories, sets, standards,
+    narration, aliases, links, STL/CSG files, and part references.
+  - `namespaces` for `namespaces.tef` and `vocab/*.tef` — namespaces, classes,
+    properties, datatypes, formats, and project bases.
+  - Unmapped entries and fields fall back to generic structural capture and are
+    reported, so a mapping can grow without losing source data.
+  - Functional fields report conflicts instead of silently choosing a value;
+    identical duplicates are deduplicated and multi-valued fields keep all
+    values.
+- Vocabulary reporting: `togetl vocab` compares terms used by mappings and
+  streams against `vocab/*.tef` and reports undefined, proposed, unused, and
+  duplicate terms.
 - Import command: `togetl import` writes deterministic, self-contained streams.
-- Parts and namespaces dialects, vocabulary reporting, SQLite loading, and the
-  PHP browser are added in later milestones.
+- SQLite loading and the PHP browser are added in later milestones.
 
 ## Usage
 
 ```sh
 ./togetl version
 
-./togetl import --input fixtures/upstream/3DPrintingData.tef \
+# Parts data with the domain mapping.
+./togetl import --dialect parts \
+    --input fixtures/upstream/3DPrintingData.tef \
     --output out/3dprinting-data.togetltsv \
-    --report out/3dprinting-data-unmapped.tsv
+    --report out/3dprinting-data-report.tsv
+
+# Shared namespace vocabulary.
+./togetl import --dialect namespaces \
+    --input fixtures/upstream/namespaces.tef \
+    --output out/namespaces.togetltsv
+
+# Check mapping terms against vocabulary definitions.
+./togetl vocab --report out/vocab-report.tsv
 ```
 
 `import` defaults to the `generic` dialect and `warn` tolerance. Local files
 are identified by their absolute `file:` URL unless `--source-url` overrides it.
+
+Mapping tables live in `mappings/*.tsv` and are selected by name (for example
+`--dialect parts` loads `mappings/parts.tsv`). Each table has an `#entry`
+section mapping entry types to subject templates and RDF types, and a `#field`
+section mapping headers to predicates, value parsers, and cardinality. Rules
+with `entryType` `*` apply unless a more specific rule exists.
+
+`vocab` exits non-zero when a mapping references an undefined term. Its report
+has one row per term with `ok`, `undefined`, `proposed`, `unused`, `duplicate`,
+`deprecated`, or `deprecated-in-use` status.

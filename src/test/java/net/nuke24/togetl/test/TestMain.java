@@ -10,10 +10,14 @@ import java.util.List;
 import java.util.Objects;
 
 import net.nuke24.togetl.cli.ImportCommand;
+import net.nuke24.togetl.cli.VocabCommand;
 import net.nuke24.togetl.dialect.GenericTEFDialect;
+import net.nuke24.togetl.dialect.TEFDialect;
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
 import net.nuke24.togetl.ident.Identifiers;
+import net.nuke24.togetl.mapping.MappingTable;
+import net.nuke24.togetl.mapping.MappingTEFDialect;
 import net.nuke24.togetl.rdf.BlankNode;
 import net.nuke24.togetl.rdf.IRI;
 import net.nuke24.togetl.rdf.Literal;
@@ -32,6 +36,9 @@ import net.nuke24.togetl.togetltsv.TOGETLTSVWriter;
 import net.nuke24.togetl.util.PercentCoder;
 import net.nuke24.togetl.util.Tolerance;
 import net.nuke24.togetl.vocab.Vocab;
+import net.nuke24.togetl.vocab.Vocabulary;
+import net.nuke24.togetl.vocab.VocabularyLoader;
+import net.nuke24.togetl.vocab.VocabularyReport;
 
 /**
  * Minimal test runner. Keeps the build dependency-free.
@@ -77,6 +84,11 @@ public final class TestMain {
         run("identifiers", TestMain::testIdentifiers);
         run("generic dialect", TestMain::testGenericDialect);
         run("generic dialect round trip", TestMain::testGenericDialectRoundTrip);
+        run("parts mapping", TestMain::testPartsMapping);
+        run("parts conflicts and duplicates", TestMain::testPartsConflicts);
+        run("namespaces mapping", TestMain::testNamespacesMapping);
+        run("vocabulary report", TestMain::testVocabularyReport);
+        run("vocab command", TestMain::testVocabCommand);
         run("import command", TestMain::testImportCommand);
 
         System.out.println();
@@ -507,6 +519,172 @@ public final class TestMain {
         assertEquals(statements, read, "generic statements round trip");
     }
 
+    private static void testPartsMapping() throws Exception {
+        String text =
+                "=part p1\n"
+                + "short-description: Widget\n"
+                + "tags: a, b\n"
+                + "member-of: p2\n"
+                + "stl-file: p1.stl\turn:bitprint:ABC\n"
+                + "openscad-rendering-ref: http://example.com/p1.png\n"
+                + "mystery: value\n"
+                + "\n"
+                + "A part.\n";
+        byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+        String sourceUrl = "https://example.com/data.tef";
+        TEFDocument document = TEFReader.read(sourceUrl, bytes);
+        SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+        ImportReport report = new ImportReport();
+        MappingTEFDialect dialect = new MappingTEFDialect(
+                "parts", MappingTable.load("parts"));
+
+        List<Statement> statements = collect(dialect, document, source, report);
+        String part = Identifiers.mint("part", "p1");
+
+        check(has(statements, part, Vocab.RDF_TYPE, Vocab.TOGETL_PART.toString()),
+                "part type");
+        check(has(statements, part, Vocab.TOGETL_SHORT_DESCRIPTION,
+                Literal.of("Widget").toString()), "short description");
+        check(has(statements, part, Vocab.TOGETL_TAG, Literal.of("a").toString()),
+                "first tag");
+        check(has(statements, part, Vocab.TOGETL_TAG, Literal.of("b").toString()),
+                "second tag");
+        check(has(statements, part, Vocab.TOGETL_MEMBER_OF,
+                Identifiers.referenceIri("p2")), "member-of resolves to a part IRI");
+        check(has(statements, part, Vocab.TOGETL_STL_FILE, "urn:bitprint:ABC"),
+                "stl file URI");
+        check(has(statements, "urn:bitprint:ABC", Vocab.TOGETL_FILENAME,
+                Literal.of("p1.stl").toString()), "stl file name");
+        check(has(statements, part, Vocab.TOGETL_OPENSCAD_RENDERING_REF,
+                "http://example.com/p1.png"), "rendering reference");
+        check(has(statements, part, Vocab.RDFS_COMMENT,
+                Literal.of("A part.\n").toString()), "content becomes a comment");
+        check(reportHas(report, "unmapped-field", "part", "mystery"),
+                "unknown field is reported");
+        assertEquals(1, countObject(statements, Vocab.TEF_KEY, Literal.of("mystery").toString()),
+                "unknown field is still captured structurally");
+    }
+
+    private static void testPartsConflicts() throws Exception {
+        String text =
+                "=part p1\n"
+                + "short-description: first\n"
+                + "tags: a\n"
+                + "\n"
+                + "=part p1\n"
+                + "short-description: second\n"
+                + "tags: b\n"
+                + "\n"
+                + "=part p2\n"
+                + "short-description: same\n"
+                + "\n"
+                + "=part p2\n"
+                + "short-description: same\n";
+        byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+        String sourceUrl = "https://example.com/conflicts.tef";
+        TEFDocument document = TEFReader.read(sourceUrl, bytes);
+        SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+        ImportReport report = new ImportReport();
+        MappingTEFDialect dialect = new MappingTEFDialect(
+                "parts", MappingTable.load("parts"));
+
+        List<Statement> statements = collect(dialect, document, source, report);
+
+        assertEquals(1, countObject(statements, Vocab.TOGETL_SHORT_DESCRIPTION,
+                Literal.of("first").toString()), "first value kept");
+        assertEquals(1, countObject(statements, Vocab.TOGETL_SHORT_DESCRIPTION,
+                Literal.of("second").toString()), "conflicting value kept");
+        check(reportHas(report, "conflict", "part", "short-description"),
+                "functional conflict is reported");
+        assertEquals(1, countObject(statements, Vocab.TOGETL_TAG, Literal.of("a").toString()),
+                "multi-valued field keeps a");
+        assertEquals(1, countObject(statements, Vocab.TOGETL_TAG, Literal.of("b").toString()),
+                "multi-valued field keeps b");
+        assertEquals(1, countObject(statements, Vocab.TOGETL_SHORT_DESCRIPTION,
+                Literal.of("same").toString()), "identical duplicate is deduplicated");
+    }
+
+    private static void testNamespacesMapping() throws Exception {
+        String text =
+                "=namespace http://example.com/ns/ \n"
+                + "project-homepage-url: https://example.com/\n"
+                + "short-description: Example namespace\n"
+                + "\n"
+                + "=type http://example.com/ns/Thing\n"
+                + "short-description: A thing.\n"
+                + "\n"
+                + "=attribute http://example.com/ns/prop\n"
+                + "=datatype http://example.com/ns/Type\n"
+                + "=format http://example.com/ns/Format\n"
+                + "=projbase urn:oid:1.2.3\n"
+                + "title: Project\n";
+        byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+        String sourceUrl = "https://example.com/namespaces.tef";
+        TEFDocument document = TEFReader.read(sourceUrl, bytes);
+        SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+        ImportReport report = new ImportReport();
+        MappingTEFDialect dialect = new MappingTEFDialect(
+                "namespaces", MappingTable.load("namespaces"));
+
+        List<Statement> statements = collect(dialect, document, source, report);
+
+        check(has(statements, "http://example.com/ns/", Vocab.RDF_TYPE,
+                Vocab.TOGETL_NAMESPACE.toString()), "namespace type and trimmed subject");
+        check(has(statements, "http://example.com/ns/", Vocab.TOGETL_PROJECT_HOMEPAGE_URL,
+                "https://example.com/"), "project homepage");
+        check(has(statements, "http://example.com/ns/Thing", Vocab.RDF_TYPE,
+                Vocab.RDFS_CLASS.toString()), "type is a class");
+        check(has(statements, "http://example.com/ns/prop", Vocab.RDF_TYPE,
+                Vocab.RDF_PROPERTY.toString()), "attribute is a property");
+        check(has(statements, "http://example.com/ns/Type", Vocab.RDF_TYPE,
+                Vocab.RDFS_DATATYPE.toString()), "datatype is a datatype");
+        check(has(statements, "http://example.com/ns/Format", Vocab.RDF_TYPE,
+                Vocab.TOGETL_FORMAT_CLASS.toString()), "format is a format");
+        check(has(statements, "urn:oid:1.2.3", Vocab.RDF_TYPE,
+                Vocab.TOGETL_PROJECT_BASE.toString()), "project base");
+        check(has(statements, "urn:oid:1.2.3", Vocab.TOGETL_TITLE,
+                Literal.of("Project").toString()), "project title");
+    }
+
+    private static void testVocabularyReport() throws Exception {
+        Vocabulary vocabulary = VocabularyLoader.loadDefaults();
+        List<MappingTable> tables = new ArrayList<MappingTable>();
+        for (Path path : MappingTable.defaultFiles()) {
+            tables.add(MappingTable.load(path.toString()));
+        }
+        VocabularyReport report = VocabularyReport.analyze(vocabulary, tables);
+
+        check(vocabulary.size() > 0, "vocabulary definitions were loaded");
+        check(!report.hasUndefined(), "all mapping terms are defined");
+        assertEquals(0, report.count(VocabularyReport.UNDEFINED), "no undefined terms");
+        assertEquals(0, report.count(VocabularyReport.PROPOSED), "no proposed terms");
+        assertEquals(0, report.count(VocabularyReport.DUPLICATE), "no duplicate terms");
+
+        boolean found = false;
+        for (VocabularyReport.Row row : report.getRows()) {
+            if (row.getTerm().equals(Vocab.TOGETL_NS + "shortDescription")) {
+                found = true;
+                assertEquals(VocabularyReport.OK, row.getStatus(), "shortDescription status");
+            }
+        }
+        check(found, "shortDescription appears in the report");
+    }
+
+    private static void testVocabCommand() throws Exception {
+        Path dir = Files.createTempDirectory("togetl-vocab-test");
+        Path report = dir.resolve("vocab-report.tsv");
+        dir.toFile().deleteOnExit();
+        report.toFile().deleteOnExit();
+
+        assertEquals(0, VocabCommand.run(new String[] {
+                "--report", report.toString()
+        }), "vocab command exit code");
+
+        List<String> lines = Files.readAllLines(report, StandardCharsets.UTF_8);
+        assertEquals("term\tstatus\tusedBy\tdefinedBy\tnote", lines.get(0), "vocab report header");
+        check(lines.size() > 1, "vocab report has rows");
+    }
+
     private static void testImportCommand() throws Exception {
         Path dir = Files.createTempDirectory("togetl-test");
         Path input = dir.resolve("data.tef");
@@ -550,7 +728,7 @@ public final class TestMain {
     }
 
     private static List<Statement> collect(
-            GenericTEFDialect dialect,
+            TEFDialect dialect,
             TEFDocument document,
             SourceDocument source,
             ImportReport report
