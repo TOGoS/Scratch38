@@ -103,7 +103,7 @@ public final class Vocab {
 	public static final IRI TOGETL_FILE_LINK = general("file");
 	public static final IRI TOGETL_IMAGE = general("image");
 	public static final IRI TOGETL_PHOTO = general("photo");
-	public static final IRI TOGETL_DOC = general("doc");
+	public static final IRI TOGETL_IS_DOCUMENTED_BY = general("isDocumentedBy");
 	public static final IRI TOGETL_DEMO = general("demo");
 	public static final IRI TOGETL_OPENSCAD_RENDERING = data("openscadRendering");
 	public static final IRI TOGETL_OPENSCAD_DESIGN = data("openscadDesign");

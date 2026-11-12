@@ -20,7 +20,7 @@ field	*	name	general:name	plain	1
 field	*	short-description	general:shortDescription	plain	1
 field	*	short-descripiton	general:shortDescription	plain	1	asWritten=short-descripiton
 field	*	title	general:title	plain	1
-field	*	doc-ref	general:doc	iri	*
+field	*	doc-ref	general:isDocumentedBy	iri	*
 field	*	demo-ref	general:demo	iri	*
 field	*	project-homepage-url	general:projectHomepage	iri	1
 field	*	created	general:created	plain	1

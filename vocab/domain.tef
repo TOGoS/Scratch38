@@ -60,8 +60,7 @@ short-description: an image associated with a resource
 =attribute tag:nuke24.net,2026-11:general:photo
 short-description: a photograph associated with a resource
 
-=attribute tag:nuke24.net,2026-11:general:doc
-# TODO: Rename to isDocumentedBy
+=attribute tag:nuke24.net,2026-11:general:isDocumentedBy
 short-description: a documentation resource associated with a resource
 
 =attribute tag:nuke24.net,2026-11:general:demo

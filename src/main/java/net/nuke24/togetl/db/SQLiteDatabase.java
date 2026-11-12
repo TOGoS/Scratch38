@@ -143,7 +143,7 @@ public final class SQLiteDatabase {
             + " 'tag:nuke24.net,2026-11:general:file',"
             + " 'tag:nuke24.net,2026-11:general:image',"
             + " 'tag:nuke24.net,2026-11:general:photo',"
-            + " 'tag:nuke24.net,2026-11:general:doc',"
+            + " 'tag:nuke24.net,2026-11:general:isDocumentedBy',"
             + " 'tag:nuke24.net,2026-11:general:demo',"
             + " 'tag:nuke24.net,2026-11:3dparts:openscadRendering',"
             + " 'tag:nuke24.net,2026-11:3dparts:openscadDesign')"
