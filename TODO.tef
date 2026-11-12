@@ -147,3 +147,23 @@ Specific cases found:
 - The project documentation and tests now treat the import run as the actual statement source, but some legacy names remain in the implementation as compatibility aliases. That is not just cosmetic: it creates a maintenance trap where callers may continue using the old names and silently produce wrong provenance records.
 
 Fix this by finishing the rename and removing the compatibility aliases once the codebase has been migrated. Any remaining bridge code should be explicit, well-scoped, and documented, not a half-finished back-compat layer.
+
+=task S36CR-009
+status: pending
+priority: high
+kind: setup
+scope: devcontainer; web browser; PHP toolchain
+title: Install PHP in the Alpine devcontainer
+request: Enable the repository's PHP browser in the Alpine devcontainer by installing the system PHP runtime and SQLite PDO extension, without vendoring PHP into the project .toolchain directory.
+acceptance: The devcontainer can run `php -v` and `php -m | grep -i sqlite`, and the project web browser works with `TOGETL_DB=out/togetl.sqlite3 php -S localhost:8080 web/router.php` (or some other port)
+notes: Use the repo's environment-variable conventions. The devcontainer should keep Java discovery via `JAVA_HOME`, and the PHP path should come from the system install rather than a project-local vendored copy.
+
+=task S36CR-010
+status: pending
+priority: high
+kind: setup
+scope: Debian/bootdev environment; web browser; PHP toolchain
+title: Install PHP in the Debian bootdev environment
+request: Enable the repository's PHP browser in the Debian-based bootdev environment by installing the equivalent system PHP runtime and SQLite extension for that distro.
+acceptance: The Debian environment can run `php -v` and `php -m | grep -i sqlite`, and the project web browser works with `TOGETL_DB=out/togetl.sqlite3 php -S localhost:8080 web/router.php` (or some other port)
+notes: This is the parallel equivalent of the Alpine devcontainer setup. It is not a project vendoring solution; it is a distro-specific system install path that should work alongside the alpine container setup.
