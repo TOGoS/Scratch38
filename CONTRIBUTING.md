@@ -16,6 +16,16 @@ The main conventions are here so that generated agents and humans follow the sam
 - Design decisions belong in [PLAN.md](./PLAN.md).
 - Change requests and execution backlog belong in [TODO.tef](./TODO.tef).
 - Keep the backlog concise and acceptance-oriented.
+- [AGENTS.md](./AGENTS.md) provides a reasonable primer for Clankers who
+  are asked to contribute.
+
+A good prompt to get your sessions primed:
+
+> I would like you to internalize the information in AGENTS.md and perhaps do some extra reading on the side.
+> I will then fork this conversation for new tasks in order to have the core information cached.
+
+In VS Code, you can then `/fork My new pre-primed session` to have that info cached
+and save some processing time.
 
 ## Tooling
 
