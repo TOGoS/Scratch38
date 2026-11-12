@@ -7,8 +7,17 @@ if [ -z "${TOGETL_ROOT:-}" ]; then
     exit 1
 fi
 
+if [ -n "${JAVA_HOME:-}" ]; then
+    if [ ! -x "$JAVA_HOME/bin/javac" ] || [ ! -x "$JAVA_HOME/bin/java" ]; then
+        echo "java-env.sh: JAVA_HOME is set but does not contain executable bin/java and bin/javac: $JAVA_HOME" >&2
+        exit 1
+    fi
+fi
+
 if [ -n "${JAVAC:-}" ]; then
     :
+elif [ -n "${JAVA_HOME:-}" ]; then
+    JAVAC="$JAVA_HOME/bin/javac"
 elif [ -x "$TOGETL_ROOT/.toolchain/jdk8/bin/javac" ]; then
     JAVAC="$TOGETL_ROOT/.toolchain/jdk8/bin/javac"
 else
@@ -17,6 +26,8 @@ fi
 
 if [ -n "${JAVA:-}" ]; then
     :
+elif [ -n "${JAVA_HOME:-}" ]; then
+    JAVA="$JAVA_HOME/bin/java"
 elif [ -x "$TOGETL_ROOT/.toolchain/jdk8/bin/java" ]; then
     JAVA="$TOGETL_ROOT/.toolchain/jdk8/bin/java"
 else

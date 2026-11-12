@@ -15,7 +15,12 @@ See [PLAN.md](PLAN.md) for the full design.
 ./test/run-tests.sh
 ```
 
-`build.sh` prefers `.toolchain/jdk8` when present, otherwise `javac` on `PATH`.
+`build.sh` and `test/run-tests.sh` use this Java selection order:
+1. `$JAVAC`/`$JAVA` (environment variables), if set.
+2. `$JAVA_HOME/bin/javac` and `$JAVA_HOME/bin/java`, if `$JAVA_HOME` is set.
+3. `.toolchain/jdk8`, if present.
+4. `javac`/`java` on `$PATH`.
+
 The build targets Java 8 and does not require Maven.
 
 ## Status
