@@ -49,7 +49,13 @@ The build targets Java 8 and does not require Maven.
   streams against `vocab/*.tef` and reports undefined, proposed, unused, and
   duplicate terms.
 - Import command: `togetl import` writes deterministic, self-contained streams.
-- SQLite loading and the PHP browser are added in later milestones.
+- SQLite loader: `togetl load` reads TOGETLTSV streams into a source-agnostic
+  schema with document, batch, loading, statement, parse-issue, report, and
+  vocabulary tables. Batch and loading IRIs are deterministic, and re-running
+  the same load replaces that batch instead of duplicating statements.
+- Read-only PHP browser in `web/` with overview, subject, predicate, document,
+  vocabulary, issue, and part pages.
+- Org and music importers are added in later milestones.
 
 ## Usage
 
@@ -69,6 +75,15 @@ The build targets Java 8 and does not require Maven.
 
 # Check mapping terms against vocabulary definitions.
 ./togetl vocab --report out/vocab-report.tsv
+
+# Load the streams into SQLite.
+./togetl load --db out/togetl.sqlite3 \
+    --input out/3dprinting-data.togetltsv \
+    --report out/3dprinting-data-report.tsv \
+    --input out/namespaces.togetltsv
+
+# Browse read-only.
+TOGETL_DB=out/togetl.sqlite3 php -S localhost:8080 web/router.php
 ```
 
 `import` defaults to the `generic` dialect and `warn` tolerance. Local files

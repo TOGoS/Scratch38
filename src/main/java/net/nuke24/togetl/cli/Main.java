@@ -34,6 +34,10 @@ public final class Main {
 			System.exit(VocabCommand.run(rest));
 			return;
 		}
+		if ("load".equals(command)) {
+			System.exit(LoadCommand.run(rest));
+			return;
+		}
 		System.err.println("Unknown command: " + command);
 		usage();
 		System.exit(1);
@@ -45,9 +49,11 @@ public final class Main {
 		System.err.println("Commands:");
 		System.err.println("  import    Convert a source document to TOGETLTSV");
 		System.err.println("  vocab     Check vocabulary definitions against mappings");
+		System.err.println("  load      Load TOGETLTSV streams into SQLite");
 		System.err.println("  version   Print the version");
 		System.err.println("  help      Print this message");
 		System.err.println();
-		System.err.println("Run 'togetl import --help' or 'togetl vocab --help' for options.");
+		System.err.println("Run 'togetl import --help', 'togetl vocab --help', or");
+		System.err.println("'togetl load --help' for options.");
 	}
 }
