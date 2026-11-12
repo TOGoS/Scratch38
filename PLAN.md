@@ -126,9 +126,15 @@ records the batch that produced it, via the document import's membership in that
 | Concept | Meaning | Identity |
 |---|---|---|
 | Document | a source file | `tag:...,togetl:document:<sha256-16 of URL>` |
-| Document import | one importer execution against one document | `tag:...,togetl:import-run:<hash>` |
+| Document import | one importer execution against one document* | `tag:...,togetl:document-import:<hash>` |
 | Batch | one `togetl load` operation over one or more documents | `tag:...,togetl:batch:<hash>` |
 | Statement | one triple at one location | row in `statement` |
+
+*Current implementation intentionally mints document-import IDs deterministically
+from `(document IRI, parser/importer version)`. If multiple executions are
+indistinguishable under that model, they collapse to one identity by design.
+Whether the determinism is really true and whether to represent per-run executions
+separately is a decision yet to be made.
 
 A document import records the batch it belongs to with `general:isMemberOf`, so a batch
 need not have its own per-document loading identity. Batch IDs are deterministic hashes

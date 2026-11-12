@@ -432,7 +432,7 @@ public final class TestMain {
 		String documentIri = Identifiers.documentIri(url);
 		String documentImportIri = Identifiers.documentImportIri(documentIri, "test/1");
 		String prefix = Identifiers.TAG_PREFIX + "document:";
-		String importPrefix = Identifiers.TAG_PREFIX + "import-run:";
+		String importPrefix = Identifiers.TAG_PREFIX + "document-import:";
 		check(documentIri.startsWith(prefix), "document IRI prefix: " + documentIri);
 		check(documentImportIri.startsWith(importPrefix), "document import IRI prefix: " + documentImportIri);
 		assertEquals(prefix.length() + 16, documentIri.length(), "document hash length");
@@ -477,21 +477,21 @@ public final class TestMain {
 		
 		List<Statement> statements = collect(new GenericTEFDialect(), document, source, report);
 		String doc = source.getDocumentIri();
-		String run = source.getDocumentImportIri();
+		String documentImport = source.getDocumentImportIri();
 		String entry = Identifiers.tefEntryIri(doc, 0);
-		assertEquals(statements.size(), countSource(statements, run), "all statements use document import source");
+		assertEquals(statements.size(), countSource(statements, documentImport), "all statements use document import source");
 		
 		check(has(statements, doc, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT.toString()),
 				"document type statement");
 		check(has(statements, doc, Vocab.TOGETL_SHA256, Literal.of(Identifiers.sha256(bytes)).toString()),
 				"document hash statement");
-		check(has(statements, run, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT_IMPORT.toString()),
+		check(has(statements, documentImport, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT_IMPORT.toString()),
 				"document import type statement");
-		check(has(statements, run, Vocab.TOGETL_SOURCE_DOCUMENT, doc),
+		check(has(statements, documentImport, Vocab.TOGETL_SOURCE_DOCUMENT, doc),
 				"document import links to source document");
-		check(has(statements, run, Vocab.TOGETL_PARSER_VERSION, Literal.of("test/1").toString()),
+		check(has(statements, documentImport, Vocab.TOGETL_PARSER_VERSION, Literal.of("test/1").toString()),
 				"document import parser version");
-		check(has(statements, run, Vocab.TOGETL_HAS_BOM,
+		check(has(statements, documentImport, Vocab.TOGETL_HAS_BOM,
 				Literal.of("false", Vocab.XSD_BOOLEAN).toString()), "document import BOM flag");
 		check(has(statements, entry, Vocab.TEF_ENTRY_TYPE, Literal.of("part").toString()),
 				"entry type statement");

@@ -65,16 +65,10 @@ public final class Identifiers {
 			throw new IllegalArgumentException("parserVersion must not be empty");
 		}
 		return mint(
-				"import-run",
+				"document-import",
 				shortSha256((documentIri + "\n" + parserVersion).getBytes(StandardCharsets.UTF_8)));
 	}
 
-	/** @deprecated Use {@link #documentImportIri(String, String)}. */
-	@Deprecated
-	public static String importRunIri(String documentIri, String parserVersion) {
-		return documentImportIri(documentIri, parserVersion);
-	}
-	
 	/** A generic TEF entry resource within a document. */
 	public static String tefEntryIri(String documentIri, int ordinal) {
 		if (ordinal < 0) {

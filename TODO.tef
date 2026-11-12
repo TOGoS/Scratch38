@@ -112,7 +112,7 @@ so I can stop telling them to explicitly `export` it in their commands.
 Then remove the note in AGENTS.md.
 
 =task S36CR-008
-status: pending
+status: done
 priority: high
 kind: cleanup
 scope: Java source files; vocabulary and loader logic

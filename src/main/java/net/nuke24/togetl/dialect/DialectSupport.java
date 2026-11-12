@@ -49,19 +49,19 @@ public final class DialectSupport {
 			StatementConsumer out
 	) throws IOException {
 		IRI doc = IRI.of(source.getDocumentIri());
-		IRI run = IRI.of(source.getDocumentImportIri());
+		IRI documentImport = IRI.of(source.getDocumentImportIri());
 		Location none = Location.none();
 		emit(source, out, none, doc, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT);
 		emit(source, out, none, doc, Vocab.TOGETL_SOURCE_URL, Literal.of(source.getSourceIri()));
 		emit(source, out, none, doc, Vocab.TOGETL_SHA256, Literal.of(source.getSha256()));
 		emit(source, out, none, doc, Vocab.TOGETL_BYTE_LENGTH,
 				Literal.of(Long.toString(source.getByteLength()), Vocab.XSD_INTEGER));
-		emit(source, out, none, run, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT_IMPORT);
-		emit(source, out, none, run, Vocab.TOGETL_SOURCE_DOCUMENT, doc);
-		emit(source, out, none, run, Vocab.TOGETL_FORMAT, Literal.of(source.getFormat()));
-		emit(source, out, none, run, Vocab.TOGETL_PARSER_VERSION,
+		emit(source, out, none, documentImport, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT_IMPORT);
+		emit(source, out, none, documentImport, Vocab.TOGETL_SOURCE_DOCUMENT, doc);
+		emit(source, out, none, documentImport, Vocab.TOGETL_FORMAT, Literal.of(source.getFormat()));
+		emit(source, out, none, documentImport, Vocab.TOGETL_PARSER_VERSION,
 				Literal.of(source.getParserVersion()));
-		emit(source, out, none, run, Vocab.TOGETL_HAS_BOM,
+		emit(source, out, none, documentImport, Vocab.TOGETL_HAS_BOM,
 				Literal.of(document.hasBom() ? "true" : "false", Vocab.XSD_BOOLEAN));
 	}
 	
@@ -104,12 +104,12 @@ public final class DialectSupport {
 			StatementConsumer out
 	) throws IOException {
 		String scope = Identifiers.documentHash(source.getDocumentIri());
-		IRI run = IRI.of(source.getDocumentImportIri());
+		IRI documentImport = IRI.of(source.getDocumentImportIri());
 		for (int i = 0; i < document.getIssues().size(); i++) {
 			TEFIssue issue = document.getIssues().get(i);
 			Location location = locationOf(issue.getSpan());
 			BlankNode node = BlankNode.of("tef-issue-" + scope + "-" + i);
-			emit(source, out, location, run, Vocab.TOGETL_PARSE_ISSUE_LINK, node);
+			emit(source, out, location, documentImport, Vocab.TOGETL_PARSE_ISSUE_LINK, node);
 			emit(source, out, location, node, Vocab.RDF_TYPE, Vocab.TOGETL_PARSE_ISSUE);
 			emit(source, out, location, node, Vocab.TOGETL_SEVERITY,
 					Literal.of(issue.getSeverity().name().toLowerCase(java.util.Locale.ROOT)));

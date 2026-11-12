@@ -34,9 +34,6 @@ public final class Vocab {
 	// Classes.
 	public static final IRI TOGETL_DOCUMENT = togetl("Document");
 	public static final IRI TOGETL_DOCUMENT_IMPORT = togetl("DocumentImport");
-	/** @deprecated Use {@link #TOGETL_DOCUMENT_IMPORT}. */
-	@Deprecated
-	public static final IRI TOGETL_IMPORT_RUN = TOGETL_DOCUMENT_IMPORT;
 	public static final IRI TOGETL_PARSE_ISSUE = togetl("ParseIssue");
 	public static final IRI TOGETL_FILE = togetl("File");
 	public static final IRI TOGETL_PART = data("Part");
@@ -100,9 +97,6 @@ public final class Vocab {
 	public static final IRI TOGETL_TAG = general("tag");
 	public static final IRI TOGETL_KEYWORD = general("keyword");
 	public static final IRI TOGETL_IS_MEMBER_OF = general("isMemberOf");
-	/** @deprecated Use {@link #TOGETL_IS_MEMBER_OF}. */
-	@Deprecated
-	public static final IRI TOGETL_MEMBER_OF = TOGETL_IS_MEMBER_OF;
 	public static final IRI TOGETL_MEMBER = general("member");
 	public static final IRI TOGETL_SEE_ALSO = general("seeAlso");
 	public static final IRI TOGETL_OBSOLETED_BY = general("obsoletedBy");

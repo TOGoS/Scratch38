@@ -79,16 +79,4 @@ public final class SourceDocument {
 	public String getDocumentImportIri() {
 		return documentImportIri;
 	}
-
-	/** @deprecated Use {@link #getDocumentImportIri()}. */
-	@Deprecated
-	public String getImportRunIri() {
-		return documentImportIri;
-	}
-	
-	/** @deprecated Use {@link #getDocumentIri()}. */
-	@Deprecated
-	public String getIri() {
-		return documentIri;
-	}
 }
