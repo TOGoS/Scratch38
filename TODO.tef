@@ -96,3 +96,17 @@ Furthermore, multiple 'parts' could refer to the same blob by different names!
 
 So we need to separate the concept of the 'file' (which has a name)
 from the blob identified by the bitprint hash.
+
+=task S36CR-007
+status: pending
+
+Sometimes agents find that JAVA_HOME is not set in their shell,
+despite `devcontainer.json` explicity setting it.
+
+This started happening after I erroneously asked an agent
+that was *not* running in the devcontainer to do a refactor.
+It probably horsed with some settings in order to try to make things work.
+
+Figure out why this started happening and fix the root cause
+so I can stop telling them to explicitly `export` it in their commands.
+Then remove the note in AGENTS.md.
