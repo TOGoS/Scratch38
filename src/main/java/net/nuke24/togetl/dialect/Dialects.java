@@ -13,9 +13,10 @@ import net.nuke24.togetl.mapping.MappingTEFDialect;
 public final class Dialects {
 	public static final String PARTS = "parts";
 	public static final String NAMESPACES = "namespaces";
+	public static final String ORG_STRUCTURE = OrgStructureDialect.NAME;
 	
 	private static final List<String> NAMES =
-			Arrays.asList(GenericTEFDialect.NAME, PARTS, NAMESPACES);
+			Arrays.asList(GenericTEFDialect.NAME, PARTS, NAMESPACES, ORG_STRUCTURE);
 			
 	private Dialects() {
 	}
@@ -32,6 +33,12 @@ public final class Dialects {
 		}
 		throw new IllegalArgumentException(
 				"Unknown dialect: " + name + " (expected one of " + NAMES + ")");
+	}
+	
+	public static boolean isTefDialect(String name) {
+		return GenericTEFDialect.NAME.equals(name)
+				|| PARTS.equals(name)
+				|| NAMESPACES.equals(name);
 	}
 	
 	public static List<String> names() {

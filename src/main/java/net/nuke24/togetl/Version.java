@@ -6,6 +6,7 @@ package net.nuke24.togetl;
 public final class Version {
 	public static final String VERSION = "0.0.0";
 	public static final String TEF_PARSER_VERSION = "togetl-tef-reader/1";
+	public static final String ORG_PARSER_VERSION = "togetl-org-reader/1";
 	
 	private Version() {
 	}

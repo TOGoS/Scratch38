@@ -11,6 +11,7 @@ import java.util.Objects;
 
 import net.nuke24.togetl.cli.ImportCommand;
 import net.nuke24.togetl.cli.VocabCommand;
+import net.nuke24.togetl.dialect.Dialects;
 import net.nuke24.togetl.dialect.GenericTEFDialect;
 import net.nuke24.togetl.dialect.TEFDialect;
 import net.nuke24.togetl.etl.ImportReport;
@@ -18,6 +19,9 @@ import net.nuke24.togetl.etl.SourceDocument;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.mapping.MappingTable;
 import net.nuke24.togetl.mapping.MappingTEFDialect;
+import net.nuke24.togetl.org.OrgDocument;
+import net.nuke24.togetl.org.OrgHeading;
+import net.nuke24.togetl.org.OrgReader;
 import net.nuke24.togetl.rdf.BlankNode;
 import net.nuke24.togetl.rdf.IRI;
 import net.nuke24.togetl.rdf.Literal;
@@ -89,7 +93,9 @@ public final class TestMain {
 		run("namespaces mapping", TestMain::testNamespacesMapping);
 		run("vocabulary report", TestMain::testVocabularyReport);
 		run("vocab command", TestMain::testVocabCommand);
+		run("org reader", TestMain::testOrgReader);
 		run("import command", TestMain::testImportCommand);
+		run("import command org-structure", TestMain::testImportCommandOrgStructure);
 		
 		System.out.println();
 		if (failures > 0) {
@@ -710,6 +716,39 @@ public final class TestMain {
 		check(lines.size() > 1, "vocab report has rows");
 	}
 	
+	private static void testOrgReader() {
+		String org = ""
+				+ "* Root heading\n"
+				+ ":PROPERTIES:\n"
+				+ ":CUSTOM_ID: root-id\n"
+				+ ":END:\n"
+				+ "SCHEDULED: <2026-11-12 Thu>\n"
+				+ "- [X] done item\n"
+				+ "See [[https://example.com/][Example]]\n"
+				+ "** Child heading\n"
+				+ "- [ ] open item\n";
+		OrgDocument document = OrgReader.read(
+				"https://example.com/3DPrintingLog.org",
+				org.getBytes(StandardCharsets.UTF_8));
+		assertEquals(2, document.getHeadings().size(), "heading count");
+		
+		OrgHeading root = document.getHeadings().get(0);
+		assertEquals(1, root.getLevel(), "root level");
+		assertEquals("Root heading", root.getTitle(), "root title");
+		assertEquals("root-id", root.getCustomId(), "CUSTOM_ID parsed");
+		assertEquals(1, root.getTimestamps().size(), "timestamp count");
+		assertEquals("<2026-11-12 Thu>", root.getTimestamps().get(0).getText(), "timestamp text");
+		assertEquals(1, root.getCheckboxes().size(), "root checkbox count");
+		assertEquals("checked", root.getCheckboxes().get(0).getState(), "root checkbox state");
+		assertEquals(1, root.getLinks().size(), "root link count");
+		assertEquals("https://example.com/", root.getLinks().get(0).getTarget(), "link target");
+		
+		OrgHeading child = document.getHeadings().get(1);
+		assertEquals(2, child.getLevel(), "child level");
+		assertEquals(1, child.getCheckboxes().size(), "child checkbox count");
+		assertEquals("unchecked", child.getCheckboxes().get(0).getState(), "child checkbox state");
+	}
+	
 	private static void testImportCommand() throws Exception {
 		Path dir = Files.createTempDirectory("togetl-test");
 		Path input = dir.resolve("data.tef");
@@ -750,6 +789,69 @@ public final class TestMain {
 				reportLines.get(0),
 				"report header");
 		check(reportLines.size() > 1, "report has rows");
+	}
+	
+	private static void testImportCommandOrgStructure() throws Exception {
+		Path dir = Files.createTempDirectory("togetl-org-test");
+		Path input = dir.resolve("log.org");
+		Path output = dir.resolve("log.togetltsv");
+		dir.toFile().deleteOnExit();
+		input.toFile().deleteOnExit();
+		output.toFile().deleteOnExit();
+		
+		String text = ""
+				+ "* Root\n"
+				+ ":PROPERTIES:\n"
+				+ ":CUSTOM_ID: print-log\n"
+				+ ":END:\n"
+				+ "SCHEDULED: <2026-11-12 Thu>\n"
+				+ "** Child\n"
+				+ "- [ ] queue item\n";
+		Files.write(input, text.getBytes(StandardCharsets.UTF_8));
+		
+		assertEquals(0, ImportCommand.run(new String[] {
+				"--input", input.toString(),
+				"--output", output.toString(),
+				"--dialect", Dialects.ORG_STRUCTURE
+		}), "org import exit code");
+		
+		List<Statement> read = TOGETLTSVReader.readAll(
+				new StringReader(new String(Files.readAllBytes(output), StandardCharsets.UTF_8)));
+		check(read.size() > 0, "org import produced statements");
+		
+		IRI orgHeadingPredicate = Vocab.TOGETL_ORG_HEADING_LINK;
+		IRI customIdPredicate = Vocab.TOGETL_CUSTOM_ID;
+		IRI outlineParentPredicate = Vocab.TOGETL_OUTLINE_PARENT;
+		IRI checkboxPredicate = Vocab.TOGETL_ORG_CHECKBOX_STATE;
+		
+		int headingLinkCount = 0;
+		String rootSubject = null;
+		for (Statement statement : read) {
+			if (statement.getPredicate().equals(orgHeadingPredicate)) {
+				headingLinkCount++;
+			}
+			if (statement.getPredicate().equals(customIdPredicate)
+					&& "data:,print-log".equals(statement.getObject().toString())) {
+				rootSubject = statement.getSubject().toString();
+			}
+		}
+		assertEquals(2, headingLinkCount, "org heading link count");
+		check(rootSubject != null, "found root heading by CUSTOM_ID");
+		
+		boolean hasOutlineParent = false;
+		boolean hasUncheckedCheckbox = false;
+		for (Statement statement : read) {
+			if (statement.getPredicate().equals(outlineParentPredicate)
+					&& statement.getObject().toString().equals(rootSubject)) {
+				hasOutlineParent = true;
+			}
+			if (statement.getPredicate().equals(checkboxPredicate)
+					&& "data:,unchecked".equals(statement.getObject().toString())) {
+				hasUncheckedCheckbox = true;
+			}
+		}
+		check(hasOutlineParent, "child heading links to parent");
+		check(hasUncheckedCheckbox, "checkbox state emitted");
 	}
 	
 	private static List<Statement> collect(
