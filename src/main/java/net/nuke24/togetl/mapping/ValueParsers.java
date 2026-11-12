@@ -15,6 +15,14 @@ import net.nuke24.togetl.vocab.Vocab;
  * Value parsers named by mapping tables.
  */
 public final class ValueParsers {
+	// In the future we will probably want to choose a prefix based on source and file type.
+	// The name should not really matter, it is more of a hint in case data from different domains
+	// ends up hosted in different places.  That said, suggested domains:
+	// - `music-files` for music-related things (including cover art, which are image files)
+	// - `picture-files` for images in general
+	// - `3dp-files` for STLs, G-code (but not renderings; those go in `picture-files`)
+	// - `wherever-files` as a default for anything else
+	private static final String FILE_GATEWAY_PREFIX = "http://wherever-files.nuke24.net/uri-res/raw/";
 	private static final Map<String, ValueParser> PARSERS = new LinkedHashMap<String, ValueParser>();
 	
 	static {
@@ -142,7 +150,7 @@ public final class ValueParsers {
 			FileRef ref = parseFileRef(context.getHeader().getValue());
 			Node object;
 			if (ref.uri != null && isAcceptableIri(ref.uri)) {
-				object = IRI.of(ref.uri);
+				object = IRI.of(canonicalFileResourceIri(ref));
 			} else {
 				object = context.blankNode("file", 0);
 			}
@@ -155,6 +163,22 @@ public final class ValueParsers {
 				context.report("invalid-iri");
 				context.emitRaw(context.getSubject(), Vocab.TOGETL_AS_WRITTEN, Literal.of(ref.uri));
 			}
+		}
+		
+		private static String canonicalFileResourceIri(FileRef ref) {
+			if (ref.uri == null) {
+				throw new IllegalArgumentException("FileRef URI must not be null");
+			}
+			return (
+				ref.name != null &&
+				!ref.name.isEmpty() &&
+				(ref.uri.startsWith("urn:bitprint:") || ref.uri.startsWith("urn:sha1:"))
+			) ? (
+				FILE_GATEWAY_PREFIX +
+				Identifiers.encodeKey(ref.uri) +
+				"/" +
+				Identifiers.encodeKey(ref.name)
+			) : ref.uri;
 		}
 	}
 	

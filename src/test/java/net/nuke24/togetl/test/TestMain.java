@@ -551,9 +551,10 @@ public final class TestMain {
 				"second tag");
 		check(has(statements, part, Vocab.TOGETL_MEMBER_OF,
 				Identifiers.referenceIri("p2")), "member-of resolves to a part IRI");
-		check(has(statements, part, Vocab.TOGETL_STL_FILE, "urn:bitprint:ABC"),
-				"stl file URI");
-		check(has(statements, "urn:bitprint:ABC", Vocab.TOGETL_FILENAME,
+		String stlResource = "http://3dp-files.nuke24.net/uri-res/raw/urn:bitprint:ABC/p1.stl";
+		check(has(statements, part, Vocab.TOGETL_STL_FILE, stlResource),
+				"stl file resource URL");
+		check(has(statements, stlResource, Vocab.TOGETL_FILENAME,
 				Literal.of("p1.stl").toString()), "stl file name");
 		check(has(statements, part, Vocab.TOGETL_OPENSCAD_RENDERING,
 				"http://example.com/p1.png"), "rendering reference");
