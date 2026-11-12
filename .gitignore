@@ -3,3 +3,4 @@ out/
 fixtures/upstream/
 lib/*.jar
 *.class
+.worktrees/

@@ -72,3 +72,9 @@ The Visual Studio Code 'devcontainer' runs on alpine and should have
 `JAVA_HOME` set to `/usr/lib/jvm/java-1.8-openjdk`, as specified by `devcontainer.json`.
 Sometimes VS Code agents find that it is not set correctly,
 in which case it can be worked-around with an `export JAVA_HOME=/usr/lib/jvm/java-1.8-openjdk` before the command.
+
+## Commit attribution
+
+When an agent makes a commit entirely on its own, set author identity per commit command as
+`CoPilot Fusion <copilot-fusion@users.noreply.github.com>` (e.g. using `git -c user.name=... -c user.email=... commit ...`),
+rather than changing repository or global git config.
