@@ -66,6 +66,8 @@ public final class Vocab {
 	public static final IRI TEF_ENTRY_TYPE = tef("entryType");
 	public static final IRI TEF_ENTRY_VALUE = tef("entryValue");
 	public static final IRI TEF_ENTRY_INDEX = tef("entryIndex");
+	// `tef:content` is [usually] free-form descriptive text for the entry's subject,
+	// not a second resource or a structured value that should be dereferenced.
 	public static final IRI TEF_CONTENT = tef("content");
 	public static final IRI TEF_HEADER_LINK = tef("header");
 	public static final IRI TEF_COMMENT_LINK = tef("comment");

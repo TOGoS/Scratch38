@@ -185,8 +185,12 @@ final class TEFEntry {
 }
 ```
 
-The raw form is preserved even when a dialect maps it, so reports and future syntax
-layers can use it.
+`tef:content` is the entry's free-form note or description,
+and in most cases can be mapped to the subject's `dc:description`,
+a prose summary of the object being described.
+
+The raw form is preserved even when a dialect maps it,
+so reports and future syntax layers can use it.
 
 ### 7.4 Tolerance
 
