@@ -81,3 +81,18 @@ request: Use tabs for indentation, with spaces only for alignment after tabs whe
 acceptance: Java files follow a single-tab indent rule consistently.
 notes: Enforced with .editorconfig and scripts/format-java-indent.sh; run the script when new Java files are added.
 
+=task S36CR-006
+status: pending
+
+I notice this in the output:
+
+togetl:document:53132fa64afac23f L36C1...L36C111 3dparts:part:p1060 3dparts:stlFile urn:bitprint:R7AGQHKFTNMWJQ352KZS4W4FSYH3KJFO.BGAOZL4H7UPECXJTRCLJXSYJDBY6LHLQY33NPTI
+togetl:document:53132fa64afac23f L36C1...L36C111 urn:bitprint:R7AGQHKFTNMWJQ352KZS4W4FSYH3KJFO.BGAOZL4H7UPECXJTRCLJXSYJDBY6LHLQY33NPTI general:filename data:,p1060-TGx7.stl
+togetl:document:53132fa64afac23f L36C1...L36C111 urn:bitprint:R7AGQHKFTNMWJQ352KZS4W4FSYH3KJFO.BGAOZL4H7UPECXJTRCLJXSYJDBY6LHLQY33NPTI rdf:type togetl:File
+
+urn:bitprint:R7AGQHKFTNMWJQ352KZS4W4FSYH3KJFO.BGAOZL4H7UPECXJTRCLJXSYJDBY6LHLQY33NPTI refers to a specific byte sequence ('blob').
+The byte sequence doesn't inherently have a name.
+Furthermore, multiple 'parts' could refer to the same blob by different names!
+
+So we need to separate the concept of the 'file' (which has a name)
+from the blob identified by the bitprint hash.
