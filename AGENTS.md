@@ -32,6 +32,9 @@ Tag-URI base convention:
 - `tag:nuke24.net,2026-11:togetl:` for project/infrastructure terms
 - `tag:nuke24.net,2026-11:general:`, `tag:nuke24.net,2026-11:3dparts:`, etc. for domain/shared terms
 
+The entire `tag:nuke24.net,2026-11:*` vocabulary namespace is, for now, project-local and not yet externally standardized.
+No outside consumers are known to depend on it yet, so vocabulary renames are acceptable as long as this note remains.
+
 ## Important modeling decisions (do not regress)
 
 - Predicate names should describe conceptual relationships, not TEF representation details
