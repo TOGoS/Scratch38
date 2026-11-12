@@ -101,18 +101,17 @@ public final class Vocab {
 	public static final IRI TOGETL_STL_FILE = data("stlFile");
 	public static final IRI TOGETL_CSG_FILE = data("csgFile");
 	public static final IRI TOGETL_FILE_LINK = general("file");
-	public static final IRI TOGETL_IMAGE_REF = general("imageRef");
-	public static final IRI TOGETL_PHOTO_REF = general("photoRef");
-	public static final IRI TOGETL_DOC_REF = general("docRef");
-	public static final IRI TOGETL_DEMO_REF = general("demoRef");
-	public static final IRI TOGETL_OPENSCAD_RENDERING_REF = data("openscadRenderingRef");
+	public static final IRI TOGETL_IMAGE = general("image");
+	public static final IRI TOGETL_PHOTO = general("photo");
+	public static final IRI TOGETL_DOC = general("doc");
+	public static final IRI TOGETL_DEMO = general("demo");
 	public static final IRI TOGETL_OPENSCAD_RENDERING = data("openscadRendering");
-	public static final IRI TOGETL_OPENSCAD_DESIGN_REF = data("openscadDesignRef");
+	public static final IRI TOGETL_OPENSCAD_DESIGN = data("openscadDesign");
 	public static final IRI TOGETL_MIRROR = general("mirror");
 	public static final IRI TOGETL_ALIAS = general("alias");
 	public static final IRI TOGETL_CREATED = general("created");
 	public static final IRI TOGETL_SOURCE = general("source");
-	public static final IRI TOGETL_PROJECT_HOMEPAGE_URL = general("projectHomepageUrl");
+	public static final IRI TOGETL_PROJECT_HOMEPAGE = general("projectHomepage");
 	public static final IRI TOGETL_SUBFORMAT_OF = general("subformatOf");
 	public static final IRI TOGETL_CONTENT_TYPE = togetl("contentType");
 	

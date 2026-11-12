@@ -20,9 +20,9 @@ field	*	name	general:name	plain	1
 field	*	short-description	general:shortDescription	plain	1
 field	*	short-descripiton	general:shortDescription	plain	1	asWritten=short-descripiton
 field	*	title	general:title	plain	1
-field	*	doc-ref	general:docRef	iri	*
-field	*	demo-ref	general:demoRef	iri	*
-field	*	project-homepage-url	general:projectHomepageUrl	iri	1
+field	*	doc-ref	general:doc	iri	*
+field	*	demo-ref	general:demo	iri	*
+field	*	project-homepage-url	general:projectHomepage	iri	1
 field	*	created	general:created	plain	1
 field	*	alias	general:alias	plain	*
 field	*	subformat-of	general:subformatOf	iri	1
@@ -38,11 +38,11 @@ field	*	sytl-file	3dparts:stlFile	fileRef	*	asWritten=sytl-file
 field	*	stl-ref	3dparts:stlFile	fileRef	*	asWritten=stl-ref
 field	*	csg-file	3dparts:csgFile	fileRef	*
 field	*	file	general:file	fileRef	*
-field	*	image-ref	general:imageRef	iri	*
-field	*	photo-ref	general:photoRef	iri	*
-field	*	openscad-rendering-ref	3dparts:openscadRenderingRef	fileRef	*
-field	*	oopenscad-rendering-ref	3dparts:openscadRenderingRef	fileRef	*	asWritten=oopenscad-rendering-ref
+field	*	image-ref	general:image	iri	*
+field	*	photo-ref	general:photo	iri	*
+field	*	openscad-rendering-ref	3dparts:openscadRendering	fileRef	*
+field	*	oopenscad-rendering-ref	3dparts:openscadRendering	fileRef	*	asWritten=oopenscad-rendering-ref
 field	*	openscad-rendering	3dparts:openscadRendering	iri	*
-field	*	openscad-design-ref	3dparts:openscadDesignRef	iri	*
+field	*	openscad-design-ref	3dparts:openscadDesign	iri	*
 field	*	mirror	general:mirror	iri	*
 field	*	source	general:source	iri	*

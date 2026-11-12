@@ -555,7 +555,7 @@ public final class TestMain {
 				"stl file URI");
 		check(has(statements, "urn:bitprint:ABC", Vocab.TOGETL_FILENAME,
 				Literal.of("p1.stl").toString()), "stl file name");
-		check(has(statements, part, Vocab.TOGETL_OPENSCAD_RENDERING_REF,
+		check(has(statements, part, Vocab.TOGETL_OPENSCAD_RENDERING,
 				"http://example.com/p1.png"), "rendering reference");
 		check(has(statements, part, Vocab.RDFS_COMMENT,
 				Literal.of("A part.\n").toString()), "content becomes a comment");
@@ -632,7 +632,7 @@ public final class TestMain {
 		
 		check(has(statements, "http://example.com/ns/", Vocab.RDF_TYPE,
 				Vocab.TOGETL_NAMESPACE.toString()), "namespace type and trimmed subject");
-		check(has(statements, "http://example.com/ns/", Vocab.TOGETL_PROJECT_HOMEPAGE_URL,
+		check(has(statements, "http://example.com/ns/", Vocab.TOGETL_PROJECT_HOMEPAGE,
 				"https://example.com/"), "project homepage");
 		check(has(statements, "http://example.com/ns/Thing", Vocab.RDF_TYPE,
 				Vocab.RDFS_CLASS.toString()), "type is a class");

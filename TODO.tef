@@ -42,7 +42,7 @@ acceptance: The design clearly distinguishes project vocabulary terms from tempo
 Implementations reserve `tag:nuke24.net,2026-11:togetl:` for ontology and infrastructure terms, and `tag:nuke24.net,2026-11:3dparts:` for part/data-derived resources such as STL files and renderings.
 
 =task S36CR-003
-status: pending
+status: done
 priority: high
 kind: design
 scope: PLAN.md; mapping vocabulary

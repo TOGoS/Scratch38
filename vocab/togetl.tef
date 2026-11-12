@@ -133,31 +133,23 @@ short-description: A CSG model file.
 =attribute tag:nuke24.net,2026-11:general:file
 short-description: A file associated with a resource.
 
-=attribute tag:nuke24.net,2026-11:general:imageRef
-# todo: remove 'Ref' from the term name
-short-description: An image reference.
+=attribute tag:nuke24.net,2026-11:general:image
+short-description: An image associated with a resource.
 
-=attribute tag:nuke24.net,2026-11:general:photoRef
-# todo: remove 'Ref' from the term name
-short-description: A photograph reference.
+=attribute tag:nuke24.net,2026-11:general:photo
+short-description: A photograph associated with a resource.
 
-=attribute tag:nuke24.net,2026-11:general:docRef
-# todo: remove 'Ref' from the term name, rename to 'documentedBy'
-short-description: A documentation reference.
+=attribute tag:nuke24.net,2026-11:general:doc
+short-description: A documentation resource associated with a resource.
 
-=attribute tag:nuke24.net,2026-11:general:demoRef
-# todo: remove 'Ref' from the term name
-short-description: A demonstration reference.
-
-=attribute tag:nuke24.net,2026-11:3dparts:openscadRenderingRef
-# todo: remove 'Ref' from the term name
-short-description: A rendering produced from an OpenSCAD model.
+=attribute tag:nuke24.net,2026-11:general:demo
+short-description: A demonstration resource associated with a resource.
 
 =attribute tag:nuke24.net,2026-11:3dparts:openscadRendering
-short-description: An OpenSCAD rendering reference.
+short-description: A rendering produced from an OpenSCAD model.
 
-=attribute tag:nuke24.net,2026-11:3dparts:openscadDesignRef
-short-description: An OpenSCAD design source reference.
+=attribute tag:nuke24.net,2026-11:3dparts:openscadDesign
+short-description: An OpenSCAD design source.
 
 =attribute tag:nuke24.net,2026-11:general:mirror
 short-description: A mirror of a resource.
@@ -171,8 +163,7 @@ short-description: A creation date or date description.
 =attribute tag:nuke24.net,2026-11:general:source
 short-description: A source reference for a resource.
 
-=attribute tag:nuke24.net,2026-11:general:projectHomepageUrl
-# todo: remove 'Ref' from the term name; the targetted resource *is* the homepage
+=attribute tag:nuke24.net,2026-11:general:projectHomepage
 short-description: The home page of a project.
 
 =attribute tag:nuke24.net,2026-11:general:subformatOf

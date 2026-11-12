@@ -18,9 +18,9 @@ field	*	name	general:name	plain	1
 field	*	short-description	general:shortDescription	plain	1
 field	*	short-descripiton	general:shortDescription	plain	1	asWritten=short-descripiton
 field	*	title	general:title	plain	1
-field	*	doc-ref	general:docRef	iri	*
-field	*	demo-ref	general:demoRef	iri	*
-field	*	project-homepage-url	general:projectHomepageUrl	iri	1
+field	*	doc-ref	general:doc	iri	*
+field	*	demo-ref	general:demo	iri	*
+field	*	project-homepage-url	general:projectHomepage	iri	1
 field	*	alias	general:alias	iri	*
 field	*	subformat-of	general:subformatOf	iri	1
 field	*	tef:content-type	togetl:contentType	plain	1
