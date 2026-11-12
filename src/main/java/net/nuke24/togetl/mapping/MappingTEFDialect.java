@@ -64,7 +64,6 @@ public final class MappingTEFDialect implements TEFDialect {
 		
 		String documentIri = source.getIri();
 		String documentHash = Identifiers.documentHash(documentIri);
-		IRI doc = IRI.of(documentIri);
 		ConflictTracker conflicts = new ConflictTracker();
 		CardinalityEmitter emitter = new CardinalityEmitter(out, report, conflicts);
 		
@@ -95,8 +94,6 @@ public final class MappingTEFDialect implements TEFDialect {
 				DialectSupport.emit(source, out, entryLocation, subject,
 						Vocab.RDF_TYPE, IRI.of(entryRule.getTypeIri()));
 			}
-			DialectSupport.emit(source, out, entryLocation, subject,
-					Vocab.TOGETL_DOCUMENT_LINK, doc);
 			if (entryRule.getAsWritten() != null) {
 				report.record("as-written-entry", entry.getType(), "", entryLocation);
 				DialectSupport.emit(source, out, entryLocation, subject,

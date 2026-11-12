@@ -551,6 +551,8 @@ public final class TestMain {
 				"second tag");
 		check(has(statements, part, Vocab.TOGETL_MEMBER_OF,
 				Identifiers.referenceIri("p2")), "member-of resolves to a part IRI");
+		check(!has(statements, part, Vocab.TOGETL_DOCUMENT_LINK, source.getIri()),
+				"mapped part should not be linked to source TEF document");
 		String stlResource = "http://wherever-files.nuke24.net/uri-res/raw/urn:bitprint:ABC/p1.stl";
 		check(has(statements, part, Vocab.TOGETL_STL_FILE, stlResource),
 				"stl file resource URL");
