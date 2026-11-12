@@ -1,0 +1,82 @@
+#format http://ns.nuke24.net/TOGETL/TEF/Formats/SyntaxV0.3
+
+This is a request list, kept as a TEF file as an own-dogfood-eating exercise.
+
+Design decisions live in PLAN.md; this file is the execution backlog.
+
+Keep this file concise, actionable, and acceptance-oriented.
+
+The tef:content of each `=task` is notes.  You might think of it as being the `dc:description`.
+
+As with many TEF files, the preamble before the first `=`-entry
+contains information about the file as a whole.  But now the preamble
+is explaining about the pre-amble.  Let's move on.
+
+
+
+=task S36CR-001
+status: pending
+priority: high
+kind: design
+scope: PLAN.md; Java source files
+title: Java naming conventions
+request: Use UpperCamelCase for type names and lowerCamelCase for variables/methods; apply the convention consistently across the Java codebase.
+acceptance: All active identifiers follow the project's actual Java naming rule, without ad hoc exceptions.
+
+The original wording was confusing; this should be captured as an explicit convention rather than left implicit.
+
+- For UpperCamelCase, upper-case the first letter of each word.
+  If a word is ALLUPPERCASE, it stays that way.
+- For lowerCamelCase, lower-case everything, *then* upper-case the first letter
+  of all but the first word.  'XYZ TLA factory' becomes `xyzTlaFactory`
+
+=task S36CR-002
+status: pending
+priority: high
+kind: design
+scope: PLAN.md; vocabulary and identifiers
+title: Namespace split for invented terms vs parsed data
+request: Use tag:nuke24.net,2026-11:togetl: for newly invented vocabulary terms, and keep raw data identifiers separate from that namespace.
+acceptance: The design clearly distinguishes semantic vocabulary terms from temporary/derived data identifiers.
+
+Prefer a separate temporary namespace such as `tag:nuke24.net,2026-11:xyz:` or `tag:nuke24.net,2026-11:3dprinting:` for data-level IDs until the OID scheme is finalized.
+
+=task S36CR-003
+status: pending
+priority: high
+kind: design
+scope: PLAN.md; mapping vocabulary
+title: Remove Uri/Ref from term names
+request: Do not encode literal-vs-URI distinction into term names; model it as the value structure instead.
+acceptance: Term names describe concepts, not representation details; RDF mappings reflect the actual literal/IRI distinction.
+
+Don't include "Uri" or "Ref" in term names, since, when translated to RDF,
+whether the value is a literal or a URI reference is part of the value.
+e.g. "doc-ref: http://foo" should probably be mapped to "documentedBy <http://foo>" (in turtle-ese).
+i.e. the resource referenced is not itself a URI!
+
+Or, put another way:
+TEF has no way of indicating how the value part of a header should be interpreted.
+This is why some headers are named like `doc-ref` or `somesuch-url`;
+the value is a [URI] reference.  If we interpret the value as a reference
+*and* keep the "ref" part of the name, we're kind of implying the thing
+needs to be double-deferenced, which is wrong.
+
+=task S36CR-004
+status: pending
+priority: medium
+kind: design
+scope: PLAN.md; TEF model and mappings
+title: Clarify tef:content semantics
+request: Treat entry `tef:content` as notes/description of the object being described
+acceptance: The terminology of the output makes clear the relationship between the subject and the content text
+
+=task S36CR-005
+status: pending
+priority: low
+kind: style
+scope: Java source files
+title: Java indentation conventions
+request: Use tabs for indentation, with spaces only for alignment after tabs when needed.
+acceptance: Java files follow a single-tab indent rule consistently.
+

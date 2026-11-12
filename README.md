@@ -5,6 +5,8 @@ statement streams, loading them into SQLite, and browsing the result read-only.
 
 See [PLAN.md](PLAN.md) for the full design.
 
+See [TODO.tef](TODO.tef) for a queue of additional change requests.
+
 ## Build
 
 ```sh
