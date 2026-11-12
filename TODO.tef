@@ -98,7 +98,7 @@ So we need to separate the concept of the 'file' (which has a name)
 from the blob identified by the bitprint hash.
 
 =task S36CR-007
-status: pending
+status/2026-11-12T1405: done
 
 Sometimes agents find that JAVA_HOME is not set in their shell,
 despite `devcontainer.json` explicity setting it.
@@ -110,6 +110,21 @@ It probably horsed with some settings in order to try to make things work.
 Figure out why this started happening and fix the root cause
 so I can stop telling them to explicitly `export` it in their commands.
 Then remove the note in AGENTS.md.
+
+-----
+
+Resolution:
+
+Problem was that the devcontainer (which is a Docker container) had gotten screwed up.
+The agent that I had accidentally run in the wrong context (because VS Code was encouraging me to use the 'Agents'
+window, which is subtly different from the chats in the usual workspace) had
+added a bad `PATH=${somethingInvalid}:$JAVA_HOME/bin` to something somewhere
+as a container-local change to the environment.  Or something like that.
+
+Rebuilding the container _without cache_ solved the problem,
+though now I've lost my agent sessions.  Oh well; I can have one read AGENTS.md,
+fork that, and be off to the races again.
+
 
 =task S36CR-008
 status: done
