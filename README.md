@@ -1,4 +1,4 @@
-# TOGETL ETL
+# TOGETL (TOGoS's Extract, Transform, Load system)
 
 Tools for converting TEF, Org, and music source documents into TOGETLTSV 202601
 statement streams, loading them into SQLite, and browsing the result read-only.
