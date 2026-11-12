@@ -1,177 +1,65 @@
 #format http://ns.nuke24.net/TEF/Formats/SyntaxV0.3
-# TOGETL project vocabulary.
 
 =namespace tag:nuke24.net,2026-11:togetl:
-short-description: Terms minted for the TOGETL ETL project.
+short-description: terms minted to describe the machinery of TOGETL itself
 
 =type tag:nuke24.net,2026-11:togetl:Document
-short-description: A source document that was read by an importer.
+short-description: a source document that was read by an importer
 
 =type tag:nuke24.net,2026-11:togetl:ParseIssue
-short-description: A problem encountered while reading a source document.
+short-description: a problem encountered while reading a source document
 
 =type tag:nuke24.net,2026-11:togetl:File
-short-description: A file referenced by a source document.
-
-=namespace tag:nuke24.net,2026-11:wsitem:
-short-description: terms about physical objects
-
-=namespace tag:nuke24.net,2026-11:3dparts:
-short-description: terms that are specific to 3D-printable shapes
-
-=namespace tag:nuke24.net,2026-11:general:
-short-description: general terms, possibly to be replaced by something from dublin core as we get things sorted out
-
-=type tag:nuke24.net,2026-11:3dparts:Part
-short-description: A 3D-printable part.
-
-=type tag:nuke24.net,2026-11:3dparts:PartCategory
-short-description: A category of parts.
-
-=type tag:nuke24.net,2026-11:3dparts:PartSet
-short-description: A named set of parts.
-
-=type tag:nuke24.net,2026-11:general:Category
-short-description: A general category record.
-
-=type tag:nuke24.net,2026-11:general:Standard
-short-description: A standard or specification record.
+short-description: a file referenced by a source document
 
 =type tag:nuke24.net,2026-11:togetl:Narration
-short-description: A narrative note attached to project data.
-
-=type tag:nuke24.net,2026-11:general:Format
-short-description: A data format.
+short-description: a narrative note attached to project data
 
 =type tag:nuke24.net,2026-11:togetl:Namespace
-short-description: An RDF namespace or ontology.
-
-=type tag:nuke24.net,2026-11:general:ProjectBase
-short-description: A project base record.
+short-description: an RDF namespace or ontology
 
 =attribute tag:nuke24.net,2026-11:togetl:sourceUrl
-short-description: The canonical URL of a source document.
-
-=attribute tag:nuke24.net,2026-11:general:sha256
-short-description: SHA-256 of the resource, which must be or have a canonical representation as a byte sequence
-
-=attribute tag:nuke24.net,2026-11:general:byteLength
-short-description: length of the resource, in bytes
+short-description: the canonical URL of a source document
 
 =attribute tag:nuke24.net,2026-11:togetl:format
-short-description: The detected or declared source format.
+short-description: the detected or declared source format
 
 =attribute tag:nuke24.net,2026-11:togetl:parserVersion
-short-description: Version of the parser that read the document.
+short-description: version of the parser that read the document
 
 =attribute tag:nuke24.net,2026-11:togetl:hasBom
-short-description: Whether the source began with a UTF-8 byte order mark.
+short-description: whether the source began with a UTF-8 byte order mark
 
 =attribute tag:nuke24.net,2026-11:togetl:document
-short-description: Links a derived resource to its source document.
+short-description: links a derived resource to its source document
 
 =attribute tag:nuke24.net,2026-11:togetl:parseIssue
-short-description: Links a document to one of its parse issues.
+short-description: links a document to one of its parse issues
 
 =attribute tag:nuke24.net,2026-11:togetl:severity
-short-description: Severity of a parse issue.
+short-description: severity of a parse issue
 
 =attribute tag:nuke24.net,2026-11:togetl:code
-short-description: Machine-readable code for a parse issue.
+short-description: machine-readable code for a parse issue
 
 =attribute tag:nuke24.net,2026-11:togetl:message
-short-description: Human-readable parse issue message.
+short-description: human-readable parse issue message
 
 =attribute tag:nuke24.net,2026-11:togetl:raw
-short-description: Raw source text associated with a parse issue.
+short-description: raw source text associated with a parse issue
 
 =attribute tag:nuke24.net,2026-11:togetl:unmappedEntry
-short-description: An entry type that the selected dialect did not map.
+short-description: an entry type that the selected dialect did not map
 
 =attribute tag:nuke24.net,2026-11:togetl:unmappedField
-short-description: A header that the selected dialect did not map.
+short-description: a header that the selected dialect did not map
 
 =attribute tag:nuke24.net,2026-11:togetl:asWritten
-short-description: The original spelling or value before normalization.
-
-=attribute tag:nuke24.net,2026-11:general:filename
-short-description: The file name recorded alongside a file reference.
-
-=attribute tag:nuke24.net,2026-11:general:name
-short-description: A short name.
-
-=attribute tag:nuke24.net,2026-11:general:title
-short-description: A human-readable title.
-
-=attribute tag:nuke24.net,2026-11:general:shortDescription
-short-description: A one-line description.
-
-=attribute tag:nuke24.net,2026-11:general:tag
-short-description: A tag or label.
-
-=attribute tag:nuke24.net,2026-11:general:keyword
-short-description: A keyword.
-
-=attribute tag:nuke24.net,2026-11:general:memberOf
-short-description: A set or category that a resource belongs to.
-
-=attribute tag:nuke24.net,2026-11:general:member
-short-description: A member of a set.
-
-=attribute tag:nuke24.net,2026-11:general:seeAlso
-short-description: A related resource.
-
-=attribute tag:nuke24.net,2026-11:general:obsoletedBy
-short-description: A resource that replaces this one.
-
-=attribute tag:nuke24.net,2026-11:3dparts:stlFile
-short-description: An STL model file.
-
-=attribute tag:nuke24.net,2026-11:3dparts:csgFile
-short-description: A CSG model file.
-
-=attribute tag:nuke24.net,2026-11:general:file
-short-description: A file associated with a resource.
-
-=attribute tag:nuke24.net,2026-11:general:image
-short-description: An image associated with a resource.
-
-=attribute tag:nuke24.net,2026-11:general:photo
-short-description: A photograph associated with a resource.
-
-=attribute tag:nuke24.net,2026-11:general:doc
-short-description: A documentation resource associated with a resource.
-
-=attribute tag:nuke24.net,2026-11:general:demo
-short-description: A demonstration resource associated with a resource.
-
-=attribute tag:nuke24.net,2026-11:3dparts:openscadRendering
-short-description: A rendering produced from an OpenSCAD model.
-
-=attribute tag:nuke24.net,2026-11:3dparts:openscadDesign
-short-description: An OpenSCAD design source.
-
-=attribute tag:nuke24.net,2026-11:general:mirror
-short-description: A mirror of a resource.
-
-=attribute tag:nuke24.net,2026-11:general:alias
-short-description: An alternative identifier or location.
-
-=attribute tag:nuke24.net,2026-11:general:created
-short-description: A creation date or date description.
-
-=attribute tag:nuke24.net,2026-11:general:source
-short-description: A source reference for a resource.
-
-=attribute tag:nuke24.net,2026-11:general:projectHomepage
-short-description: The home page of a project.
-
-=attribute tag:nuke24.net,2026-11:general:subformatOf
-short-description: A format that this format is a subformat of.
+short-description: the original spelling or value before normalization
 
 =attribute tag:nuke24.net,2026-11:togetl:contentType
 # TODO: I suspect this should really be 'tef:contentType',
 # which actually identifies _the format of the description of the resource_.
 # e.g. a piece of wood does not have a content type, but it
 # might be described by a text-based resource that does.
-short-description: A content type declaration.
+short-description: a content type declaration

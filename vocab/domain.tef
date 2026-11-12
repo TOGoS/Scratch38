@@ -1,0 +1,115 @@
+#format http://ns.nuke24.net/TEF/Formats/SyntaxV0.3
+
+=namespace tag:nuke24.net,2026-11:general:
+short-description: general terms, possibly to be replaced by something from dublin core as we get things sorted out
+
+=type tag:nuke24.net,2026-11:general:Category
+short-description: a general category record
+
+=type tag:nuke24.net,2026-11:general:Standard
+short-description: a standard or specification record
+
+=type tag:nuke24.net,2026-11:general:Format
+short-description: a data format
+
+=type tag:nuke24.net,2026-11:general:ProjectBase
+short-description: a project base record
+
+=attribute tag:nuke24.net,2026-11:general:sha256
+short-description: SHA-256 of the resource, which must be or have a canonical representation as a byte sequence
+
+=attribute tag:nuke24.net,2026-11:general:byteLength
+short-description: length of the resource, in bytes
+
+=attribute tag:nuke24.net,2026-11:general:filename
+short-description: the file name recorded alongside a file reference
+
+=attribute tag:nuke24.net,2026-11:general:name
+short-description: a short name
+
+=attribute tag:nuke24.net,2026-11:general:title
+short-description: a human-readable title
+
+=attribute tag:nuke24.net,2026-11:general:shortDescription
+short-description: a one-line description
+
+=attribute tag:nuke24.net,2026-11:general:tag
+short-description: a tag or label
+
+=attribute tag:nuke24.net,2026-11:general:keyword
+short-description: a keyword
+
+=attribute tag:nuke24.net,2026-11:general:memberOf
+short-description: a set or category that a resource belongs to
+
+=attribute tag:nuke24.net,2026-11:general:member
+short-description: a member of a set
+
+=attribute tag:nuke24.net,2026-11:general:seeAlso
+short-description: a related resource
+
+=attribute tag:nuke24.net,2026-11:general:obsoletedBy
+short-description: a resource that replaces this one
+
+=attribute tag:nuke24.net,2026-11:general:file
+short-description: a file associated with a resource
+
+=attribute tag:nuke24.net,2026-11:general:image
+short-description: an image associated with a resource
+
+=attribute tag:nuke24.net,2026-11:general:photo
+short-description: a photograph associated with a resource
+
+=attribute tag:nuke24.net,2026-11:general:doc
+# TODO: Rename to isDocumentedBy
+short-description: a documentation resource associated with a resource
+
+=attribute tag:nuke24.net,2026-11:general:demo
+short-description: a demonstration resource associated with a resource
+
+=attribute tag:nuke24.net,2026-11:general:mirror
+short-description: a mirror of a resource
+
+=attribute tag:nuke24.net,2026-11:general:alias
+short-description: an alternative identifier or location
+
+=attribute tag:nuke24.net,2026-11:general:created
+short-description: a creation date or date description
+
+=attribute tag:nuke24.net,2026-11:general:source
+short-description: a source reference for a resource
+
+=attribute tag:nuke24.net,2026-11:general:projectHomepage
+short-description: the home page of a project
+
+=attribute tag:nuke24.net,2026-11:general:subformatOf
+short-description: a format of which this format is a subformat
+
+
+=namespace tag:nuke24.net,2026-11:3dparts:
+short-description: terms that are specific to 3D-printable shapes ('parts')
+
+=type tag:nuke24.net,2026-11:3dparts:Part
+short-description: a 3D-printable part
+
+=type tag:nuke24.net,2026-11:3dparts:PartCategory
+short-description: a category of parts
+
+=type tag:nuke24.net,2026-11:3dparts:PartSet
+short-description: a named set of parts
+
+=attribute tag:nuke24.net,2026-11:3dparts:stlFile
+short-description: an STL model file of the part
+
+=attribute tag:nuke24.net,2026-11:3dparts:csgFile
+short-description: a CSG model file representing the part
+
+=attribute tag:nuke24.net,2026-11:3dparts:openscadRendering
+short-description: a rendering of the part produced from an OpenSCAD model
+
+=attribute tag:nuke24.net,2026-11:3dparts:openscadDesign
+short-description: the OpenSCAD design source used to generate the part
+
+
+=namespace tag:nuke24.net,2026-11:wsitem:
+short-description: terms about physical objects

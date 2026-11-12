@@ -318,6 +318,7 @@ No silent last-write-wins.
 Vocabulary sources:
 
 - `vocab/togetl.tef` — terms minted for this project
+- `vocab/domain.tef` — non-`togetl` domain/shared terms (`general`, `3dparts`, `wsitem`)
 - `vocab/tef-dialect.tef` — TEF entry/header terms
 - `namespaces.tef` — shared namespaces
 - ContentCouch and Dublin Core terms used by mappings
