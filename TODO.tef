@@ -82,7 +82,7 @@ acceptance: Java files follow a single-tab indent rule consistently.
 notes: Enforced with .editorconfig and scripts/format-java-indent.sh; run the script when new Java files are added.
 
 =task S36CR-006
-status: pending
+status: done
 
 I notice this in the output:
 
