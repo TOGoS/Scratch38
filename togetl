@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+
+TOGETL_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+export TOGETL_ROOT
+. "$TOGETL_ROOT/scripts/java-env.sh"
+
+exec "$JAVA" -cp "$TOGETL_ROOT/out/classes:$TOGETL_ROOT/lib/*" \
+    net.nuke24.togetl.cli.Main "$@"

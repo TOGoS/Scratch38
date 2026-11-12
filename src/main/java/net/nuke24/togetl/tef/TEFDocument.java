@@ -1,0 +1,73 @@
+package net.nuke24.togetl.tef;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * The result of reading one TEF document.
+ */
+public final class TEFDocument {
+    private final String sourceIri;
+    private final long byteLength;
+    private final boolean bom;
+    private final List<TEFComment> comments;
+    private final List<TEFDirective> directives;
+    private final List<TEFEntry> entries;
+    private final List<TEFIssue> issues;
+
+    public TEFDocument(
+            String sourceIri,
+            long byteLength,
+            boolean bom,
+            List<TEFComment> comments,
+            List<TEFDirective> directives,
+            List<TEFEntry> entries,
+            List<TEFIssue> issues
+    ) {
+        this.sourceIri = sourceIri;
+        this.byteLength = byteLength;
+        this.bom = bom;
+        this.comments = Collections.unmodifiableList(new ArrayList<TEFComment>(comments));
+        this.directives = Collections.unmodifiableList(new ArrayList<TEFDirective>(directives));
+        this.entries = Collections.unmodifiableList(new ArrayList<TEFEntry>(entries));
+        this.issues = Collections.unmodifiableList(new ArrayList<TEFIssue>(issues));
+    }
+
+    public String getSourceIri() {
+        return sourceIri;
+    }
+
+    public long getByteLength() {
+        return byteLength;
+    }
+
+    public boolean hasBom() {
+        return bom;
+    }
+
+    public List<TEFComment> getComments() {
+        return comments;
+    }
+
+    public List<TEFDirective> getDirectives() {
+        return directives;
+    }
+
+    public List<TEFEntry> getEntries() {
+        return entries;
+    }
+
+    public List<TEFIssue> getIssues() {
+        return issues;
+    }
+
+    public TEFDirective getDirective(String name) {
+        for (TEFDirective directive : directives) {
+            if (directive.getName().equals(name)) {
+                return directive;
+            }
+        }
+        return null;
+    }
+}

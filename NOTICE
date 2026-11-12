@@ -1,0 +1,42 @@
+This project vendors a modified copy of the TEF parser from TScript34.
+
+Upstream: https://github.com/TOGoS/TScript34
+Source tree: subtrees/p0014/master and subtrees/p0010/master
+Files derived from upstream:
+
+  src/main/java/net/nuke24/togetl/tef/TEFParser.java
+  src/main/java/net/nuke24/togetl/tef/LLChunks.java
+  src/main/java/net/nuke24/togetl/tef/LLChunkMerger.java
+  src/main/java/net/nuke24/togetl/tef/util/ArrayUtil.java
+  src/main/java/net/nuke24/togetl/tef/util/DucerUtil.java
+  src/main/java/net/nuke24/togetl/ducer/Function.java
+  src/main/java/net/nuke24/togetl/ducer/DucerChunk.java
+  src/main/java/net/nuke24/togetl/ducer/DucerState2.java
+
+The files have been modified for this project: package names were changed,
+source spans, comments, and directives were added, and recovery behavior was
+extended. The upstream license follows.
+
+---
+
+MIT License
+
+Copyright (c) 2023 Dan Stevens
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
