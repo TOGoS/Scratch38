@@ -1,56 +1,56 @@
 #format http://ns.nuke24.net/TEF/Formats/SyntaxV0.3
 # Terms describing the TEF syntax layer itself.
 
-=namespace http://ns.nuke24.net/TOGETL/TEF/
+=namespace tag:nuke24.net,2026-11:togetl:tef:
 short-description: Syntactic-level terms for TEF entries.
 
-=type http://ns.nuke24.net/TOGETL/TEF/Entry
+=type tag:nuke24.net,2026-11:togetl:tef:Entry
 short-description: A TEF entry.
 
-=type http://ns.nuke24.net/TOGETL/TEF/Header
+=type tag:nuke24.net,2026-11:togetl:tef:Header
 short-description: A header line within a TEF entry.
 
-=type http://ns.nuke24.net/TOGETL/TEF/Comment
+=type tag:nuke24.net,2026-11:togetl:tef:Comment
 short-description: A comment line within a TEF document.
 
-=type http://ns.nuke24.net/TOGETL/TEF/Directive
+=type tag:nuke24.net,2026-11:togetl:tef:Directive
 short-description: A sharp-format directive within a TEF document.
 
-=attribute http://ns.nuke24.net/TOGETL/TEF/entryType
+=attribute tag:nuke24.net,2026-11:togetl:tef:entryType
 short-description: The type token of a TEF entry.
 
-=attribute http://ns.nuke24.net/TOGETL/TEF/entryValue
+=attribute tag:nuke24.net,2026-11:togetl:tef:entryValue
 short-description: The value token of a TEF entry.
 
-=attribute http://ns.nuke24.net/TOGETL/TEF/entryIndex
+=attribute tag:nuke24.net,2026-11:togetl:tef:entryIndex
 short-description: The zero-based ordinal of a TEF entry in its document.
 
-=attribute http://ns.nuke24.net/TOGETL/TEF/content
+=attribute tag:nuke24.net,2026-11:togetl:tef:content
 short-description: The content block of a TEF entry.
 
-=attribute http://ns.nuke24.net/TOGETL/TEF/header
+=attribute tag:nuke24.net,2026-11:togetl:tef:header
 short-description: Links an entry to one of its header lines.
 
-=attribute http://ns.nuke24.net/TOGETL/TEF/comment
+=attribute tag:nuke24.net,2026-11:togetl:tef:comment
 short-description: Links a resource to one of its comment lines.
 
-=attribute http://ns.nuke24.net/TOGETL/TEF/directive
+=attribute tag:nuke24.net,2026-11:togetl:tef:directive
 short-description: Links a resource to one of its directives.
 
-=attribute http://ns.nuke24.net/TOGETL/TEF/key
+=attribute tag:nuke24.net,2026-11:togetl:tef:key
 short-description: The key of a TEF header.
 
-=attribute http://ns.nuke24.net/TOGETL/TEF/value
+=attribute tag:nuke24.net,2026-11:togetl:tef:value
 short-description: The value of a TEF header or directive.
 
-=attribute http://ns.nuke24.net/TOGETL/TEF/index
+=attribute tag:nuke24.net,2026-11:togetl:tef:index
 short-description: The zero-based ordinal of a header within an entry.
 
-=attribute http://ns.nuke24.net/TOGETL/TEF/text
+=attribute tag:nuke24.net,2026-11:togetl:tef:text
 short-description: The text of a TEF comment.
 
-=attribute http://ns.nuke24.net/TOGETL/TEF/name
+=attribute tag:nuke24.net,2026-11:togetl:tef:name
 short-description: The name of a TEF directive.
 
-=attribute http://ns.nuke24.net/TOGETL/TEF/raw
+=attribute tag:nuke24.net,2026-11:togetl:tef:raw
 short-description: The raw source text of a TEF directive.

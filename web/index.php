@@ -290,7 +290,7 @@ function page_vocab()
         unset($used[$term['iri']]);
     }
     foreach (array_keys($used) as $iri) {
-        $status = strpos($iri, 'http://ns.nuke24.net/TOGETL/') === 0
+        $status = strpos($iri, 'tag:nuke24.net,2026-11:togetl:') === 0
             ? 'proposed' : 'undefined';
         $rows[] = array(
             'term' => $iri,
@@ -386,7 +386,7 @@ function page_part()
         if ($id === '') {
             throw new InvalidArgumentException('Missing part id');
         }
-        $iri = 'tag:nuke24.net,2026-11:togetl:part:' . $id;
+        $iri = 'tag:nuke24.net,2026-11:3dparts:part:' . $id;
     }
 
     $part = fetch_one('SELECT * FROM part WHERE iri = ?', array($iri));
@@ -432,7 +432,7 @@ function page_part()
     render_part_links(
         'Tags',
         'SELECT object AS iri FROM statement WHERE subject = ?'
-        . " AND predicate = 'http://ns.nuke24.net/TOGETL/tag'"
+        . " AND predicate = 'tag:nuke24.net,2026-11:togetl:tag'"
         . " AND object_kind = 'literal' ORDER BY object",
         $iri,
         false
@@ -440,7 +440,7 @@ function page_part()
     render_part_links(
         'Member of',
         'SELECT object AS iri FROM statement WHERE subject = ?'
-        . " AND predicate = 'http://ns.nuke24.net/TOGETL/memberOf'"
+        . " AND predicate = 'tag:nuke24.net,2026-11:togetl:memberOf'"
         . " AND object_kind = 'iri' ORDER BY object",
         $iri,
         true
@@ -448,15 +448,15 @@ function page_part()
     render_part_links(
         'Members',
         'SELECT subject AS iri FROM statement WHERE object = ?'
-        . " AND predicate = 'http://ns.nuke24.net/TOGETL/member'"
-        . " AND subject LIKE 'tag:nuke24.net,2026-11:togetl:part:%' ORDER BY subject",
+        . " AND predicate = 'tag:nuke24.net,2026-11:togetl:member'"
+        . " AND subject LIKE 'tag:nuke24.net,2026-11:3dparts:part:%' ORDER BY subject",
         $iri,
         true
     );
     render_part_links(
         'See also',
         'SELECT object AS iri FROM statement WHERE subject = ?'
-        . " AND predicate = 'http://ns.nuke24.net/TOGETL/seeAlso'"
+        . " AND predicate = 'tag:nuke24.net,2026-11:togetl:seeAlso'"
         . " AND object_kind = 'iri' ORDER BY object",
         $iri,
         true
@@ -464,7 +464,7 @@ function page_part()
     render_part_links(
         'Obsoleted by',
         'SELECT object AS iri FROM statement WHERE subject = ?'
-        . " AND predicate = 'http://ns.nuke24.net/TOGETL/obsoletedBy'"
+        . " AND predicate = 'tag:nuke24.net,2026-11:togetl:obsoletedBy'"
         . " AND object_kind = 'iri' ORDER BY object",
         $iri,
         true

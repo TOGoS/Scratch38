@@ -66,7 +66,7 @@ function part_url($iri)
 
 function resource_url($iri)
 {
-    if (strpos($iri, 'tag:nuke24.net,2026-11:togetl:part:') === 0) {
+    if (strpos($iri, 'tag:nuke24.net,2026-11:3dparts:part:') === 0) {
         return part_url($iri);
     }
     if (strpos($iri, 'tag:nuke24.net,2026-11:togetl:document:') === 0) {
@@ -105,12 +105,12 @@ function scalar($sql, array $params = array())
 function short_iri($iri)
 {
     $prefixes = array(
-        'http://ns.nuke24.net/TOGETL/' => 'togetl:',
-        'http://ns.nuke24.net/TOGETL/TEF/' => 'tef:',
+        'tag:nuke24.net,2026-11:togetl:' => 'togetl:',
+        'tag:nuke24.net,2026-11:3dparts:' => '3dparts:',
+        'tag:nuke24.net,2026-11:togetl:tef:' => 'tef:',
         'http://www.w3.org/1999/02/22-rdf-syntax-ns#' => 'rdf:',
         'http://www.w3.org/2000/01/rdf-schema#' => 'rdfs:',
         'http://www.w3.org/2001/XMLSchema#' => 'xsd:',
-        'tag:nuke24.net,2026-11:togetl:' => 'togetl:',
     );
     foreach ($prefixes as $prefix => $short) {
         if (strpos($iri, $prefix) === 0) {

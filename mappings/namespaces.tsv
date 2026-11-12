@@ -9,19 +9,19 @@ namespace	${value}	togetl:Namespace
 type	${value}	rdfs:Class
 attribute	${value}	rdf:Property
 datatype	${value}	rdfs:Datatype
-format	${value}	togetl:Format
-projbase	${value}	togetl:ProjectBase
+format	${value}	general:Format
+projbase	${value}	general:ProjectBase
 
 #field
 field	entryType	header	predicate	valueParser	cardinality	note
-field	*	name	togetl:name	plain	1
-field	*	short-description	togetl:shortDescription	plain	1
-field	*	short-descripiton	togetl:shortDescription	plain	1	asWritten=short-descripiton
-field	*	title	togetl:title	plain	1
-field	*	doc-ref	togetl:docRef	iri	*
-field	*	demo-ref	togetl:demoRef	iri	*
-field	*	project-homepage-url	togetl:projectHomepageUrl	iri	1
-field	*	alias	togetl:alias	iri	*
-field	*	subformat-of	togetl:subformatOf	iri	1
+field	*	name	general:name	plain	1
+field	*	short-description	general:shortDescription	plain	1
+field	*	short-descripiton	general:shortDescription	plain	1	asWritten=short-descripiton
+field	*	title	general:title	plain	1
+field	*	doc-ref	general:docRef	iri	*
+field	*	demo-ref	general:demoRef	iri	*
+field	*	project-homepage-url	general:projectHomepageUrl	iri	1
+field	*	alias	general:alias	iri	*
+field	*	subformat-of	general:subformatOf	iri	1
 field	*	tef:content-type	togetl:contentType	plain	1
-field	*	created	togetl:created	plain	1
+field	*	created	general:created	plain	1

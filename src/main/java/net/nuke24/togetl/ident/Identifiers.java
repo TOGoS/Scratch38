@@ -13,6 +13,7 @@ import java.security.NoSuchAlgorithmException;
 public final class Identifiers {
 	public static final String TAG_DATE = "2026-11";
 	public static final String TAG_PREFIX = "tag:nuke24.net," + TAG_DATE + ":togetl:";
+	public static final String DATA_TAG_PREFIX = "tag:nuke24.net," + TAG_DATE + ":3dparts:";
 	
 	private static final char[] HEX = "0123456789abcdef".toCharArray();
 	
@@ -25,11 +26,22 @@ public final class Identifiers {
 	 * {@code A-Za-z0-9-._~:}.
 	 */
 	public static String mint(String type, String key) {
+		return mintNamespace(TAG_PREFIX, type, key);
+	}
+	
+	public static String mintData(String type, String key) {
+		return mintNamespace(DATA_TAG_PREFIX, type, key);
+	}
+	
+	public static String mintNamespace(String namespace, String type, String key) {
 		checkType(type);
+		if (namespace == null || namespace.isEmpty()) {
+			throw new IllegalArgumentException("Identifier namespace must not be empty");
+		}
 		if (key == null) {
 			throw new IllegalArgumentException("Identifier key must not be null");
 		}
-		return TAG_PREFIX + type + ":" + encodeKey(key);
+		return namespace + type + ":" + encodeKey(key);
 	}
 	
 	/**
@@ -62,12 +74,12 @@ public final class Identifiers {
 		}
 		String trimmed = key.trim();
 		if (trimmed.startsWith("WSPROJECT-")) {
-			return mint("project", trimmed);
+			return mintData("project", trimmed);
 		}
 		if (trimmed.startsWith("WSITEM-")) {
-			return mint("item", trimmed);
+			return mintData("item", trimmed);
 		}
-		return mint("part", trimmed);
+		return mintData("part", trimmed);
 	}
 	
 	/** The part of a minted IRI after the common prefix, used to scope blank nodes. */

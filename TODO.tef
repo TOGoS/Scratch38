@@ -31,15 +31,15 @@ The original wording was confusing; this should be captured as an explicit conve
   of all but the first word.  'XYZ TLA factory' becomes `xyzTlaFactory`
 
 =task S36CR-002
-status: pending
+status: done
 priority: high
 kind: design
 scope: PLAN.md; vocabulary and identifiers
 title: Namespace split for invented terms vs parsed data
-request: Use tag:nuke24.net,2026-11:togetl: for newly invented vocabulary terms, and keep raw data identifiers separate from that namespace.
-acceptance: The design clearly distinguishes semantic vocabulary terms from temporary/derived data identifiers.
+request: Use tag URIs for both TOGETL vocabulary terms and domain data, with separate namespaces under `tag:nuke24.net,2026-11`: `togetl` for TOGETL itself and a more specific domain namespace such as `3dparts` for data-level IDs.
+acceptance: The design clearly distinguishes project vocabulary terms from temporary/derived data identifiers while keeping both under the same tag: URI authority and date.
 
-Prefer a separate temporary namespace such as `tag:nuke24.net,2026-11:xyz:` or `tag:nuke24.net,2026-11:3dprinting:` for data-level IDs until the OID scheme is finalized.
+Implementations reserve `tag:nuke24.net,2026-11:togetl:` for ontology and infrastructure terms, and `tag:nuke24.net,2026-11:3dparts:` for part/data-derived resources such as STL files and renderings.
 
 =task S36CR-003
 status: pending

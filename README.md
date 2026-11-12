@@ -65,8 +65,8 @@ The build targets Java 8 and does not require Maven.
 # Parts data with the domain mapping.
 ./togetl import --dialect parts \
     --input fixtures/upstream/3DPrintingData.tef \
-    --output out/3dprinting-data.togetltsv \
-    --report out/3dprinting-data-report.tsv
+    --output out/3dparts-data.togetltsv \
+    --report out/3dparts-data-report.tsv
 
 # Shared namespace vocabulary.
 ./togetl import --dialect namespaces \
@@ -78,8 +78,8 @@ The build targets Java 8 and does not require Maven.
 
 # Load the streams into SQLite.
 ./togetl load --db out/togetl.sqlite3 \
-    --input out/3dprinting-data.togetltsv \
-    --report out/3dprinting-data-report.tsv \
+    --input out/3dparts-data.togetltsv \
+    --report out/3dparts-data-report.tsv \
     --input out/namespaces.togetltsv
 
 # Browse read-only.

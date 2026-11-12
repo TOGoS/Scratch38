@@ -6,8 +6,8 @@ Read-only PHP browser over the SQLite database produced by `togetl load`.
 
 ```sh
 ./togetl load --db out/togetl.sqlite3 \
-    --input out/3dprinting-data.togetltsv \
-    --report out/3dprinting-data-report.tsv
+    --input out/3dparts-data.togetltsv \
+    --report out/3dparts-data-report.tsv
 
 TOGETL_DB=out/togetl.sqlite3 php -S localhost:8080 web/router.php
 ```

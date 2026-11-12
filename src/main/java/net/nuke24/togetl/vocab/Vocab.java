@@ -5,12 +5,15 @@ import net.nuke24.togetl.rdf.IRI;
 /**
  * IRIs for project, TEF, and RDF vocabulary terms used by importers.
  *
- * <p>Vocabulary terms are HTTP IRIs so they can eventually be documented at
- * that address. Only instance resources use tag URIs.</p>
+ * <p>TOGETL terms and TEF metadata terms live under tag URIs in the project
+ * namespace, while instance and derived data IDs use a more specific tag URI
+ * namespace for each data domain.</p>
  */
 public final class Vocab {
-	public static final String TOGETL_NS = "http://ns.nuke24.net/TOGETL/";
-	public static final String TEF_NS = "http://ns.nuke24.net/TOGETL/TEF/";
+	public static final String TOGETL_NS = "tag:nuke24.net,2026-11:togetl:";
+	public static final String TEF_NS = "tag:nuke24.net,2026-11:togetl:tef:";
+	public static final String GENERAL_NS = "tag:nuke24.net,2026-11:general:";
+	public static final String PARTS3D_NS = "tag:nuke24.net,2026-11:3dparts:";
 	public static final String RDF_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 	public static final String RDFS_NS = "http://www.w3.org/2000/01/rdf-schema#";
 	public static final String XSD_NS = "http://www.w3.org/2001/XMLSchema#";
@@ -32,15 +35,15 @@ public final class Vocab {
 	public static final IRI TOGETL_DOCUMENT = togetl("Document");
 	public static final IRI TOGETL_PARSE_ISSUE = togetl("ParseIssue");
 	public static final IRI TOGETL_FILE = togetl("File");
-	public static final IRI TOGETL_PART = togetl("Part");
-	public static final IRI TOGETL_PART_CATEGORY = togetl("PartCategory");
-	public static final IRI TOGETL_PART_SET = togetl("PartSet");
-	public static final IRI TOGETL_CATEGORY = togetl("Category");
-	public static final IRI TOGETL_STANDARD = togetl("Standard");
-	public static final IRI TOGETL_NARRATION = togetl("Narration");
+	public static final IRI TOGETL_PART = data("Part");
+	public static final IRI TOGETL_PART_CATEGORY = data("PartCategory");
+	public static final IRI TOGETL_PART_SET = data("PartSet");
+	public static final IRI TOGETL_CATEGORY = general("Category");
+	public static final IRI TOGETL_STANDARD = general("Standard");
+	public static final IRI TOGETL_NARRATION = data("Narration");
 	public static final IRI TOGETL_NAMESPACE = togetl("Namespace");
-	public static final IRI TOGETL_PROJECT_BASE = togetl("ProjectBase");
-	public static final IRI TOGETL_FORMAT_CLASS = togetl("Format");
+	public static final IRI TOGETL_PROJECT_BASE = general("ProjectBase");
+	public static final IRI TOGETL_FORMAT_CLASS = general("Format");
 	public static final IRI TEF_ENTRY = tef("Entry");
 	public static final IRI TEF_HEADER = tef("Header");
 	public static final IRI TEF_COMMENT = tef("Comment");
@@ -48,8 +51,8 @@ public final class Vocab {
 	
 	// Document metadata.
 	public static final IRI TOGETL_SOURCE_URL = togetl("sourceUrl");
-	public static final IRI TOGETL_SHA256 = togetl("sha256");
-	public static final IRI TOGETL_BYTE_LENGTH = togetl("byteLength");
+	public static final IRI TOGETL_SHA256 = general("sha256");
+	public static final IRI TOGETL_BYTE_LENGTH = general("byteLength");
 	public static final IRI TOGETL_FORMAT = togetl("format");
 	public static final IRI TOGETL_PARSER_VERSION = togetl("parserVersion");
 	public static final IRI TOGETL_HAS_BOM = togetl("hasBom");
@@ -83,34 +86,34 @@ public final class Vocab {
 	public static final IRI TOGETL_UNMAPPED_ENTRY = togetl("unmappedEntry");
 	public static final IRI TOGETL_UNMAPPED_FIELD = togetl("unmappedField");
 	public static final IRI TOGETL_AS_WRITTEN = togetl("asWritten");
-	public static final IRI TOGETL_FILENAME = togetl("filename");
+	public static final IRI TOGETL_FILENAME = general("filename");
 	
 	// Domain predicates.
-	public static final IRI TOGETL_NAME = togetl("name");
-	public static final IRI TOGETL_TITLE = togetl("title");
-	public static final IRI TOGETL_SHORT_DESCRIPTION = togetl("shortDescription");
-	public static final IRI TOGETL_TAG = togetl("tag");
-	public static final IRI TOGETL_KEYWORD = togetl("keyword");
-	public static final IRI TOGETL_MEMBER_OF = togetl("memberOf");
-	public static final IRI TOGETL_MEMBER = togetl("member");
-	public static final IRI TOGETL_SEE_ALSO = togetl("seeAlso");
-	public static final IRI TOGETL_OBSOLETED_BY = togetl("obsoletedBy");
-	public static final IRI TOGETL_STL_FILE = togetl("stlFile");
-	public static final IRI TOGETL_CSG_FILE = togetl("csgFile");
-	public static final IRI TOGETL_FILE_LINK = togetl("file");
-	public static final IRI TOGETL_IMAGE_REF = togetl("imageRef");
-	public static final IRI TOGETL_PHOTO_REF = togetl("photoRef");
-	public static final IRI TOGETL_DOC_REF = togetl("docRef");
-	public static final IRI TOGETL_DEMO_REF = togetl("demoRef");
-	public static final IRI TOGETL_OPENSCAD_RENDERING_REF = togetl("openscadRenderingRef");
-	public static final IRI TOGETL_OPENSCAD_RENDERING = togetl("openscadRendering");
-	public static final IRI TOGETL_OPENSCAD_DESIGN_REF = togetl("openscadDesignRef");
-	public static final IRI TOGETL_MIRROR = togetl("mirror");
-	public static final IRI TOGETL_ALIAS = togetl("alias");
-	public static final IRI TOGETL_CREATED = togetl("created");
-	public static final IRI TOGETL_SOURCE = togetl("source");
-	public static final IRI TOGETL_PROJECT_HOMEPAGE_URL = togetl("projectHomepageUrl");
-	public static final IRI TOGETL_SUBFORMAT_OF = togetl("subformatOf");
+	public static final IRI TOGETL_NAME = general("name");
+	public static final IRI TOGETL_TITLE = general("title");
+	public static final IRI TOGETL_SHORT_DESCRIPTION = general("shortDescription");
+	public static final IRI TOGETL_TAG = general("tag");
+	public static final IRI TOGETL_KEYWORD = general("keyword");
+	public static final IRI TOGETL_MEMBER_OF = general("memberOf");
+	public static final IRI TOGETL_MEMBER = general("member");
+	public static final IRI TOGETL_SEE_ALSO = general("seeAlso");
+	public static final IRI TOGETL_OBSOLETED_BY = general("obsoletedBy");
+	public static final IRI TOGETL_STL_FILE = data("stlFile");
+	public static final IRI TOGETL_CSG_FILE = data("csgFile");
+	public static final IRI TOGETL_FILE_LINK = general("file");
+	public static final IRI TOGETL_IMAGE_REF = general("imageRef");
+	public static final IRI TOGETL_PHOTO_REF = general("photoRef");
+	public static final IRI TOGETL_DOC_REF = general("docRef");
+	public static final IRI TOGETL_DEMO_REF = general("demoRef");
+	public static final IRI TOGETL_OPENSCAD_RENDERING_REF = data("openscadRenderingRef");
+	public static final IRI TOGETL_OPENSCAD_RENDERING = data("openscadRendering");
+	public static final IRI TOGETL_OPENSCAD_DESIGN_REF = data("openscadDesignRef");
+	public static final IRI TOGETL_MIRROR = general("mirror");
+	public static final IRI TOGETL_ALIAS = general("alias");
+	public static final IRI TOGETL_CREATED = general("created");
+	public static final IRI TOGETL_SOURCE = general("source");
+	public static final IRI TOGETL_PROJECT_HOMEPAGE_URL = general("projectHomepageUrl");
+	public static final IRI TOGETL_SUBFORMAT_OF = general("subformatOf");
 	public static final IRI TOGETL_CONTENT_TYPE = togetl("contentType");
 	
 	private Vocab() {
@@ -118,6 +121,14 @@ public final class Vocab {
 	
 	public static IRI togetl(String localName) {
 		return IRI.of(TOGETL_NS + localName);
+	}
+	
+	public static IRI general(String localName) {
+		return IRI.of(GENERAL_NS + localName);
+	}
+	
+	public static IRI data(String localName) {
+		return IRI.of(PARTS3D_NS + localName);
 	}
 	
 	public static IRI tef(String localName) {

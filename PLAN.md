@@ -86,26 +86,27 @@ Our writer:
 
 ## 5. Identifiers
 
-Instances are **tag URIs** with the `nuke24.net` authority and the fixed date `2026-11`:
+Instances and vocabulary terms are both **tag URIs** under the `nuke24.net` authority and the fixed date `2026-11`, but they live in different namespaces:
 
 ```
-tag:nuke24.net,2026-11:togetl:part:p1310
-tag:nuke24.net,2026-11:togetl:recording:<key>
-tag:nuke24.net,2026-11:togetl:org-heading:<custom-id-or-hash>
+tag:nuke24.net,2026-11:togetl:Document
+tag:nuke24.net,2026-11:togetl:Part
+tag:nuke24.net,2026-11:togetl:tef:Entry
+tag:nuke24.net,2026-11:3dparts:part:p1310
+tag:nuke24.net,2026-11:3dparts:rendering:<hash>
+tag:nuke24.net,2026-11:3dparts:stl-file:<hash>
 tag:nuke24.net,2026-11:togetl:document:<sha256-16>
-tag:nuke24.net,2026-11:togetl:batch:<hash>
-tag:nuke24.net,2026-11:togetl:loading:<hash>
 ```
 
 Rules:
 
 - The date is fixed. Changing it would silently re-identify every instance.
+- `tag:nuke24.net,2026-11:togetl:` is reserved for TOGETL vocabulary and infrastructure terms.
+- `tag:nuke24.net,2026-11:<domain>:` is reserved for domain data and derived resources, such as the `3dparts` namespace for STL files and renderings.
 - Key segments are percent-encoded outside `A-Za-z0-9-._~:`.
 - Documents are identified by a hash of their source URL, not by the URL itself, so a
   moved document keeps its identity. `togetl:sourceUrl` records the URL.
-- Vocabulary terms are HTTP IRIs under `http://ns.nuke24.net/TOGETL/`, so they can
-  eventually be documented at that address. TEF syntax terms live under
-  `http://ns.nuke24.net/TOGETL/TEF/`.
+- TEF syntax terms live under `tag:nuke24.net,2026-11:togetl:tef:`.
 
 Identifier interpretation is deliberately provisional. Some source IDs are shorthand for
 larger identifiers: `WSITEM-1234` is expected to become `urn:oid:<base>.1234`, `p`-prefixed
@@ -279,7 +280,7 @@ Two layers:
    links. Headings become `togetl:orgHeading` resources; a heading with a `CUSTOM_ID`
    gets a stable tag URI.
 2. **Named tables** — `#+NAME:` tables become typed rows. Column names come from the
-   header row; mappings under `mappings/org-3dprinting-log.tsv` assign predicates and
+   header row; mappings under `mappings/org-3dparts-log.tsv` assign predicates and
    value parsers. Foreign keys are resolved through the same mapping layer
    (`print_1.GCode` -> `slicing_*`, `slicing_*.Part STL Number` -> `part_*`,
    `print_1.Print ID` suffix -> `printer_1`, `item_0.Item #` -> `WSITEM-*`).
@@ -482,7 +483,7 @@ Commands:
 ./test/run-tests.sh
 
 ./togetl import --dialect parts --input fixtures/upstream/3DPrintingData.tef \
-    --output out/3dprinting-data.togetltsv
+    --output out/3dparts-data.togetltsv
 ./togetl import --dialect namespaces --input vocab/togetl.tef \
     --output out/togetl-vocab.togetltsv
 ./togetl vocab --input out/togetl-vocab.togetltsv --report out/vocab-report.tsv

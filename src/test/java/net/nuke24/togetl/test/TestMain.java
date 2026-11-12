@@ -46,7 +46,7 @@ import net.nuke24.togetl.vocab.VocabularyReport;
 public final class TestMain {
 	private static final String DOC = "tag:nuke24.net,2026-11:togetl:document:abc";
 	private static final String PART = "tag:nuke24.net,2026-11:togetl:part:p1310";
-	private static final String TOGETL = "http://ns.nuke24.net/TOGETL/";
+	private static final String TOGETL = "tag:nuke24.net,2026-11:togetl:";
 	private static final String RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 	private static final String XSD = "http://www.w3.org/2001/XMLSchema#";
 	
@@ -193,7 +193,7 @@ public final class TestMain {
 				"#format urn:uuid:b783bac7-58e9-4340-93ef-7973914732d5\n"
 				+ "# a comment\n"
 				+ "#alias doc tag:nuke24.net,2026-11:togetl:document:abc\n"
-				+ "#alias togetl: http://ns.nuke24.net/TOGETL/\n"
+				+ "#alias togetl: tag:nuke24.net,2026-11:togetl:\n"
 				+ "#alias rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#\n"
 				+ "#alias name togetl:name\n"
 				+ "\n"
@@ -539,7 +539,7 @@ public final class TestMain {
 				"parts", MappingTable.load("parts"));
 				
 		List<Statement> statements = collect(dialect, document, source, report);
-		String part = Identifiers.mint("part", "p1");
+		String part = Identifiers.mintData("part", "p1");
 		
 		check(has(statements, part, Vocab.RDF_TYPE, Vocab.TOGETL_PART.toString()),
 				"part type");
@@ -664,7 +664,7 @@ public final class TestMain {
 		
 		boolean found = false;
 		for (VocabularyReport.Row row : report.getRows()) {
-			if (row.getTerm().equals(Vocab.TOGETL_NS + "shortDescription")) {
+			if (row.getTerm().equals(Vocab.TOGETL_SHORT_DESCRIPTION.toString())) {
 				found = true;
 				assertEquals(VocabularyReport.OK, row.getStatus(), "shortDescription status");
 			}
