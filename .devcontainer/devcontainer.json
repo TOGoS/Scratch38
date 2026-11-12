@@ -5,9 +5,10 @@
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "mcr.microsoft.com/devcontainers/base:alpine3.23",
 	"containerEnv": {
-		"JAVA_HOME": "/usr/lib/jvm/java-1.8-openjdk"
+		"JAVA_HOME": "/usr/lib/jvm/java-1.8-openjdk",
+		"PHP_BIN": "/usr/bin/php"
 	},
-	"postCreateCommand": "sudo apk add --no-cache openjdk8-jdk"
+	"postCreateCommand": "sudo apk add --no-cache openjdk8-jdk php php-pdo_sqlite"
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
