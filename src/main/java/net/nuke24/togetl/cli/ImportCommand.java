@@ -13,9 +13,12 @@ import java.nio.file.Paths;
 
 import net.nuke24.togetl.Version;
 import net.nuke24.togetl.dialect.Dialects;
+import net.nuke24.togetl.dialect.OrgStructureDialect;
 import net.nuke24.togetl.dialect.TEFDialect;
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
+import net.nuke24.togetl.org.OrgDocument;
+import net.nuke24.togetl.org.OrgReader;
 import net.nuke24.togetl.rdf.Statement;
 import net.nuke24.togetl.rdf.StatementConsumer;
 import net.nuke24.togetl.tef.TEFDocument;
@@ -109,11 +112,19 @@ public final class ImportCommand {
 	}
 	
 	private void execute() throws IOException, TEFReadException {
-		Tolerance toleranceValue = Tolerance.parse(tolerance);
-		TEFDialect selectedDialect = Dialects.byName(dialect);
-		
 		byte[] content = readInput(input);
 		String effectiveSourceUrl = sourceUrl != null ? sourceUrl : defaultSourceUrl(input);
+		if (Dialects.ORG_STRUCTURE.equals(dialect)) {
+			executeOrgImport(content, effectiveSourceUrl);
+			return;
+		}
+		if (!Dialects.isTefDialect(dialect)) {
+			throw new IllegalArgumentException(
+					"Unknown dialect: " + dialect + " (expected one of " + Dialects.names() + ")");
+		}
+		
+		Tolerance toleranceValue = Tolerance.parse(tolerance);
+		TEFDialect selectedDialect = Dialects.byName(dialect);
 		SourceDocument source = SourceDocument.of(
 				effectiveSourceUrl,
 				content,
@@ -160,6 +171,57 @@ public final class ImportCommand {
 		System.err.println("  entries " + document.getEntries().size()
 				+ ", statements " + statementCount
 				+ ", issues " + document.getIssues().size());
+		System.err.println("  unmapped " + report.getOccurrenceCount()
+				+ " occurrence(s) in " + report.getRowCount() + " row(s)");
+	}
+	
+	private void executeOrgImport(byte[] content, String effectiveSourceUrl) throws IOException {
+		SourceDocument source = SourceDocument.of(
+				effectiveSourceUrl,
+				content,
+				"org",
+				Version.ORG_PARSER_VERSION);
+		OrgDocument document = OrgReader.read(effectiveSourceUrl, content);
+		OrgStructureDialect selectedDialect = new OrgStructureDialect();
+		
+		ImportReport report = new ImportReport();
+		long statementCount = 0;
+		Writer outputWriter = null;
+		boolean closeOutput = false;
+		try {
+			outputWriter = openOutput(output);
+			closeOutput = !"-".equals(output);
+			final TOGETLTSVWriter tsv = new TOGETLTSVWriter(outputWriter, AliasTable.withDefaults());
+			final CountingConsumer counter = new CountingConsumer();
+			StatementConsumer consumer = new StatementConsumer() {
+				@Override
+				public void accept(Statement statement) throws IOException {
+					tsv.write(statement);
+					counter.accept(statement);
+				}
+			};
+			selectedDialect.map(document, source, consumer, report);
+			tsv.flush();
+			statementCount = counter.count;
+		} finally {
+			if (outputWriter != null) {
+				if (closeOutput) {
+					outputWriter.close();
+				} else {
+					outputWriter.flush();
+				}
+			}
+		}
+		
+		if (reportPath != null) {
+			writeReport(reportPath, report);
+		}
+		
+		System.err.println("Imported " + effectiveSourceUrl);
+		System.err.println("  document " + source.getDocumentIri());
+		System.err.println("  document-import " + source.getDocumentImportIri());
+		System.err.println("  headings " + document.getHeadings().size()
+				+ ", statements " + statementCount);
 		System.err.println("  unmapped " + report.getOccurrenceCount()
 				+ " occurrence(s) in " + report.getRowCount() + " row(s)");
 	}

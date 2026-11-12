@@ -43,6 +43,7 @@ public final class Vocab {
 	public static final IRI TOGETL_STANDARD = general("Standard");
 	public static final IRI TOGETL_NARRATION = data("Narration");
 	public static final IRI TOGETL_NAMESPACE = togetl("Namespace");
+	public static final IRI TOGETL_ORG_HEADING = togetl("OrgHeading");
 	public static final IRI TOGETL_PROJECT_BASE = general("ProjectBase");
 	public static final IRI TOGETL_FORMAT_CLASS = general("Format");
 	public static final IRI TEF_ENTRY = tef("Entry");
@@ -116,6 +117,17 @@ public final class Vocab {
 	public static final IRI TOGETL_PROJECT_HOMEPAGE = general("projectHomepage");
 	public static final IRI TOGETL_SUBFORMAT_OF = general("subformatOf");
 	public static final IRI TOGETL_CONTENT_TYPE = togetl("contentType");
+	public static final IRI TOGETL_ORG_HEADING_LINK = togetl("orgHeading");
+	public static final IRI TOGETL_OUTLINE_PARENT = togetl("outlineParent");
+	public static final IRI TOGETL_OUTLINE_PATH = togetl("outlinePath");
+	public static final IRI TOGETL_OUTLINE_LEVEL = togetl("outlineLevel");
+	public static final IRI TOGETL_OUTLINE_INDEX = togetl("outlineIndex");
+	public static final IRI TOGETL_CUSTOM_ID = togetl("customId");
+	public static final IRI TOGETL_ORG_TIMESTAMP = togetl("orgTimestamp");
+	public static final IRI TOGETL_ORG_CHECKBOX_STATE = togetl("orgCheckboxState");
+	public static final IRI TOGETL_ORG_LINK = togetl("orgLink");
+	public static final IRI TOGETL_ORG_LINK_TARGET = togetl("orgLinkTarget");
+	public static final IRI TOGETL_ORG_LINK_LABEL = togetl("orgLinkLabel");
 	
 	private Vocab() {
 	}

@@ -21,6 +21,9 @@ short-description: a narrative note attached to project data
 =type tag:nuke24.net,2026-11:togetl:Namespace
 short-description: an RDF namespace or ontology
 
+=type tag:nuke24.net,2026-11:togetl:OrgHeading
+short-description: a heading node from an Org document outline
+
 =attribute tag:nuke24.net,2026-11:togetl:sourceDocument
 short-description: links a document import to its source document
 
@@ -69,3 +72,36 @@ short-description: the original spelling or value before normalization
 # e.g. a piece of wood does not have a content type, but it
 # might be described by a text-based resource that does.
 short-description: a content type declaration
+
+=attribute tag:nuke24.net,2026-11:togetl:orgHeading
+short-description: links a source document to one of its Org heading resources
+
+=attribute tag:nuke24.net,2026-11:togetl:outlineParent
+short-description: parent heading in an Org outline tree
+
+=attribute tag:nuke24.net,2026-11:togetl:outlinePath
+short-description: human-readable heading path from root to this heading
+
+=attribute tag:nuke24.net,2026-11:togetl:outlineLevel
+short-description: heading depth in the Org outline
+
+=attribute tag:nuke24.net,2026-11:togetl:outlineIndex
+short-description: zero-based heading ordinal in source order
+
+=attribute tag:nuke24.net,2026-11:togetl:customId
+short-description: CUSTOM_ID property declared on an Org heading
+
+=attribute tag:nuke24.net,2026-11:togetl:orgTimestamp
+short-description: timestamp token associated with an Org heading
+
+=attribute tag:nuke24.net,2026-11:togetl:orgCheckboxState
+short-description: parsed checkbox state from heading content
+
+=attribute tag:nuke24.net,2026-11:togetl:orgLink
+short-description: links an Org heading to a parsed link node
+
+=attribute tag:nuke24.net,2026-11:togetl:orgLinkTarget
+short-description: target string of an Org link node
+
+=attribute tag:nuke24.net,2026-11:togetl:orgLinkLabel
+short-description: optional display label of an Org link node
