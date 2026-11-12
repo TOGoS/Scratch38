@@ -561,8 +561,10 @@ public final class TestMain {
 				Literal.of("A part.\n").toString()), "content becomes a comment");
 		check(reportHas(report, "unmapped-field", "part", "mystery"),
 				"unknown field is reported");
-		assertEquals(1, countObject(statements, Vocab.TEF_KEY, Literal.of("mystery").toString()),
-				"unknown field is still captured structurally");
+		assertEquals(0, countObject(statements, Vocab.TEF_KEY, Literal.of("mystery").toString()),
+				"unknown field is not emitted as TEF structure in mapped dialect");
+		check(!has(statements, part, Vocab.TEF_ENTRY_TYPE, Literal.of("part").toString()),
+				"mapped subject does not get TEF entry metadata");
 	}
 	
 	private static void testPartsConflicts() throws Exception {

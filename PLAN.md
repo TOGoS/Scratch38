@@ -186,11 +186,12 @@ final class TEFEntry {
 ```
 
 `tef:content` is the entry's free-form note or description,
-and in most cases can be mapped to the subject's `dc:description`,
-a prose summary of the object being described.
+and in mapped dialects should be translated into an appropriate
+domain predicate (currently `rdfs:comment`) on the mapped subject.
 
-The raw form is preserved even when a dialect maps it,
-so reports and future syntax layers can use it.
+The parser keeps the full raw entry form available.
+The `generic` dialect emits that structure directly, while mapped dialects
+emit domain/provenance statements and report unmapped constructs by location.
 
 ### 7.4 Tolerance
 
@@ -236,8 +237,8 @@ field    part       tags         togetl:tag         plain        *
 - `cardinality` is `1`, `?`, or `*`.
 - Every predicate referenced must be defined in `vocab/`.
 
-Entries and headers with no mapping produce a report row and a `togetl:unmappedEntry` or
-`togetl:unmappedField` statement, so nothing disappears silently.
+Entries and headers with no mapping produce report rows with source locations,
+so nothing disappears silently from import diagnostics.
 
 ### 8.1 Parts dialect
 

@@ -63,7 +63,7 @@ the value is a [URI] reference.  If we interpret the value as a reference
 needs to be double-deferenced, which is wrong.
 
 =task S36CR-004
-status: pending
+status: done
 priority: medium
 kind: design
 scope: PLAN.md; TEF model and mappings

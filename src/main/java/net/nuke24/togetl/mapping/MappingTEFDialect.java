@@ -24,9 +24,9 @@ import net.nuke24.togetl.vocab.Vocab;
 /**
  * Maps TEF entries through a declarative mapping table.
  *
- * <p>Entries without an entry rule and headers without a field rule fall back
- * to the generic structural capture, so a mapping table can grow incrementally
- * without dropping source data.</p>
+ * <p>This dialect emits mapped domain statements plus provenance metadata. It
+ * does not emit TEF-structural statements for mapped subjects; use the generic
+ * dialect when structural TEF capture is desired.</p>
  */
 public final class MappingTEFDialect implements TEFDialect {
 	private final String name;
@@ -76,8 +76,15 @@ public final class MappingTEFDialect implements TEFDialect {
 					: entryRule.buildSubject(entry, documentIri, documentHash, entryIndex);
 					
 			if (subjectText == null) {
-				DialectSupport.emitGenericEntry(
-						document, source, entry, entryIndex, out, report);
+				Location location = DialectSupport.locationOf(entry.getSpan());
+				if (!entry.getType().isEmpty()) {
+					report.unmappedEntryType(entry.getType(), location);
+				}
+				for (int headerIndex = 0; headerIndex < entry.getHeaders().size(); headerIndex++) {
+					TEFHeader header = entry.getHeaders().get(headerIndex);
+					report.unmappedField(
+							entry.getType(), header.getKey(), DialectSupport.locationOf(header.getSpan()));
+				}
 				continue;
 			}
 			
@@ -90,13 +97,6 @@ public final class MappingTEFDialect implements TEFDialect {
 			}
 			DialectSupport.emit(source, out, entryLocation, subject,
 					Vocab.TOGETL_DOCUMENT_LINK, doc);
-			DialectSupport.emit(source, out, entryLocation, subject,
-					Vocab.TEF_ENTRY_INDEX,
-					Literal.of(Integer.toString(entryIndex), Vocab.XSD_INTEGER));
-			if (!entry.getType().isEmpty()) {
-				DialectSupport.emit(source, out, entryLocation, subject,
-						Vocab.TEF_ENTRY_TYPE, Literal.of(entry.getType()));
-			}
 			if (entryRule.getAsWritten() != null) {
 				report.record("as-written-entry", entry.getType(), "", entryLocation);
 				DialectSupport.emit(source, out, entryLocation, subject,
@@ -114,8 +114,6 @@ public final class MappingTEFDialect implements TEFDialect {
 				FieldRule fieldRule = table.fieldRule(entry.getType(), header.getKey());
 				Location location = DialectSupport.locationOf(header.getSpan());
 				if (fieldRule == null) {
-					DialectSupport.emitGenericHeader(
-							source, out, documentHash, subject, entryIndex, headerIndex, header);
 					report.unmappedField(entry.getType(), header.getKey(), location);
 					continue;
 				}
@@ -139,16 +137,6 @@ public final class MappingTEFDialect implements TEFDialect {
 				parser.parse(context);
 			}
 			
-			for (int commentIndex = 0; commentIndex < entry.getComments().size(); commentIndex++) {
-				DialectSupport.emitGenericComment(
-						source, out, documentHash, subject, entryIndex, commentIndex,
-						entry.getComments().get(commentIndex));
-			}
-			for (int directiveIndex = 0; directiveIndex < entry.getDirectives().size(); directiveIndex++) {
-				DialectSupport.emitGenericDirective(
-						source, out, documentHash, subject, entryIndex, directiveIndex,
-						entry.getDirectives().get(directiveIndex));
-			}
 		}
 		
 		DialectSupport.emitIssues(document, source, out);

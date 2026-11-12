@@ -39,8 +39,9 @@ The build targets Java 8 and does not require Maven.
     narration, aliases, links, STL/CSG files, and part references.
   - `namespaces` for `namespaces.tef` and `vocab/*.tef` — namespaces, classes,
     properties, datatypes, formats, and project bases.
-  - Unmapped entries and fields fall back to generic structural capture and are
-    reported, so a mapping can grow without losing source data.
+  - Unmapped entries and fields are reported with source locations; mapped
+    dialect output stays at the domain/provenance layer rather than emitting TEF
+    structural statements on mapped subjects.
   - Functional fields report conflicts instead of silently choosing a value;
     identical duplicates are deduplicated and multi-valued fields keep all
     values.
