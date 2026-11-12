@@ -36,7 +36,7 @@ public final class DialectSupport {
 			IRI predicate,
 			Node object
 	) throws IOException {
-		out.accept(new Statement(source.getIri(), location, subject, predicate, object));
+		out.accept(new Statement(source.getDocumentImportIri(), location, subject, predicate, object));
 	}
 	
 	public static Location locationOf(TEFSpan span) {
@@ -48,17 +48,20 @@ public final class DialectSupport {
 			SourceDocument source,
 			StatementConsumer out
 	) throws IOException {
-		IRI doc = IRI.of(source.getIri());
+		IRI doc = IRI.of(source.getDocumentIri());
+		IRI run = IRI.of(source.getDocumentImportIri());
 		Location none = Location.none();
 		emit(source, out, none, doc, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT);
 		emit(source, out, none, doc, Vocab.TOGETL_SOURCE_URL, Literal.of(source.getSourceIri()));
 		emit(source, out, none, doc, Vocab.TOGETL_SHA256, Literal.of(source.getSha256()));
 		emit(source, out, none, doc, Vocab.TOGETL_BYTE_LENGTH,
 				Literal.of(Long.toString(source.getByteLength()), Vocab.XSD_INTEGER));
-		emit(source, out, none, doc, Vocab.TOGETL_FORMAT, Literal.of(source.getFormat()));
-		emit(source, out, none, doc, Vocab.TOGETL_PARSER_VERSION,
+		emit(source, out, none, run, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT_IMPORT);
+		emit(source, out, none, run, Vocab.TOGETL_SOURCE_DOCUMENT, doc);
+		emit(source, out, none, run, Vocab.TOGETL_FORMAT, Literal.of(source.getFormat()));
+		emit(source, out, none, run, Vocab.TOGETL_PARSER_VERSION,
 				Literal.of(source.getParserVersion()));
-		emit(source, out, none, doc, Vocab.TOGETL_HAS_BOM,
+		emit(source, out, none, run, Vocab.TOGETL_HAS_BOM,
 				Literal.of(document.hasBom() ? "true" : "false", Vocab.XSD_BOOLEAN));
 	}
 	
@@ -68,8 +71,8 @@ public final class DialectSupport {
 			StatementConsumer out,
 			ImportReport report
 	) throws IOException {
-		String scope = Identifiers.documentHash(source.getIri());
-		IRI doc = IRI.of(source.getIri());
+		String scope = Identifiers.documentHash(source.getDocumentIri());
+		IRI doc = IRI.of(source.getDocumentIri());
 		
 		for (int i = 0; i < document.getComments().size(); i++) {
 			TEFComment comment = document.getComments().get(i);
@@ -100,13 +103,13 @@ public final class DialectSupport {
 			SourceDocument source,
 			StatementConsumer out
 	) throws IOException {
-		String scope = Identifiers.documentHash(source.getIri());
-		IRI doc = IRI.of(source.getIri());
+		String scope = Identifiers.documentHash(source.getDocumentIri());
+		IRI run = IRI.of(source.getDocumentImportIri());
 		for (int i = 0; i < document.getIssues().size(); i++) {
 			TEFIssue issue = document.getIssues().get(i);
 			Location location = locationOf(issue.getSpan());
 			BlankNode node = BlankNode.of("tef-issue-" + scope + "-" + i);
-			emit(source, out, location, doc, Vocab.TOGETL_PARSE_ISSUE_LINK, node);
+			emit(source, out, location, run, Vocab.TOGETL_PARSE_ISSUE_LINK, node);
 			emit(source, out, location, node, Vocab.RDF_TYPE, Vocab.TOGETL_PARSE_ISSUE);
 			emit(source, out, location, node, Vocab.TOGETL_SEVERITY,
 					Literal.of(issue.getSeverity().name().toLowerCase(java.util.Locale.ROOT)));
@@ -126,12 +129,12 @@ public final class DialectSupport {
 			StatementConsumer out,
 			ImportReport report
 	) throws IOException {
-		String scope = Identifiers.documentHash(source.getIri());
-		IRI entryIri = IRI.of(Identifiers.tefEntryIri(source.getIri(), entryIndex));
+		String scope = Identifiers.documentHash(source.getDocumentIri());
+		IRI entryIri = IRI.of(Identifiers.tefEntryIri(source.getDocumentIri(), entryIndex));
 		Location location = locationOf(entry.getSpan());
 		
 		emit(source, out, location, entryIri, Vocab.RDF_TYPE, Vocab.TEF_ENTRY);
-		emit(source, out, location, entryIri, Vocab.TOGETL_DOCUMENT_LINK, IRI.of(source.getIri()));
+		emit(source, out, location, entryIri, Vocab.TOGETL_DOCUMENT_LINK, IRI.of(source.getDocumentIri()));
 		emit(source, out, location, entryIri, Vocab.TEF_ENTRY_INDEX,
 				Literal.of(Integer.toString(entryIndex), Vocab.XSD_INTEGER));
 		if (!entry.getType().isEmpty()) {

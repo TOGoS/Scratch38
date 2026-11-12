@@ -9,9 +9,11 @@ import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.rdf.BlankNode;
@@ -62,14 +64,20 @@ public final class Loader {
 
         Map<String, DocumentMeta> documents = collectDocuments(streams);
         insertDocuments(documents);
+        Map<String, String> documentByDocumentImport = collectDocumentByDocumentImport(streams, documents);
 
         Map<String, String> loadingByDocument = new LinkedHashMap<String, String>();
         if (batchIri != null) {
             insertLoadings(batchIri, documents.keySet(), loadingByDocument);
         }
+        Map<String, String> loadingBySource = loadingBySource(
+                documents.keySet(),
+                documentByDocumentImport,
+                loadingByDocument);
 
-        int statementCount = insertStatements(streams, batchIri, loadingByDocument);
-        int issueCount = insertParseIssues(streams, batchIri, loadingByDocument);
+        int statementCount = insertStatements(streams, batchIri, loadingBySource);
+        int issueCount = insertParseIssues(
+                streams, batchIri, loadingBySource, documents, documentByDocumentImport);
         int reportCount = insertReportRows(reportRows, batchIri, documents.keySet());
         int vocabCount = replaceVocabulary(vocabulary);
 
@@ -152,6 +160,7 @@ public final class Loader {
 
     private Map<String, DocumentMeta> collectDocuments(List<LoadedStream> streams) {
         Map<String, DocumentMeta> documents = new LinkedHashMap<String, DocumentMeta>();
+        Map<String, String> documentByDocumentImport = new LinkedHashMap<String, String>();
 
         for (LoadedStream stream : streams) {
             for (Statement statement : stream.getStatements()) {
@@ -169,7 +178,25 @@ public final class Loader {
 
         for (LoadedStream stream : streams) {
             for (Statement statement : stream.getStatements()) {
+                if (Vocab.TOGETL_SOURCE_DOCUMENT.equals(statement.getPredicate())
+                        && statement.getSubject() instanceof IRI
+                        && statement.getObject() instanceof IRI) {
+                    documentByDocumentImport.put(
+                            statement.getSubject().toString(),
+                            statement.getObject().toString());
+                }
+            }
+        }
+
+        for (LoadedStream stream : streams) {
+            for (Statement statement : stream.getStatements()) {
                 DocumentMeta meta = documents.get(statement.getSubject().toString());
+                if (meta == null) {
+                    String mappedDocument = documentByDocumentImport.get(statement.getSubject().toString());
+                    if (mappedDocument != null) {
+                        meta = documents.get(mappedDocument);
+                    }
+                }
                 if (meta == null) {
                     continue;
                 }
@@ -186,11 +213,23 @@ public final class Loader {
                 }
             }
         }
-
+        
+        Set<String> documentImportIris = new HashSet<String>();
+        for (LoadedStream stream : streams) {
+            for (Statement statement : stream.getStatements()) {
+                if (Vocab.TOGETL_SOURCE_DOCUMENT.equals(statement.getPredicate())
+                        && statement.getSubject() instanceof IRI) {
+                    documentImportIris.add(statement.getSubject().toString());
+                }
+            }
+        }
+        
         for (LoadedStream stream : streams) {
             for (Statement statement : stream.getStatements()) {
                 String source = statement.getSource();
-                if ("-".equals(source) || documents.containsKey(source)) {
+                if ("-".equals(source)
+                        || documents.containsKey(source)
+                        || documentImportIris.contains(source)) {
                     continue;
                 }
                 DocumentMeta meta = new DocumentMeta(source);
@@ -208,6 +247,56 @@ public final class Loader {
             }
         }
         return documents;
+    }
+    
+    private Map<String, String> collectDocumentByDocumentImport(
+            List<LoadedStream> streams,
+            Map<String, DocumentMeta> documents
+    ) {
+        Map<String, String> documentByDocumentImport = new LinkedHashMap<String, String>();
+
+        for (LoadedStream stream : streams) {
+            for (Statement statement : stream.getStatements()) {
+                String source = statement.getSource();
+                if (!"-".equals(source)
+                        && documents.containsKey(source)
+                        && !documentByDocumentImport.containsKey(source)) {
+                    documentByDocumentImport.put(source, source);
+                }
+            }
+        }
+
+        for (LoadedStream stream : streams) {
+            for (Statement statement : stream.getStatements()) {
+                if (!(statement.getSubject() instanceof IRI)
+                        || !(statement.getObject() instanceof IRI)
+                        || !Vocab.TOGETL_SOURCE_DOCUMENT.equals(statement.getPredicate())) {
+                    continue;
+                }
+                String runIri = statement.getSubject().toString();
+                String documentIri = statement.getObject().toString();
+                if (documents.containsKey(documentIri)) {
+                    documentByDocumentImport.put(runIri, documentIri);
+                }
+            }
+        }
+
+        return documentByDocumentImport;
+    }
+    
+    private static Map<String, String> loadingBySource(
+            Iterable<String> documentIris,
+            Map<String, String> documentByDocumentImport,
+            Map<String, String> loadingByDocument
+    ) {
+        Map<String, String> loadingBySource = new LinkedHashMap<String, String>();
+        for (String documentIri : documentIris) {
+            loadingBySource.put(documentIri, loadingByDocument.get(documentIri));
+        }
+        for (Map.Entry<String, String> entry : documentByDocumentImport.entrySet()) {
+            loadingBySource.put(entry.getKey(), loadingByDocument.get(entry.getValue()));
+        }
+        return loadingBySource;
     }
 
     private void insertDocuments(Map<String, DocumentMeta> documents) throws SQLException {
@@ -264,7 +353,7 @@ public final class Loader {
     private int insertStatements(
             List<LoadedStream> streams,
             String batchIri,
-            Map<String, String> loadingByDocument
+            Map<String, String> loadingBySource
     ) throws SQLException {
         PreparedStatement statement = connection.prepareStatement(
                 "INSERT INTO statement"
@@ -318,7 +407,7 @@ public final class Loader {
                     }
 
                     setNullableString(statement, 11, batchIri);
-                    setNullableString(statement, 12, loadingByDocument.get(source));
+                    setNullableString(statement, 12, loadingBySource.get(source));
                     statement.executeUpdate();
                     count++;
                 }
@@ -332,7 +421,9 @@ public final class Loader {
     private int insertParseIssues(
             List<LoadedStream> streams,
             String batchIri,
-            Map<String, String> loadingByDocument
+            Map<String, String> loadingBySource,
+            Map<String, DocumentMeta> documents,
+            Map<String, String> documentByDocumentImport
     ) throws SQLException {
         Map<String, IssueMeta> issues = new LinkedHashMap<String, IssueMeta>();
 
@@ -345,6 +436,7 @@ public final class Loader {
                     if (!issues.containsKey(key)) {
                         issues.put(key, new IssueMeta(
                                 statement.getSubject().toString(),
+                                statement.getSource(),
                                 statement.getLocation()));
                     }
                 }
@@ -377,7 +469,12 @@ public final class Loader {
         int count = 0;
         try {
             for (IssueMeta meta : issues.values()) {
-                insert.setString(1, meta.documentIri);
+                String documentIri = resolveDocumentIri(
+                        meta.issueOwnerIri, meta.sourceIri, documents, documentByDocumentImport);
+                if (documentIri == null) {
+                    continue;
+                }
+                insert.setString(1, documentIri);
                 Location location = meta.location;
                 if (location != null && location.isLineColumn()) {
                     insert.setInt(2, location.getLine());
@@ -391,7 +488,7 @@ public final class Loader {
                 insert.setString(6, meta.message == null ? "" : meta.message);
                 setNullableString(insert, 7, meta.raw);
                 setNullableString(insert, 8, batchIri);
-                setNullableString(insert, 9, loadingByDocument.get(meta.documentIri));
+                setNullableString(insert, 9, loadingBySource.get(meta.sourceIri));
                 insert.executeUpdate();
                 count++;
             }
@@ -399,6 +496,25 @@ public final class Loader {
             insert.close();
         }
         return count;
+    }
+    
+    private static String resolveDocumentIri(
+            String issueOwnerIri,
+            String sourceIri,
+            Map<String, DocumentMeta> documents,
+            Map<String, String> documentByDocumentImport
+    ) {
+        if (documents.containsKey(issueOwnerIri)) {
+            return issueOwnerIri;
+        }
+        String byOwner = documentByDocumentImport.get(issueOwnerIri);
+        if (byOwner != null) {
+            return byOwner;
+        }
+        if (documents.containsKey(sourceIri)) {
+            return sourceIri;
+        }
+        return documentByDocumentImport.get(sourceIri);
     }
 
     private int insertReportRows(
@@ -526,15 +642,17 @@ public final class Loader {
     }
 
     private static final class IssueMeta {
-        final String documentIri;
+        final String issueOwnerIri;
+        final String sourceIri;
         final Location location;
         String severity;
         String code;
         String message;
         String raw;
 
-        IssueMeta(String documentIri, Location location) {
-            this.documentIri = documentIri;
+        IssueMeta(String issueOwnerIri, String sourceIri, Location location) {
+            this.issueOwnerIri = issueOwnerIri;
+            this.sourceIri = sourceIri;
             this.location = location;
         }
     }

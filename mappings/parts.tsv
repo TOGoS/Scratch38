@@ -29,7 +29,7 @@ field	*	subformat-of	general:subformatOf	iri	1
 field	*	tef:content-type	togetl:contentType	plain	1
 field	*	tags	general:tag	csv	*
 field	*	keywords	general:keyword	csv	*
-field	*	member-of	general:memberOf	csvPartRef	*
+field	*	member-of	general:isMemberOf	csvPartRef	*
 field	*	members	general:member	csvPartRef	*
 field	*	see-also	general:seeAlso	csvPartRef	*
 field	*	obsoleted-by	general:obsoletedBy	csvPartRef	1

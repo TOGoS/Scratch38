@@ -62,6 +62,10 @@ source location subject predicate object
 
 with any amount of space/tab whitespace between columns.
 
+`source` identifies the 'document import' that emitted the statement.
+An 'document import' references exactly one source document,
+and can also be a member of a batch (batch ontology is not yet formalized).
+
 - Blank lines and lines beginning with whitespace + `#` + whitespace are comments.
 - Lines beginning with `#` + a non-whitespace word are directives. Only `#format` and
   `#alias` are defined.
@@ -117,21 +121,22 @@ touching importers.
 ## 6. Provenance
 
 Every statement carries a source document and a location. The database additionally
-records the batch and loading that produced it.
+records the batch that produced it, via the document import's membership in that batch.
 
 | Concept | Meaning | Identity |
 |---|---|---|
 | Document | a source file | `tag:...,togetl:document:<sha256-16 of URL>` |
-| Batch | one import run over one or more documents | `tag:...,togetl:batch:<hash>` |
-| Loading | one document processed by one batch with one set of options | `tag:...,togetl:loading:<hash>` |
+| Document import | one importer execution against one document | `tag:...,togetl:import-run:<hash>` |
+| Batch | one `togetl load` operation over one or more documents | `tag:...,togetl:batch:<hash>` |
 | Statement | one triple at one location | row in `statement` |
 
-Batch and loading IDs are deterministic hashes of source content, importer version, and
-options. Re-importing the same document replaces that batch's statements rather than
-duplicating them.
+A document import records the batch it belongs to with `general:isMemberOf`, so a batch
+need not have its own per-document loading identity. Batch IDs are deterministic hashes
+of source content, importer version, and options. Re-importing the same document replaces
+that batch's statements rather than duplicating them.
 
-Default mode records document, batch, loading, and location. `--simple-provenance`
-records only the document.
+Default mode records document, document import, batch membership, and location.
+`--simple-provenance` records only the document.
 
 ## 7. TEF parsing
 

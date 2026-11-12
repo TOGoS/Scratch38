@@ -4,7 +4,10 @@
 short-description: terms minted to describe the machinery of TOGETL itself
 
 =type tag:nuke24.net,2026-11:togetl:Document
-short-description: a source document that was read by an importer
+short-description: a source document
+
+=type tag:nuke24.net,2026-11:togetl:DocumentImport
+short-description: one import of one source document
 
 =type tag:nuke24.net,2026-11:togetl:ParseIssue
 short-description: a problem encountered while reading a source document
@@ -18,6 +21,9 @@ short-description: a narrative note attached to project data
 =type tag:nuke24.net,2026-11:togetl:Namespace
 short-description: an RDF namespace or ontology
 
+=attribute tag:nuke24.net,2026-11:togetl:sourceDocument
+short-description: links a document import to its source document
+
 =attribute tag:nuke24.net,2026-11:togetl:sourceUrl
 short-description: the canonical URL of a source document
 
@@ -25,16 +31,16 @@ short-description: the canonical URL of a source document
 short-description: the detected or declared source format
 
 =attribute tag:nuke24.net,2026-11:togetl:parserVersion
-short-description: version of the parser that read the document
+short-description: version of the parser used by a document import
 
 =attribute tag:nuke24.net,2026-11:togetl:hasBom
-short-description: whether the source began with a UTF-8 byte order mark
+short-description: whether a document import observed a UTF-8 byte order mark
 
 =attribute tag:nuke24.net,2026-11:togetl:document
 short-description: links a derived resource to its source document
 
 =attribute tag:nuke24.net,2026-11:togetl:parseIssue
-short-description: links a document to one of its parse issues
+short-description: links a document import to one of its parse issues
 
 =attribute tag:nuke24.net,2026-11:togetl:severity
 short-description: severity of a parse issue

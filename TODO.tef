@@ -110,3 +110,25 @@ It probably horsed with some settings in order to try to make things work.
 Figure out why this started happening and fix the root cause
 so I can stop telling them to explicitly `export` it in their commands.
 Then remove the note in AGENTS.md.
+
+=task S36CR-008
+status: pending
+priority: high
+kind: cleanup
+scope: Java source files; vocabulary and loader logic
+title: Finish the document-import provenance refactor
+request: Complete the migration from the older single-document model to the newer document/import-provenance model and remove the leftover compatibility shims that were left behind during the refactor.
+acceptance: All internal code uses the document/import semantics consistently; deprecated aliases are removed or justified; loader and vocab code no longer mix old and new names in ways that could produce wrong provenance or wrong vocabulary output.
+
+The new model is clear: each source document has a stable `documentIri`, and each import run has its own `documentImportIri` that acts as the statement source. The code still shows signs of a refactor that was only partially completed.
+
+Specific cases found:
+
+- `SourceDocument.java` still keeps deprecated `getIri()` and `getImportRunIri()` methods, even though the surrounding code and tests already expect `getDocumentIri()` and `getDocumentImportIri()`. This is a stale compatibility layer that risks future calls using the wrong concept.
+- `Vocab.java` still defines `TOGETL_MEMBER_OF` as a deprecated alias of `TOGETL_IS_MEMBER_OF`. This is an obvious partial rename: the mapping tables and tests have moved to `general:isMemberOf`, but a legacy constant remains, which suggests some code paths may still emit the old predicate accidentally,
+  or that the agent mistakenly kept the old name around for 'compatibility' that is not actually needed.
+- `Loader.java` contains a large amount of `documentByDocumentImport` / `loadingBySource` / `resolveDocumentIri` logic specifically to map statements and parse issues back to the correct document or import. That indicates the code paths are now trying to reconcile both the old document-centric assumptions and the new import-centric provenance model. This is likely the point where half-finished refactors tend to hide subtle bugs.
+- The names in the loader and vocabulary layer are still mixed: `source`, `document`, `document import`, `run`, and `import-run` all appear as different identifiers for the same conceptual thing. That makes the provenance model harder to reason about and increases the chance of mismatched links when a new importer or dialect is added.
+- The project documentation and tests now treat the import run as the actual statement source, but some legacy names remain in the implementation as compatibility aliases. That is not just cosmetic: it creates a maintenance trap where callers may continue using the old names and silently produce wrong provenance records.
+
+Fix this by finishing the rename and removing the compatibility aliases once the codebase has been migrated. Any remaining bridge code should be explicit, well-scoped, and documented, not a half-finished back-compat layer.

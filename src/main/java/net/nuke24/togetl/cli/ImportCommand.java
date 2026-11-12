@@ -155,7 +155,8 @@ public final class ImportCommand {
 		}
 		
 		System.err.println("Imported " + effectiveSourceUrl);
-		System.err.println("  document " + source.getIri());
+		System.err.println("  document " + source.getDocumentIri());
+		System.err.println("  document-import " + source.getDocumentImportIri());
 		System.err.println("  entries " + document.getEntries().size()
 				+ ", statements " + statementCount
 				+ ", issues " + document.getIssues().size());

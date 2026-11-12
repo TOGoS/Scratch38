@@ -42,7 +42,7 @@ public final class ValueParserContext {
 			ValueEmitter emitter
 	) {
 		this.source = source;
-		this.documentHash = Identifiers.documentHash(source.getIri());
+		this.documentHash = Identifiers.documentHash(source.getDocumentIri());
 		this.entryType = entryType;
 		this.entryOrdinal = entryOrdinal;
 		this.subject = subject;

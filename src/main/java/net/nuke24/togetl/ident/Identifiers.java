@@ -56,6 +56,25 @@ public final class Identifiers {
 		return mint("document", shortSha256(sourceUrl.getBytes(StandardCharsets.UTF_8)));
 	}
 	
+	/** A deterministic identifier for one document import against one document. */
+	public static String documentImportIri(String documentIri, String parserVersion) {
+		if (documentIri == null || documentIri.isEmpty()) {
+			throw new IllegalArgumentException("documentIri must not be empty");
+		}
+		if (parserVersion == null || parserVersion.isEmpty()) {
+			throw new IllegalArgumentException("parserVersion must not be empty");
+		}
+		return mint(
+				"import-run",
+				shortSha256((documentIri + "\n" + parserVersion).getBytes(StandardCharsets.UTF_8)));
+	}
+
+	/** @deprecated Use {@link #documentImportIri(String, String)}. */
+	@Deprecated
+	public static String importRunIri(String documentIri, String parserVersion) {
+		return documentImportIri(documentIri, parserVersion);
+	}
+	
 	/** A generic TEF entry resource within a document. */
 	public static String tefEntryIri(String documentIri, int ordinal) {
 		if (ordinal < 0) {

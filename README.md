@@ -31,9 +31,10 @@ The build targets Java 8 and does not require Maven.
 - TEF reader: BOM handling, strict UTF-8 validation, source spans, comments,
   directives, tolerance levels, and recovery for orphan continuations and
   malformed header lines.
-- Generic TEF dialect: captures document metadata, entries, headers, comments,
-  directives, and parse issues without dropping source data, and reports the
-  entry types and fields that a domain dialect still needs to map.
+- Generic TEF dialect: captures source-document metadata plus document-import
+  metadata, entries, headers, comments, directives, and parse issues without
+  dropping source data, and reports the entry types and fields that a domain
+  dialect still needs to map.
 - Declarative mapping dialects driven by TSV tables under `mappings/`:
   - `parts` for `3DPrintingData.tef` — parts, categories, sets, standards,
     narration, aliases, links, STL/CSG files, and part references.

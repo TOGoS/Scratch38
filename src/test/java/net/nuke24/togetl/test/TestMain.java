@@ -430,10 +430,18 @@ public final class TestMain {
 	private static void testIdentifiers() throws Exception {
 		String url = "https://example.com/a b.tef";
 		String documentIri = Identifiers.documentIri(url);
+		String documentImportIri = Identifiers.documentImportIri(documentIri, "test/1");
 		String prefix = Identifiers.TAG_PREFIX + "document:";
+		String importPrefix = Identifiers.TAG_PREFIX + "import-run:";
 		check(documentIri.startsWith(prefix), "document IRI prefix: " + documentIri);
+		check(documentImportIri.startsWith(importPrefix), "document import IRI prefix: " + documentImportIri);
 		assertEquals(prefix.length() + 16, documentIri.length(), "document hash length");
+		assertEquals(importPrefix.length() + 16, documentImportIri.length(), "document import hash length");
 		assertEquals(documentIri, Identifiers.documentIri(url), "document IRI is deterministic");
+		assertEquals(documentImportIri, Identifiers.documentImportIri(documentIri, "test/1"),
+				"document import IRI is deterministic");
+		check(!documentImportIri.equals(Identifiers.documentImportIri(documentIri, "test/2")),
+				"parser versions produce different document imports");
 		check(!documentIri.equals(Identifiers.documentIri(url + "x")), "different URLs differ");
 		
 		String entryIri = Identifiers.tefEntryIri(documentIri, 7);
@@ -468,13 +476,23 @@ public final class TestMain {
 		ImportReport report = new ImportReport();
 		
 		List<Statement> statements = collect(new GenericTEFDialect(), document, source, report);
-		String doc = source.getIri();
+		String doc = source.getDocumentIri();
+		String run = source.getDocumentImportIri();
 		String entry = Identifiers.tefEntryIri(doc, 0);
+		assertEquals(statements.size(), countSource(statements, run), "all statements use document import source");
 		
 		check(has(statements, doc, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT.toString()),
 				"document type statement");
 		check(has(statements, doc, Vocab.TOGETL_SHA256, Literal.of(Identifiers.sha256(bytes)).toString()),
 				"document hash statement");
+		check(has(statements, run, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT_IMPORT.toString()),
+				"document import type statement");
+		check(has(statements, run, Vocab.TOGETL_SOURCE_DOCUMENT, doc),
+				"document import links to source document");
+		check(has(statements, run, Vocab.TOGETL_PARSER_VERSION, Literal.of("test/1").toString()),
+				"document import parser version");
+		check(has(statements, run, Vocab.TOGETL_HAS_BOM,
+				Literal.of("false", Vocab.XSD_BOOLEAN).toString()), "document import BOM flag");
 		check(has(statements, entry, Vocab.TEF_ENTRY_TYPE, Literal.of("part").toString()),
 				"entry type statement");
 		check(has(statements, entry, Vocab.TEF_ENTRY_VALUE, Literal.of("p1").toString()),
@@ -549,9 +567,9 @@ public final class TestMain {
 				"first tag");
 		check(has(statements, part, Vocab.TOGETL_TAG, Literal.of("b").toString()),
 				"second tag");
-		check(has(statements, part, Vocab.TOGETL_MEMBER_OF,
+		check(has(statements, part, Vocab.TOGETL_IS_MEMBER_OF,
 				Identifiers.referenceIri("p2")), "member-of resolves to a part IRI");
-		check(!has(statements, part, Vocab.TOGETL_DOCUMENT_LINK, source.getIri()),
+		check(!has(statements, part, Vocab.TOGETL_DOCUMENT_LINK, source.getDocumentIri()),
 				"mapped part should not be linked to source TEF document");
 		String stlResource = "http://wherever-files.nuke24.net/uri-res/raw/urn:bitprint:ABC/p1.stl";
 		check(has(statements, part, Vocab.TOGETL_STL_FILE, stlResource),
@@ -767,6 +785,16 @@ public final class TestMain {
 		for (Statement statement : statements) {
 			if (statement.getPredicate().equals(predicate)
 					&& statement.getObject().toString().equals(object)) {
+				count++;
+			}
+		}
+		return count;
+	}
+	
+	private static int countSource(List<Statement> statements, String source) {
+		int count = 0;
+		for (Statement statement : statements) {
+			if (statement.getSource().equals(source)) {
 				count++;
 			}
 		}

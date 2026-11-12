@@ -3,7 +3,7 @@ package net.nuke24.togetl.etl;
 import net.nuke24.togetl.ident.Identifiers;
 
 /**
- * Provenance for one source document in one import run.
+ * Provenance for one source document in one document import.
  */
 public final class SourceDocument {
 	private final String sourceIri;
@@ -11,7 +11,8 @@ public final class SourceDocument {
 	private final long byteLength;
 	private final String format;
 	private final String parserVersion;
-	private final String iri;
+	private final String documentIri;
+	private final String documentImportIri;
 	
 	private SourceDocument(
 			String sourceIri,
@@ -25,7 +26,8 @@ public final class SourceDocument {
 		this.byteLength = byteLength;
 		this.format = format;
 		this.parserVersion = parserVersion;
-		this.iri = Identifiers.documentIri(sourceIri);
+		this.documentIri = Identifiers.documentIri(sourceIri);
+		this.documentImportIri = Identifiers.documentImportIri(documentIri, parserVersion);
 	}
 	
 	public static SourceDocument of(
@@ -68,8 +70,25 @@ public final class SourceDocument {
 		return parserVersion;
 	}
 	
-	/** The minted document IRI. */
+	/** The minted source-document IRI. */
+	public String getDocumentIri() {
+		return documentIri;
+	}
+	
+	/** The minted document-import IRI used as statement source. */
+	public String getDocumentImportIri() {
+		return documentImportIri;
+	}
+
+	/** @deprecated Use {@link #getDocumentImportIri()}. */
+	@Deprecated
+	public String getImportRunIri() {
+		return documentImportIri;
+	}
+	
+	/** @deprecated Use {@link #getDocumentIri()}. */
+	@Deprecated
 	public String getIri() {
-		return iri;
+		return documentIri;
 	}
 }

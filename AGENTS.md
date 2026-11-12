@@ -67,3 +67,8 @@ Default verification after code changes:
 ```
 
 This runs project build + tests; use it unless the change is documentation-only.
+
+The Visual Studio Code 'devcontainer' runs on alpine and should have
+`JAVA_HOME` set to `/usr/lib/jvm/java-1.8-openjdk`, as specified by `devcontainer.json`.
+Sometimes VS Code agents find that it is not set correctly,
+in which case it can be worked-around with an `export JAVA_HOME=/usr/lib/jvm/java-1.8-openjdk` before the command.

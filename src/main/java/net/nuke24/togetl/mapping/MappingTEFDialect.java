@@ -62,7 +62,7 @@ public final class MappingTEFDialect implements TEFDialect {
 		DialectSupport.emitDocumentMetadata(document, source, out);
 		DialectSupport.emitDocumentAnnotations(document, source, out, report);
 		
-		String documentIri = source.getIri();
+		String documentIri = source.getDocumentIri();
 		String documentHash = Identifiers.documentHash(documentIri);
 		ConflictTracker conflicts = new ConflictTracker();
 		CardinalityEmitter emitter = new CardinalityEmitter(out, report, conflicts);

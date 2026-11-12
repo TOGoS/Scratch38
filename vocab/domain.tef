@@ -39,8 +39,16 @@ short-description: a tag or label
 =attribute tag:nuke24.net,2026-11:general:keyword
 short-description: a keyword
 
-=attribute tag:nuke24.net,2026-11:general:memberOf
+=attribute tag:nuke24.net,2026-11:general:isMemberOf
 short-description: a set or category that a resource belongs to
+
+Also used to indicate that an object meets some specification, or is [somewhat vaguely] of a type.
+The 'type' usage has some overlap with http://www.w3.org/1999/02/22-rdf-syntax-ns#type,
+so we should probably, at some point, come up with guidelines for when to use which,
+and update source documents accordingly.
+
+=attribute tag:nuke24.net,2026-11:general:memberOf
+short-description: deprecated alias for isMemberOf
 
 =attribute tag:nuke24.net,2026-11:general:member
 short-description: a member of a set

@@ -59,6 +59,8 @@ public final class VocabularyReport {
 		}
 		addUse(usedBy, Vocab.RDF_TYPE.toString(), "dialect");
 		addUse(usedBy, Vocab.RDFS_COMMENT.toString(), "dialect");
+		addUse(usedBy, Vocab.TOGETL_DOCUMENT_IMPORT.toString(), "dialect");
+		addUse(usedBy, Vocab.TOGETL_SOURCE_DOCUMENT.toString(), "dialect");
 		addUse(usedBy, Vocab.TOGETL_DOCUMENT_LINK.toString(), "dialect");
 		addUse(usedBy, Vocab.TEF_ENTRY_INDEX.toString(), "dialect");
 		addUse(usedBy, Vocab.TEF_ENTRY_TYPE.toString(), "dialect");
