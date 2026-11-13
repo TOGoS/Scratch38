@@ -889,6 +889,15 @@ public final class TestMain {
 		assertEquals("a \\", row.getCell(0), "cell before the pipe keeps its backslash");
 		assertEquals("b", row.getCell(1), "cell after the pipe");
 		check(table.getRows().get(1).isSeparator(), "line starting with |- is a horizontal rule");
+		
+		OrgDocument notes = OrgReader.read(
+				"* T\n| a | b | free note\n| c | d | e |\n".getBytes(StandardCharsets.UTF_8));
+		OrgTable noteTable = notes.getTables().get(0);
+		assertEquals(2, noteTable.getRows().size(), "row without trailing pipe is still a row");
+		OrgTableRow noteRow = noteTable.getRows().get(0);
+		assertEquals(3, noteRow.getCellCount(), "unterminated last cell is a cell");
+		assertEquals("free note", noteRow.getCell(2), "free-form last cell text");
+		assertEquals(3, noteTable.getRows().get(1).getCellCount(), "terminated row unchanged");
 	}
 	
 	private static void testImportCommand() throws Exception {

@@ -42,7 +42,7 @@ public final class OrgReader {
 	private static final Pattern BLOCK_END =
 			Pattern.compile("^\\s*#\\+end_([A-Za-z0-9_-]+)[ \t]*$", Pattern.CASE_INSENSITIVE | Pattern.UNIX_LINES);
 	private static final Pattern TABLE_ROW =
-			Pattern.compile("^\\s*\\|(.*)\\|\\s*$", Pattern.UNIX_LINES);
+			Pattern.compile("^\\s*\\|(.*?)\\|?\\s*$", Pattern.UNIX_LINES);
 	private static final Pattern TABLE_SEPARATOR =
 			Pattern.compile("^\\s*\\|-.*$", Pattern.UNIX_LINES);
 	private static final Pattern LINK =
