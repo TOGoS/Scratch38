@@ -73,17 +73,6 @@ The Visual Studio Code 'devcontainer' runs on alpine and should have
 Sometimes VS Code agents find that it is not set correctly,
 in which case it can be worked-around with an `export JAVA_HOME=/usr/lib/jvm/java-1.8-openjdk` before the command.
 
-## Documentation
-
-Avoid redundant documentation -- it becomes confusing when things change.
-
-Do not document implementation details in documents such as PLAN / README.
-
-The Java code itself is the canonical source of truth about the Java code.
-PLAN should be reserved for aspirations ('let's stream data instead of loading files into strings')
-and not bother itself with what the current implementation happens to be
-except when changing it is relevant to, like, a milestone or something.
-
 ## Commit attribution
 
 When an agent makes a commit entirely on its own, set author identity per commit command
