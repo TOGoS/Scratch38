@@ -9,17 +9,16 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.security.DigestInputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.Optional;
 
 import net.nuke24.togetl.Version;
 import net.nuke24.togetl.dialect.Dialects;
 import net.nuke24.togetl.dialect.TEFDialect;
+import net.nuke24.togetl.dialect.TEFDocumentSink;
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
-import net.nuke24.togetl.ident.Identifiers;
+import net.nuke24.togetl.etl.SourceProvenance;
 import net.nuke24.togetl.rdf.Statement;
 import net.nuke24.togetl.rdf.StatementConsumer;
 import net.nuke24.togetl.tef.TEFComment;
@@ -30,6 +29,8 @@ import net.nuke24.togetl.tef.TEFReader;
 import net.nuke24.togetl.tef.TEFSink;
 import net.nuke24.togetl.togetltsv.AliasTable;
 import net.nuke24.togetl.togetltsv.TOGETLTSVWriter;
+import net.nuke24.togetl.util.MultiSink;
+import net.nuke24.togetl.util.Sink;
 
 /**
  * {@code togetl import}: read one source document and write a TOGETLTSV stream.
@@ -113,38 +114,19 @@ public final class ImportCommand {
 	
 	private void execute() throws IOException, TEFReadException {
 		TEFDialect selectedDialect = Dialects.byName(dialect);
-		
-		if ("-".equals(input)) {
-			Path spool = Files.createTempFile("togetl-import-", ".tef");
-			try {
-				Files.copy(System.in, spool, StandardCopyOption.REPLACE_EXISTING);
-				executeFile(selectedDialect, spool);
-			} finally {
-				Files.deleteIfExists(spool);
-			}
-		} else {
-			executeFile(selectedDialect, Paths.get(input));
-		}
-	}
-	
-	private void executeFile(TEFDialect selectedDialect, Path file) throws IOException, TEFReadException {
 		String effectiveSourceUrl = sourceUrl != null ? sourceUrl : defaultSourceUrl(input);
-		Provenance provenance = Provenance.scan(file);
 		SourceDocument source = SourceDocument.of(
 				effectiveSourceUrl,
-				provenance.sha256,
-				provenance.byteLength,
 				"tef",
 				Version.TEF_PARSER_VERSION);
 		
 		ImportReport report = new ImportReport();
-		CountingSink sink = new CountingSink();
 		CountingConsumer counter = new CountingConsumer();
 		boolean fileOutput = !"-".equals(output);
 		boolean complete = false;
 		Writer outputWriter = openOutput(output);
 		try {
-			final TOGETLTSVWriter tsv = new TOGETLTSVWriter(outputWriter, AliasTable.withDefaults());
+			TOGETLTSVWriter tsv = new TOGETLTSVWriter(outputWriter, AliasTable.withDefaults());
 			StatementConsumer consumer = new StatementConsumer() {
 				@Override
 				public void accept(Statement statement) throws IOException {
@@ -152,15 +134,25 @@ public final class ImportCommand {
 					counter.accept(statement);
 				}
 			};
-			sink.delegate = selectedDialect.begin(source, provenance.bom, consumer, report);
-			InputStream in = Files.newInputStream(file);
-			try {
-				TEFReader.read(effectiveSourceUrl, in, sink);
-			} finally {
-				in.close();
-			}
+			TEFDocumentSink document = selectedDialect.begin(source, consumer, report);
+			CountingSink entries = new CountingSink(document);
+			SourceProvenance.Digester digester = new SourceProvenance.Digester();
+			Sink<byte[]> input = new MultiSink<byte[]>(Arrays.<Sink<byte[]>>asList(
+					digester, TEFReader.parser(effectiveSourceUrl, entries)));
+			readInput(input);
+			document.finish(digester.result());
 			tsv.flush();
 			complete = true;
+			
+			if (reportPath != null) {
+				writeReport(reportPath, report);
+			}
+			System.err.println("Imported " + effectiveSourceUrl);
+			System.err.println("  document " + source.getDocumentIri());
+			System.err.println("  document-import " + source.getDocumentImportIri());
+			System.err.println("  entries " + entries.entryCount + ", statements " + counter.count);
+			System.err.println("  unmapped " + report.getOccurrenceCount()
+					+ " occurrence(s) in " + report.getRowCount() + " row(s)");
 		} finally {
 			if (fileOutput) {
 				outputWriter.close();
@@ -171,17 +163,25 @@ public final class ImportCommand {
 				outputWriter.flush();
 			}
 		}
-		
-		if (reportPath != null) {
-			writeReport(reportPath, report);
+	}
+	
+	/** Reads the input once, in blocks, and pushes each block into the stage. */
+	private void readInput(Sink<byte[]> stage) throws IOException, TEFReadException {
+		InputStream in = "-".equals(input) ? System.in : Files.newInputStream(Paths.get(input));
+		try {
+			byte[] block = new byte[65536];
+			int n;
+			while ((n = in.read(block)) >= 0) {
+				if (n > 0) {
+					stage.accept(Optional.of(Arrays.copyOf(block, n)));
+				}
+			}
+		} finally {
+			if (!"-".equals(input)) {
+				in.close();
+			}
 		}
-		
-		System.err.println("Imported " + effectiveSourceUrl);
-		System.err.println("  document " + source.getDocumentIri());
-		System.err.println("  document-import " + source.getDocumentImportIri());
-		System.err.println("  entries " + sink.entryCount + ", statements " + counter.count);
-		System.err.println("  unmapped " + report.getOccurrenceCount()
-				+ " occurrence(s) in " + report.getRowCount() + " row(s)");
+		stage.accept(Optional.<byte[]>empty());
 	}
 	
 	private static String defaultSourceUrl(String input) throws IOException {
@@ -230,50 +230,13 @@ public final class ImportCommand {
 		err.println("  --report <file>        Write the unmapped-construct report as TSV");
 	}
 	
-	/** Digest, length, and BOM of the input, found in one pass so metadata can come first. */
-	private static final class Provenance {
-		final String sha256;
-		final long byteLength;
-		final boolean bom;
-		
-		private Provenance(String sha256, long byteLength, boolean bom) {
-			this.sha256 = sha256;
-			this.byteLength = byteLength;
-			this.bom = bom;
-		}
-		
-		static Provenance scan(Path file) throws IOException {
-			MessageDigest digest;
-			try {
-				digest = MessageDigest.getInstance("SHA-256");
-			} catch (NoSuchAlgorithmException e) {
-				throw new IllegalStateException("SHA-256 is unavailable", e);
-			}
-			byte[] head = new byte[3];
-			int headLength = 0;
-			long length = 0;
-			byte[] buffer = new byte[65536];
-			InputStream in = new DigestInputStream(Files.newInputStream(file), digest);
-			try {
-				int n;
-				while ((n = in.read(buffer)) >= 0) {
-					for (int i = 0; i < n && headLength < head.length; i++) {
-						head[headLength++] = buffer[i];
-					}
-					length += n;
-				}
-			} finally {
-				in.close();
-			}
-			boolean bom = headLength == 3
-					&& head[0] == (byte) 0xEF && head[1] == (byte) 0xBB && head[2] == (byte) 0xBF;
-			return new Provenance(Identifiers.hex(digest.digest()), length, bom);
-		}
-	}
-	
 	private static final class CountingSink implements TEFSink {
-		TEFSink delegate;
+		private final TEFDocumentSink delegate;
 		long entryCount;
+		
+		CountingSink(TEFDocumentSink delegate) {
+			this.delegate = delegate;
+		}
 		
 		@Override
 		public void documentComment(TEFComment comment) throws IOException {

@@ -1,6 +1,5 @@
 package net.nuke24.togetl.tef;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -12,6 +11,7 @@ import java.nio.charset.CodingErrorAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import net.nuke24.togetl.ducer.DucerChunk;
 import net.nuke24.togetl.ducer.DucerState2;
@@ -22,6 +22,7 @@ import net.nuke24.togetl.tef.LLChunks.Directive;
 import net.nuke24.togetl.tef.LLChunks.Header;
 import net.nuke24.togetl.tef.LLChunks.HeaderValuePiece;
 import net.nuke24.togetl.tef.LLChunks.NewEntryLine;
+import net.nuke24.togetl.util.Sink;
 
 /**
  * Reads a TEF document, pushing its structure to a {@link TEFSink} as it goes.
@@ -41,17 +42,16 @@ public final class TEFReader {
 	private TEFReader() {
 	}
 	
-	/** Reads a whole document into memory. Prefer the streaming overload for large input. */
+	/** Reads a whole document into memory. Prefer the streaming overloads for large input. */
 	public static TEFDocument read(String sourceIri, byte[] input)
 			throws IOException, TEFReadException {
-		if (sourceIri == null || sourceIri.isEmpty()) {
-			throw new IllegalArgumentException("sourceIri must not be empty");
-		}
 		if (input == null) {
 			throw new IllegalArgumentException("input must not be null");
 		}
 		Collector collector = new Collector();
-		read(sourceIri, new ByteArrayInputStream(input), collector);
+		Sink<byte[]> parser = parser(sourceIri, collector);
+		parser.accept(Optional.of(input));
+		parser.accept(Optional.<byte[]>empty());
 		return new TEFDocument(
 				sourceIri,
 				input.length,
@@ -63,51 +63,32 @@ public final class TEFReader {
 	
 	public static void read(String sourceIri, InputStream in, TEFSink sink)
 			throws IOException, TEFReadException {
-		if (sourceIri == null || sourceIri.isEmpty()) {
-			throw new IllegalArgumentException("sourceIri must not be empty");
-		}
 		if (in == null) {
 			throw new IllegalArgumentException("input must not be null");
+		}
+		Sink<byte[]> parser = parser(sourceIri, sink);
+		byte[] block = new byte[FEED_BLOCK_SIZE];
+		int n;
+		while ((n = in.read(block)) >= 0) {
+			if (n > 0) {
+				parser.accept(Optional.of(Arrays.copyOf(block, n)));
+			}
+		}
+		parser.accept(Optional.<byte[]>empty());
+	}
+	
+	/**
+	 * Returns a stage that takes the document's bytes in blocks of any size,
+	 * ending with {@code Optional.empty()}, and pushes its structure to the sink.
+	 */
+	public static Sink<byte[]> parser(String sourceIri, TEFSink sink) {
+		if (sourceIri == null || sourceIri.isEmpty()) {
+			throw new IllegalArgumentException("sourceIri must not be empty");
 		}
 		if (sink == null) {
 			throw new IllegalArgumentException("sink must not be null");
 		}
-		
-		Pipeline pipeline = new Pipeline(sourceIri, sink);
-		byte[] block = new byte[FEED_BLOCK_SIZE];
-		int filled = fill(in, block);
-		int offset = startsWithBom(block, filled) ? UTF8_BOM.length : 0;
-		boolean last = filled < block.length;
-		while (true) {
-			pipeline.feed(Arrays.copyOfRange(block, offset, filled));
-			if (last) {
-				break;
-			}
-			filled = fill(in, block);
-			last = filled < block.length;
-			offset = 0;
-		}
-		pipeline.finish();
-	}
-	
-	/** Reads until the buffer is full or the stream ends. */
-	private static int fill(InputStream in, byte[] buffer) throws IOException {
-		int total = 0;
-		while (total < buffer.length) {
-			int n = in.read(buffer, total, buffer.length - total);
-			if (n < 0) {
-				break;
-			}
-			total += n;
-		}
-		return total;
-	}
-	
-	private static boolean startsWithBom(byte[] block, int filled) {
-		return filled >= UTF8_BOM.length
-				&& block[0] == UTF8_BOM[0]
-				&& block[1] == UTF8_BOM[1]
-				&& block[2] == UTF8_BOM[2];
+		return new Pipeline(sourceIri, sink);
 	}
 	
 	private static boolean hasUtf8Bom(byte[] input) {
@@ -117,26 +98,63 @@ public final class TEFReader {
 				&& input[2] == UTF8_BOM[2];
 	}
 	
-	/** The streaming stages, carried from one block to the next. */
-	private static final class Pipeline {
+	/**
+	 * The streaming stages, carried from one block to the next. The first
+	 * three bytes are held back until they can be checked for a BOM, so the
+	 * block sizes do not matter.
+	 */
+	private static final class Pipeline implements Sink<byte[]> {
 		private final String sourceIri;
 		private final Utf8Checker utf8 = new Utf8Checker();
 		private final Assembler assembler;
 		private DucerState2<byte[], Chunk[]> lexer = TEFParser.INIT;
 		private DucerState2<Chunk[], Chunk[]> merger = LLChunkMerger.FULL;
+		private byte[] head = new byte[0];
+		private boolean started;
 		
 		Pipeline(String sourceIri, TEFSink sink) {
 			this.sourceIri = sourceIri;
 			this.assembler = new Assembler(sink);
 		}
 		
-		void feed(byte[] bytes) throws IOException, TEFReadException {
-			step(bytes, false);
+		@Override
+		public void accept(Optional<byte[]> item) throws IOException, TEFReadException {
+			if (!started) {
+				if (!item.isPresent()) {
+					start(head, true);
+					return;
+				}
+				head = concat(head, item.get());
+				if (head.length < UTF8_BOM.length) {
+					return;
+				}
+				start(head, false);
+				return;
+			}
+			if (item.isPresent()) {
+				step(item.get(), false);
+			} else {
+				step(new byte[0], true);
+				assembler.finish();
+			}
 		}
 		
-		void finish() throws IOException, TEFReadException {
-			step(new byte[0], true);
-			assembler.finish();
+		private void start(byte[] bytes, boolean end) throws IOException, TEFReadException {
+			started = true;
+			byte[] body = hasUtf8Bom(bytes)
+					? Arrays.copyOfRange(bytes, UTF8_BOM.length, bytes.length)
+					: bytes;
+			head = null;
+			step(body, end);
+			if (end) {
+				assembler.finish();
+			}
+		}
+		
+		private static byte[] concat(byte[] a, byte[] b) {
+			byte[] out = Arrays.copyOf(a, a.length + b.length);
+			System.arraycopy(b, 0, out, a.length, b.length);
+			return out;
 		}
 		
 		private void step(byte[] bytes, boolean end) throws IOException, TEFReadException {
@@ -161,12 +179,10 @@ public final class TEFReader {
 	 * is carried into the next check, so only a few bytes are ever buffered.
 	 */
 	private static final class Utf8Checker {
-		private static final int MAX_CARRY = 3;
-		
 		private final CharsetDecoder decoder = UTF8.newDecoder()
 				.onMalformedInput(CodingErrorAction.REPORT)
 				.onUnmappableCharacter(CodingErrorAction.REPORT);
-		private final CharBuffer chars = CharBuffer.allocate(FEED_BLOCK_SIZE + MAX_CARRY);
+		private final CharBuffer chars = CharBuffer.allocate(4096);
 		private byte[] carry = new byte[0];
 		/** Byte offset (in the BOM-stripped input) of carry[0]. */
 		private long offset;
@@ -179,13 +195,21 @@ public final class TEFReader {
 			System.arraycopy(bytes, 0, buf, carry.length, bytes.length);
 			
 			ByteBuffer in = ByteBuffer.wrap(buf);
-			chars.clear();
-			CoderResult result = decoder.decode(in, chars, end);
-			if (result.isError() || (end && in.hasRemaining())) {
+			CoderResult result;
+			do {
+				chars.clear();
+				result = decoder.decode(in, chars, end);
+				if (result.isError()) {
+					throw invalidAt(buf, in.position());
+				}
+			} while (result.isOverflow());
+			if (end && in.hasRemaining()) {
 				throw invalidAt(buf, in.position());
 			}
 			if (end) {
-				decoder.flush(chars);
+				while (decoder.flush(chars).isOverflow()) {
+					chars.clear();
+				}
 			}
 			
 			int consumed = in.position();

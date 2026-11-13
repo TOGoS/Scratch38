@@ -6,7 +6,6 @@ import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
 import net.nuke24.togetl.rdf.StatementConsumer;
 import net.nuke24.togetl.tef.TEFEntry;
-import net.nuke24.togetl.tef.TEFSink;
 
 /**
  * Captures a TEF document structurally without assigning domain meaning.
@@ -24,23 +23,17 @@ public final class GenericTEFDialect implements TEFDialect {
 	}
 	
 	@Override
-	public TEFSink begin(
+	public TEFDocumentSink begin(
 			SourceDocument source,
-			boolean bom,
 			StatementConsumer out,
 			ImportReport report
 	) throws IOException {
-		return new Session(source, bom, out, report);
+		return new Session(source, out, report);
 	}
 	
 	private static final class Session extends DialectSupport.DocumentSession {
-		Session(
-				SourceDocument source,
-				boolean bom,
-				StatementConsumer out,
-				ImportReport report
-		) throws IOException {
-			super(source, bom, out, report);
+		Session(SourceDocument source, StatementConsumer out, ImportReport report) {
+			super(source, out, report);
 		}
 		
 		@Override

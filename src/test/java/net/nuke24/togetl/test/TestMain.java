@@ -2,9 +2,10 @@ package net.nuke24.togetl.test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FilterReader;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.Reader;
 import java.io.StringReader;
@@ -16,9 +17,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import net.nuke24.togetl.cli.ImportCommand;
 import net.nuke24.togetl.cli.LoadCommand;
@@ -26,8 +31,10 @@ import net.nuke24.togetl.cli.VocabCommand;
 import net.nuke24.togetl.db.SQLiteDatabase;
 import net.nuke24.togetl.dialect.GenericTEFDialect;
 import net.nuke24.togetl.dialect.TEFDialect;
+import net.nuke24.togetl.dialect.TEFDocumentSink;
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
+import net.nuke24.togetl.etl.SourceProvenance;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.mapping.MappingTable;
 import net.nuke24.togetl.mapping.MappingTEFDialect;
@@ -55,6 +62,8 @@ import net.nuke24.togetl.tef.TEFSink;
 import net.nuke24.togetl.togetltsv.AliasTable;
 import net.nuke24.togetl.togetltsv.TOGETLTSVReader;
 import net.nuke24.togetl.togetltsv.TOGETLTSVWriter;
+import net.nuke24.togetl.util.MultiSink;
+import net.nuke24.togetl.util.Sink;
 import net.nuke24.togetl.util.PercentCoder;
 import net.nuke24.togetl.vocab.Vocab;
 import net.nuke24.togetl.vocab.Vocabulary;
@@ -81,6 +90,14 @@ public final class TestMain {
 			
 	private static int failures = 0;
 	private static int passed = 0;
+	private static int skipped = 0;
+	/**
+	 * Categories that run. "core" is always on; the others are opt-in with
+	 * --include=file-tests,memory-tests, because they touch the file system or
+	 * take a while.
+	 */
+	private static final Set<String> enabledCategories = new HashSet<String>(
+			Collections.singletonList("core"));
 	
 	private interface Check {
 		void run() throws Exception;
@@ -90,6 +107,16 @@ public final class TestMain {
 	}
 	
 	public static void main(String[] args) {
+		for (String arg : args) {
+			if (arg.startsWith("--include=")) {
+				for (String category : arg.substring("--include=".length()).split(",")) {
+					enabledCategories.add(category.trim());
+				}
+			} else {
+				System.err.println("Usage: TestMain [--include=file-tests,memory-tests]");
+				System.exit(2);
+			}
+		}
 		run("percent coder", TestMain::testPercentCoder);
 		run("locations", TestMain::testLocations);
 		run("aliases", TestMain::testAliases);
@@ -111,6 +138,11 @@ public final class TestMain {
 		run("tef spans", TestMain::testTefSpans);
 		run("tef crlf", TestMain::testTefCrLf);
 		run("tef streamed input", TestMain::testTefStreamedInput);
+		run("tef utf-8 split across blocks", TestMain::testTefUtf8SplitAcrossBlocks);
+		run("tef invalid utf-8 split across blocks", TestMain::testTefInvalidUtf8SplitAcrossBlocks);
+		run("tef entries arrive before end of input", TestMain::testTefEntriesArriveBeforeEnd);
+		run("source provenance", TestMain::testSourceProvenance);
+		run("multi sink order", TestMain::testMultiSinkOrder);
 		run("identifiers", TestMain::testIdentifiers);
 		run("generic dialect", TestMain::testGenericDialect);
 		run("generic dialect round trip", TestMain::testGenericDialectRoundTrip);
@@ -131,15 +163,31 @@ public final class TestMain {
 		run("database load", TestMain::testDatabaseLoad);
 		run("database simple provenance", TestMain::testDatabaseSimpleProvenance);
 		
+		run("file-tests", "import leaves no output on syntax error", TestMain::testImportNoOutputOnError);
+		run("file-tests", "import rejects --tolerance", TestMain::testImportRejectsTolerance);
+		run("file-tests", "import writes provenance", TestMain::testImportWritesProvenance);
+		run("file-tests", "import from stdin", TestMain::testImportFromStdin);
+		
+		run("memory-tests", "import streams in a small heap", TestMain::testImportStreamsInSmallHeap);
+		
 		System.out.println();
 		if (failures > 0) {
-			System.out.println(failures + " test(s) failed, " + passed + " passed");
+			System.out.println(failures + " test(s) failed, " + passed + " passed, " + skipped + " skipped");
 			System.exit(1);
 		}
-		System.out.println(passed + " test(s) passed");
+		System.out.println(passed + " test(s) passed, " + skipped + " skipped");
 	}
 	
 	private static void run(String name, Check check) {
+		run("core", name, check);
+	}
+	
+	private static void run(String category, String name, Check check) {
+		if (!enabledCategories.contains(category)) {
+			skipped++;
+			System.out.println("skip " + name + " (needs --include=" + category + ")");
+			return;
+		}
 		try {
 			check.run();
 			passed++;
@@ -449,6 +497,173 @@ public final class TestMain {
 		check(entry.getContent().contains("caf\u00e9 line 19999"), "content should reach the last line");
 	}
 	
+	/** Collects what a TEFSink receives, for tests that inspect the stream. */
+	private static final class RecordingSink implements TEFSink {
+		final List<TEFEntry> entries = new ArrayList<TEFEntry>();
+		final List<TEFComment> comments = new ArrayList<TEFComment>();
+		final List<TEFDirective> directives = new ArrayList<TEFDirective>();
+		
+		@Override
+		public void documentComment(TEFComment comment) {
+			comments.add(comment);
+		}
+		
+		@Override
+		public void documentDirective(TEFDirective directive) {
+			directives.add(directive);
+		}
+		
+		@Override
+		public void entry(TEFEntry entry) {
+			entries.add(entry);
+		}
+	}
+	
+	/** Feeds bytes to a parser in blocks of the given size, then ends the input. */
+	private static RecordingSink parseInBlocks(byte[] bytes, int blockSize) throws Exception {
+		RecordingSink sink = new RecordingSink();
+		Sink<byte[]> parser = TEFReader.parser(DOC, sink);
+		for (int offset = 0; offset < bytes.length; offset += blockSize) {
+			int end = Math.min(bytes.length, offset + blockSize);
+			parser.accept(Optional.of(Arrays.copyOfRange(bytes, offset, end)));
+		}
+		parser.accept(Optional.<byte[]>empty());
+		return sink;
+	}
+	
+	private static String describe(List<TEFEntry> entries) {
+		StringBuilder out = new StringBuilder();
+		for (TEFEntry entry : entries) {
+			out.append(entry.getType()).append(' ').append(entry.getValue()).append('\n');
+			for (TEFHeader header : entry.getHeaders()) {
+				out.append(header.getKey()).append('=').append(header.getValue()).append('\n');
+			}
+			out.append(entry.getContent()).append("\n--\n");
+		}
+		return out.toString();
+	}
+	
+	private static void testTefUtf8SplitAcrossBlocks() throws Exception {
+		String[] samples = {"caf\u00e9", "\u20ac", "\ud83d\ude00"};
+		for (String sample : samples) {
+			String text = "\uFEFF=part p1\nname: " + sample + " x\n\n" + sample + sample + "\n";
+			byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+			String whole = describe(parseInBlocks(bytes, bytes.length).entries);
+			for (int blockSize : new int[] {1, 2, 3, 5, 7}) {
+				assertEquals(whole, describe(parseInBlocks(bytes, blockSize).entries),
+						"parse with blocks of " + blockSize + " for " + sample);
+			}
+		}
+	}
+	
+	private static void testTefInvalidUtf8SplitAcrossBlocks() throws Exception {
+		byte[][] invalid = {
+				{(byte) 0xE2, (byte) 0x82},
+				{(byte) 0xE2, (byte) 0x28, (byte) 0xA1},
+				{(byte) 0xF0, (byte) 0x9F, (byte) 0x98},
+		};
+		byte[] prefix = "=part p1\nname: ".getBytes(StandardCharsets.UTF_8);
+		byte[] newline = {(byte) '\n'};
+		for (byte[] badSequence : invalid) {
+			byte[] bytes = concat(prefix, badSequence, newline);
+			for (int blockSize : new int[] {1, 2, bytes.length}) {
+				boolean threw = false;
+				try {
+					parseInBlocks(bytes, blockSize);
+				} catch (TEFReadException expected) {
+					threw = true;
+					check(expected.getMessage().contains("Invalid UTF-8"),
+							"error should be invalid UTF-8: " + expected.getMessage());
+				}
+				check(threw, "invalid UTF-8 should be rejected with blocks of " + blockSize);
+			}
+		}
+		
+		byte[] truncated = concat(prefix, new byte[] {(byte) 0xE2, (byte) 0x82}, new byte[0]);
+		boolean threw = false;
+		try {
+			parseInBlocks(truncated, 1);
+		} catch (TEFReadException expected) {
+			threw = true;
+		}
+		check(threw, "input ending mid-character should be rejected");
+	}
+	
+	private static byte[] concat(byte[]... parts) {
+		int total = 0;
+		for (byte[] part : parts) {
+			total += part.length;
+		}
+		byte[] out = new byte[total];
+		int offset = 0;
+		for (byte[] part : parts) {
+			System.arraycopy(part, 0, out, offset, part.length);
+			offset += part.length;
+		}
+		return out;
+	}
+	
+	private static void testTefEntriesArriveBeforeEnd() throws Exception {
+		RecordingSink sink = new RecordingSink();
+		Sink<byte[]> parser = TEFReader.parser(DOC, sink);
+		parser.accept(Optional.of("=part a\nname: 1\n\nx\n=part b\nname: 2\n\n".getBytes(StandardCharsets.UTF_8)));
+		assertEquals(1, sink.entries.size(), "first entry is delivered before end of input");
+		assertEquals("a", sink.entries.get(0).getValue(), "first entry value");
+		parser.accept(Optional.<byte[]>empty());
+		assertEquals(2, sink.entries.size(), "second entry is delivered at end of input");
+	}
+	
+	private static void testSourceProvenance() throws Exception {
+		byte[] plain = "=part p1\n".getBytes(StandardCharsets.UTF_8);
+		byte[] withBom = concat(new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF}, plain);
+		
+		SourceProvenance p = SourceProvenance.of(withBom);
+		assertEquals(Identifiers.sha256(withBom), p.getSha256(), "sha256 of all bytes including BOM");
+		assertEquals((long) withBom.length, p.getByteLength(), "byte length includes BOM");
+		check(p.hasBom(), "BOM detected");
+		check(!SourceProvenance.of(plain).hasBom(), "no BOM in plain input");
+		
+		SourceProvenance.Digester digester = new SourceProvenance.Digester();
+		for (byte b : withBom) {
+			digester.accept(Optional.of(new byte[] {b}));
+		}
+		digester.accept(Optional.<byte[]>empty());
+		SourceProvenance streamed = digester.result();
+		assertEquals(p.getSha256(), streamed.getSha256(), "streamed sha256");
+		assertEquals(p.getByteLength(), streamed.getByteLength(), "streamed length");
+		check(streamed.hasBom(), "BOM detected when split across blocks");
+		
+		boolean threw = false;
+		try {
+			new SourceProvenance.Digester().result();
+		} catch (IllegalStateException expected) {
+			threw = true;
+		}
+		check(threw, "result before end of input should be refused");
+	}
+	
+	private static void testMultiSinkOrder() throws Exception {
+		final List<String> log = new ArrayList<String>();
+		Sink<String> first = new Sink<String>() {
+			@Override
+			public void accept(Optional<String> item) {
+				log.add("first:" + item.orElse("<end>"));
+			}
+		};
+		Sink<String> second = new Sink<String>() {
+			@Override
+			public void accept(Optional<String> item) {
+				log.add("second:" + item.orElse("<end>"));
+			}
+		};
+		Sink<String> both = new MultiSink<String>(Arrays.asList(first, second));
+		both.accept(Optional.of("a"));
+		both.accept(Optional.of("b"));
+		both.accept(Optional.<String>empty());
+		assertEquals("[first:a, second:a, first:b, second:b, first:<end>, second:<end>]",
+				log.toString(), "every target sees every item and the end, in order");
+	}
+	
 	private static void testTefSpans() throws Exception {
 		TEFDocument document = readTef("=part p1310\nname: Widget\n\nSome content\n");
 		TEFEntry entry = document.getEntries().get(0);
@@ -517,7 +732,7 @@ public final class TestMain {
 				+ "content\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
 		String sourceUrl = "https://example.com/data.tef";
-		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+		SourceDocument source = SourceDocument.of(sourceUrl, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		
 		List<Statement> statements = collect(new GenericTEFDialect(), bytes, source, report);
@@ -563,7 +778,7 @@ public final class TestMain {
 		String text = "=part p1\nname: Widget\ntag: a\ntag: b\n\ncontent\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
 		String sourceUrl = "https://example.com/data.tef";
-		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+		SourceDocument source = SourceDocument.of(sourceUrl, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		
 		List<Statement> statements = collect(new GenericTEFDialect(), bytes, source, report);
@@ -594,7 +809,7 @@ public final class TestMain {
 				+ "A part.\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
 		String sourceUrl = "https://example.com/data.tef";
-		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+		SourceDocument source = SourceDocument.of(sourceUrl, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		MappingTEFDialect dialect = new MappingTEFDialect(
 				"parts", MappingTable.load("parts"));
@@ -650,7 +865,7 @@ public final class TestMain {
 				+ "short-description: same\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
 		String sourceUrl = "https://example.com/conflicts.tef";
-		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+		SourceDocument source = SourceDocument.of(sourceUrl, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		MappingTEFDialect dialect = new MappingTEFDialect(
 				"parts", MappingTable.load("parts"));
@@ -687,7 +902,7 @@ public final class TestMain {
 				+ "title: Project\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
 		String sourceUrl = "https://example.com/namespaces.tef";
-		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+		SourceDocument source = SourceDocument.of(sourceUrl, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		MappingTEFDialect dialect = new MappingTEFDialect(
 				"namespaces", MappingTable.load("namespaces"));
@@ -1055,6 +1270,113 @@ public final class TestMain {
 		check(reportLines.size() > 1, "report has rows");
 	}
 	
+	private static Path tempDir() throws IOException {
+		Path dir = Files.createTempDirectory("togetl-test");
+		dir.toFile().deleteOnExit();
+		return dir;
+	}
+	
+	private static void testImportNoOutputOnError() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("broken.tef");
+		Path output = dir.resolve("broken.togetltsv");
+		Files.write(input, "=part p1\nname: Bob\nno colon here\n".getBytes(StandardCharsets.UTF_8));
+		
+		assertEquals(1, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString()
+		}), "syntax error exit code");
+		check(!Files.exists(output), "partial output should be removed after a syntax error");
+	}
+	
+	private static void testImportRejectsTolerance() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("data.tef");
+		Path output = dir.resolve("data.togetltsv");
+		Files.write(input, "=part p1\nname: Bob\n".getBytes(StandardCharsets.UTF_8));
+		
+		assertEquals(1, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString(), "--tolerance", "warn"
+		}), "--tolerance exit code");
+		check(!Files.exists(output), "no output should be written for a rejected option");
+	}
+	
+	private static void testImportWritesProvenance() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("data.tef");
+		Path output = dir.resolve("data.togetltsv");
+		byte[] bytes = "=part p1\nname: Widget\n".getBytes(StandardCharsets.UTF_8);
+		Files.write(input, bytes);
+		
+		assertEquals(0, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString()
+		}), "import exit code");
+		String written = new String(Files.readAllBytes(output), StandardCharsets.UTF_8);
+		check(written.contains(Identifiers.sha256(bytes)), "output should record the input's SHA-256");
+		check(written.contains("data:," + bytes.length + "|"), "output should record the input's byte length");
+	}
+	
+	private static void testImportFromStdin() throws Exception {
+		Path dir = tempDir();
+		Path output = dir.resolve("stdin.togetltsv");
+		byte[] bytes = "=part p1\nname: Widget\n".getBytes(StandardCharsets.UTF_8);
+		
+		InputStream originalIn = System.in;
+		System.setIn(new ByteArrayInputStream(bytes));
+		try {
+			assertEquals(0, ImportCommand.run(new String[] {
+					"--input", "-", "--output", output.toString(),
+					"--source-url", "file:///stdin.tef"
+			}), "stdin import exit code");
+		} finally {
+			System.setIn(originalIn);
+		}
+		String written = new String(Files.readAllBytes(output), StandardCharsets.UTF_8);
+		check(written.contains(Identifiers.sha256(bytes)), "stdin output should record the input's SHA-256");
+		
+		assertEquals(1, ImportCommand.run(new String[] {"--input", "-", "--output", output.toString()}),
+				"stdin without --source-url should be refused");
+	}
+	
+	/**
+	 * Imports a generated document of about 20 MB in a child JVM with a 48 MB
+	 * heap. Holding the whole input or the whole document in memory fails here.
+	 */
+	private static void testImportStreamsInSmallHeap() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("large.tef");
+		try (java.io.Writer out = Files.newBufferedWriter(input, StandardCharsets.UTF_8)) {
+			out.write("#format http://ns.nuke24.net/TEF/Formats/SyntaxV0.3\n\n");
+			for (int i = 0; i < 140000; i++) {
+				out.write("=part p" + i + "\nname: Part number " + i + "\ntags: a, b\n\n");
+				out.write("Some description of part " + i + ".\nIt has two lines.\n\n");
+			}
+		}
+		
+		String java = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
+		Process process = new ProcessBuilder(
+				java, "-Xmx48m",
+				"-cp", System.getProperty("java.class.path"),
+				"net.nuke24.togetl.cli.Main", "import",
+				"--dialect", "generic",
+				"--source-url", "file:///large.tef",
+				"--input", input.toString(),
+				"--output", "-")
+				.redirectError(dir.resolve("stderr.txt").toFile())
+				.start();
+		long discarded = 0;
+		byte[] buffer = new byte[65536];
+		try (InputStream stdout = process.getInputStream()) {
+			int n;
+			while ((n = stdout.read(buffer)) >= 0) {
+				discarded += n;
+			}
+		}
+		int exit = process.waitFor();
+		String stderr = new String(Files.readAllBytes(dir.resolve("stderr.txt")), StandardCharsets.UTF_8);
+		assertEquals(0, exit, "import exit code under -Xmx48m; stderr: " + stderr);
+		check(discarded > 0, "import should write statements");
+	}
+	
 	private static void testDatabaseLoad() throws Exception {
 		Path dir = Files.createTempDirectory("togetl-db-test");
 		Path db = dir.resolve("togetl.sqlite3");
@@ -1353,17 +1675,12 @@ public final class TestMain {
 				statements.add(statement);
 			}
 		};
-		TEFSink sink = dialect.begin(source, hasBom(bytes), consumer, report);
+		TEFDocumentSink sink = dialect.begin(source, consumer, report);
 		TEFReader.read(source.getSourceIri(), new ByteArrayInputStream(bytes), sink);
+		sink.finish(SourceProvenance.of(bytes));
 		return statements;
 	}
 	
-	private static boolean hasBom(byte[] bytes) {
-		return bytes.length >= 3
-				&& (bytes[0] & 0xFF) == 0xEF
-				&& (bytes[1] & 0xFF) == 0xBB
-				&& (bytes[2] & 0xFF) == 0xBF;
-	}
 	
 	private static boolean has(List<Statement> statements, String subject, IRI predicate, String object) {
 		for (Statement statement : statements) {

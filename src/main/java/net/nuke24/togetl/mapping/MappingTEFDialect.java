@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 import net.nuke24.togetl.dialect.DialectSupport;
+import net.nuke24.togetl.dialect.TEFDocumentSink;
 import net.nuke24.togetl.dialect.TEFDialect;
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
@@ -18,7 +19,6 @@ import net.nuke24.togetl.rdf.Node;
 import net.nuke24.togetl.rdf.StatementConsumer;
 import net.nuke24.togetl.tef.TEFEntry;
 import net.nuke24.togetl.tef.TEFHeader;
-import net.nuke24.togetl.tef.TEFSink;
 import net.nuke24.togetl.vocab.Vocab;
 
 /**
@@ -53,13 +53,12 @@ public final class MappingTEFDialect implements TEFDialect {
 	}
 	
 	@Override
-	public TEFSink begin(
+	public TEFDocumentSink begin(
 			SourceDocument source,
-			boolean bom,
 			StatementConsumer out,
 			ImportReport report
 	) throws IOException {
-		return new Session(source, bom, out, report);
+		return new Session(source, out, report);
 	}
 	
 	private final class Session extends DialectSupport.DocumentSession {
@@ -68,9 +67,8 @@ public final class MappingTEFDialect implements TEFDialect {
 		private final ConflictTracker conflicts = new ConflictTracker();
 		private final CardinalityEmitter emitter = new CardinalityEmitter(out, report, conflicts);
 		
-		Session(SourceDocument source, boolean bom, StatementConsumer out, ImportReport report)
-				throws IOException {
-			super(source, bom, out, report);
+		Session(SourceDocument source, StatementConsumer out, ImportReport report) {
+			super(source, out, report);
 			this.documentIri = source.getDocumentIri();
 			this.documentHash = Identifiers.documentHash(documentIri);
 		}

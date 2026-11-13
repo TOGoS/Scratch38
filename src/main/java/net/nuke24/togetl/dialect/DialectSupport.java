@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
+import net.nuke24.togetl.etl.SourceProvenance;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.rdf.BlankNode;
 import net.nuke24.togetl.rdf.IRI;
@@ -16,7 +17,6 @@ import net.nuke24.togetl.tef.TEFComment;
 import net.nuke24.togetl.tef.TEFDirective;
 import net.nuke24.togetl.tef.TEFEntry;
 import net.nuke24.togetl.tef.TEFHeader;
-import net.nuke24.togetl.tef.TEFSink;
 import net.nuke24.togetl.tef.TEFSpan;
 import net.nuke24.togetl.vocab.Vocab;
 
@@ -32,7 +32,7 @@ public final class DialectSupport {
 	 * comments and directives as they are read, then one call per entry.
 	 * Subclasses supply the per-entry mapping.
 	 */
-	public abstract static class DocumentSession implements TEFSink {
+	public abstract static class DocumentSession implements TEFDocumentSink {
 		protected final SourceDocument source;
 		protected final StatementConsumer out;
 		protected final ImportReport report;
@@ -41,17 +41,16 @@ public final class DialectSupport {
 		private int directiveCount;
 		private int entryCount;
 		
-		protected DocumentSession(
-				SourceDocument source,
-				boolean bom,
-				StatementConsumer out,
-				ImportReport report
-		) throws IOException {
+		protected DocumentSession(SourceDocument source, StatementConsumer out, ImportReport report) {
 			this.source = source;
 			this.out = out;
 			this.report = report;
 			this.scope = Identifiers.documentHash(source.getDocumentIri());
-			emitDocumentMetadata(source, bom, out);
+		}
+		
+		@Override
+		public final void finish(SourceProvenance provenance) throws IOException {
+			emitDocumentMetadata(source, provenance, out);
 		}
 		
 		@Override
@@ -90,7 +89,7 @@ public final class DialectSupport {
 	
 	public static void emitDocumentMetadata(
 			SourceDocument source,
-			boolean bom,
+			SourceProvenance provenance,
 			StatementConsumer out
 	) throws IOException {
 		IRI doc = IRI.of(source.getDocumentIri());
@@ -98,16 +97,16 @@ public final class DialectSupport {
 		Location none = Location.none();
 		emit(source, out, none, doc, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT);
 		emit(source, out, none, doc, Vocab.TOGETL_SOURCE_URL, Literal.of(source.getSourceIri()));
-		emit(source, out, none, doc, Vocab.TOGETL_SHA256, Literal.of(source.getSha256()));
+		emit(source, out, none, doc, Vocab.TOGETL_SHA256, Literal.of(provenance.getSha256()));
 		emit(source, out, none, doc, Vocab.TOGETL_BYTE_LENGTH,
-				Literal.of(Long.toString(source.getByteLength()), Vocab.XSD_INTEGER));
+				Literal.of(Long.toString(provenance.getByteLength()), Vocab.XSD_INTEGER));
 		emit(source, out, none, documentImport, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT_IMPORT);
 		emit(source, out, none, documentImport, Vocab.TOGETL_SOURCE_DOCUMENT, doc);
 		emit(source, out, none, documentImport, Vocab.TOGETL_FORMAT, Literal.of(source.getFormat()));
 		emit(source, out, none, documentImport, Vocab.TOGETL_PARSER_VERSION,
 				Literal.of(source.getParserVersion()));
 		emit(source, out, none, documentImport, Vocab.TOGETL_HAS_BOM,
-				Literal.of(bom ? "true" : "false", Vocab.XSD_BOOLEAN));
+				Literal.of(provenance.hasBom() ? "true" : "false", Vocab.XSD_BOOLEAN));
 	}
 	
 	public static void emitDocumentComment(
