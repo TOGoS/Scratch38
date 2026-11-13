@@ -72,14 +72,7 @@ in which case it can be worked-around with an `export JAVA_HOME=/usr/lib/jvm/jav
 
 ## Documentation
 
-Avoid redundant documentation -- it becomes confusing when things change.
-
-Do not document implementation details in documents such as PLAN / README.
-
-The Java code itself is the canonical source of truth about the Java code.
-PLAN should be reserved for aspirations ('let's stream data instead of loading files into strings')
-and not bother itself with what the current implementation happens to be
-except when changing it is relevant to, like, a milestone or something.
+See CONTRIBUTING.md for documentation conventions.
 
 ## Commit attribution
 

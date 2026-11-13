@@ -29,12 +29,11 @@ and save some processing time.
 
 Avoid redundant documentation -- it becomes confusing when things change.
 
-Do not document implementation details in documents such as PLAN / README.
+Do not document implementation details in README or archived plan documents.
 
 The Java code itself is the canonical source of truth about the Java code.
-PLAN should be reserved for aspirations ('let's stream data instead of loading files into strings')
-and not bother itself with what the current implementation happens to be
-except when changing it is relevant to, like, a milestone or something.
+Design decisions and the change-request backlog now live in the issue tracker / PR
+discussion; there is no live PLAN.md or TODO.tef anymore (see `.archived-docs/`).
 
 ## Tooling
 

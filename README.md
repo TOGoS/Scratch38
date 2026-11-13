@@ -24,6 +24,7 @@ Not yet implemented:
 - Music importer
 - Batch ontology formalization
 - TEF parser should be refactored to stream input (similar to Org reader)
+
 ## Build
 
 ```sh
