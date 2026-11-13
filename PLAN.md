@@ -46,6 +46,24 @@ source document
 Every importer emits the same `Statement` model. No importer writes SQL directly, and
 the SQLite loader knows nothing about TEF or Org.
 
+**Streaming.** Readers and dialects should consume input incrementally and emit
+statements as they go, so large documents don't have to be held in memory as text.
+Current state:
+
+- `OrgReader` reads through a `Reader` one line at a time. Its output is a whole
+  document model, which is intentional for now: the Org analyzer needs outline context
+  (for example, `CUSTOM_ID` resolution across the document).
+- `TEFReader` reads the whole file into a byte array.
+- `ImportCommand` reads the whole input before parsing. It needs the SHA-256 and byte
+  length for document metadata, which can be computed in a separate pass with a
+  `DigestInputStream` if the input is streamed.
+- `TOGETLTSVReader.readAll` returns a `List`, and `LoadCommand` reads whole stream
+  files.
+
+These are deferred until the feature branches are merged. New code should take a
+`Reader` or `InputStream` and a `StatementConsumer` where practical, rather than a
+`String` or `byte[]`.
+
 ## 4. TOGETLTSV output
 
 The format is TOGETLTSV 202601. The first line of every stream is:
@@ -285,16 +303,47 @@ the same format the system imports.
 
 ### 8.3 Org importer
 
-Two layers:
+The Org importer has two parts that don't share a data model:
 
-1. **Document structure** — headings, outline path, `CUSTOM_ID`, timestamps, checkboxes,
-   links. Headings become `togetl:orgHeading` resources; a heading with a `CUSTOM_ID`
-   gets a stable tag URI.
-2. **Named tables** — `#+NAME:` tables become typed rows. Column names come from the
-   header row; mappings under `mappings/org-3dparts-log.tsv` assign predicates and
-   value parsers. Foreign keys are resolved through the same mapping layer
-   (`print_1.GCode` -> `slicing_*`, `slicing_*.Part STL Number` -> `part_*`,
-   `print_1.Print ID` suffix -> `printer_1`, `item_0.Item #` -> `WSITEM-*`).
+1. **Reader** (`net.nuke24.togetl.org`) parses `.org` syntax into plain Java objects:
+   headings (TODO keyword, priority, tags, outline position), property drawers,
+   planning lines, links, timestamps, checkbox states, `#+` directives, and tables
+   with raw cell text. It emits no statements, and nothing it produces is persisted.
+   Recovered problems are reported as `OrgDiagnostic`s on the document (for example,
+   an unclosed `#+begin_` block or drawer).
+2. **Analyzer** (planned, ordinary Java) reads an `OrgDocument` and recognizes domain
+   meaning: which headings are parts, prints, or slicings; which table columns are
+   foreign keys; which identifiers are global. It emits TOGETLTSV through the same
+   writer and `ImportReport` as the other importers. The rules involve recognizing ID
+   forms and composing IRIs, which the `mappings/` TSV format doesn't express, so they
+   live in code rather than in a mapping table.
+
+Table cells are kept as raw text. The reader does not extract links, timestamps, or
+checkboxes from cells; the analyzer may scan cell text if it needs them.
+
+**Identity.** A `CUSTOM_ID` is not automatically a global identifier. The analyzer
+decides per ID form:
+
+- An ID it recognizes as a global form (for example, a print ID that starts with a
+  timestamp and ends with a two-letter printer code, or a date-plus-words heading meant
+  to be unique across all of the author's documents) maps to a global tag URI. The
+  document-scoped identity is still emitted, so the source reference stays precise.
+- Any other `CUSTOM_ID` is scoped to its document, for example by a document-scoped IRI
+  built from the document key and the ID. It must not be assumed unique across
+  documents.
+- A link such as `[[file::#id]]` resolves to a heading only when `file` is the current
+  document. Links to other documents stay as literal targets until those documents are
+  known.
+- Duplicate IDs within one document are reported through `ImportReport`, and their
+  statements are not merged.
+- Positional identifiers (heading index) are unstable under edits. Headings without a
+  `CUSTOM_ID` should get identities that are not based on position alone, or be marked
+  as provisional.
+
+**Named tables.** `#+NAME:` tables become typed rows. Column names come from the header
+row, and the analyzer assigns predicates and value parsers per table. Foreign keys are
+resolved in the same layer (`print_1.GCode` -> `slicing_*`, `slicing_*.Part STL Number`
+-> `part_*`, `print_1.Print ID` suffix -> `printer_1`, `item_0.Item #` -> `WSITEM-*`).
 
 TEF parts and Org table rows that refer to the same part key resolve to the same
 subject, so provenance and conflicts are visible across sources.
@@ -513,8 +562,8 @@ Commands:
 | M2 | Generic TEF dialect + TSV writer + unmapped reporting | `3DPrintingData.tef` imports; no silent drops |
 | M3 | Parts dialect, namespaces dialect, vocabulary registry, vocab report | counts match the source; every mapping predicate is defined |
 | M4 | SQLite schema/loader + PHP browser, parts only | reproducible DB; subject/predicate/document/vocab/issues pages work |
-| M5 | Org structure: headings, outline path, `CUSTOM_ID`, timestamps, checkboxes, links | `CUSTOM_ID`s resolve; stable heading tree |
-| M6 | Org named tables, column mappings, foreign keys, TEF↔Org merge | all 33 tables load; `print_1` -> `slicing_*` -> `part_*` joins resolve |
+| M5 | Org reader library and heading analyzer: headings, outline path, `CUSTOM_ID` identity rules (§8.3), links | reader tests pass; malformed input yields diagnostics, not silent loss; cross-file links never resolve to the wrong document |
+| M6 | Org analyzer for named tables, column rules, foreign keys, TEF↔Org merge | all 33 tables load; `print_1` -> `slicing_*` -> `part_*` joins resolve |
 | M7 | `music.txt` importer | 301 recordings; both `file:` forms parsed; orphan content warns |
 | M8 | Hardening | offline test suite green; checksums pinned; no un-pinned dependencies |
 
@@ -548,6 +597,9 @@ re-parsing.
 - The exact OID bases for `WSITEM-*` and `p*` IDs are not yet fixed; current mappings use
   tag URIs and can be changed centrally.
 - Org table column names are noisy and will need a per-table mapping review.
+- Which `CUSTOM_ID` forms count as global is not yet decided. The list of recognized
+  forms should be written here once it has been sampled from the real corpus
+  (`3DPrintingLog.org`, and the author's other documents).
 - Conflict policy for functional headers is per-property; the first pass will treat
   `name`, `description`, and `obsoleted-by` as functional and everything else as
   multi-valued.
