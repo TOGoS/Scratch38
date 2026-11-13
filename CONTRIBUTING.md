@@ -3,27 +3,18 @@
 This project is intentionally lightweight.
 The main conventions are here so that generated agents and humans follow the same rules.
 
-## Java style
+## Design principles
 
-- Use tabs for indentation in Java source files.
-- Use spaces only for alignment after tabs if needed.
-- Preserve indentation on blank lines inside blocks; a blank line should still carry the block's indent.
-- The repository config is in [.editorconfig](./.editorconfig).
-- Run `./scripts/format-java-indent.py` on Java files before committing formatting changes.
+Aim for simplicity in API, then simplicity in implementation. Specifically,
+recovering from badly-formed input is a non-goal. Known typos should be errors.
+Other unrecognized terms should be warnings. Erroneous syntax (malformed TEF
+headers, unclosed tags in Org/JSON/XML, etc.) are definitely errors. Continue
+parsing only when doing so does not complicate the parser implementation.
 
-## Project notes and agent handoff
-
-- Keep changes consistent with the architecture described in README.md.
-- [AGENTS.md](./AGENTS.md) provides a reasonable primer for Clankers who
-  are asked to contribute.
-
-A good prompt to get your sessions primed:
-
-> I would like you to internalize the information in AGENTS.md and perhaps do some extra reading on the side.
-> I will then fork this conversation for new tasks in order to have the core information cached.
-
-In VS Code, you can then `/fork My new pre-primed session` to have that info cached
-and save some processing time.
+**Do** make an effort to provide clear and specific error messages
+so that problems in the source material can be easily identified and corrected
+(this is one reason we go out of our way to track line/column numbers through the entire process)
+or parser rules can be adjusted to accomodate intentional variations.
 
 ## Documentation
 
@@ -35,18 +26,32 @@ The Java code itself is the canonical source of truth about the Java code.
 Design decisions and the change-request backlog now live in the issue tracker / PR
 discussion; there is no live PLAN.md or TODO.tef anymore (see `.archived-docs/`).
 
-## Design principles
+When in doubt, avoid cluttering README.
+Notes about the current implementation, changes you have made, or changes you are planing
+may go into DEVLOG.md under a header of the form "## <date> - <title> - <your name>"
 
-Aim for simplicity in API, then simplicity in implementation. Specifically,
-recovering from badly-formed input is a non-goal. Known typos should be errors.
-Other unrecognized terms should be warnings. Erroneous syntax (malformed TEF
-headers, unclosed tags in Org/JSON/XML, etc.) are definitely errors. Continue
-parsing only when doing so does not complicate the parser implementation.
+## Java style
 
-**Do** make an effort to provide clear and specific error messages so that problems
-in the source material can be easily identified and corrected (one reason we go
-out of our way to track line/column numbers through the entire process) or new
-rules added to the parser.
+- Use tabs for indentation in Java source files.
+- Use spaces only for alignment after tabs if needed.
+- Preserve indentation on blank lines inside blocks; a blank line should still carry the block's indent.
+- The repository config is in [.editorconfig](./.editorconfig).
+- Run `./scripts/format-java-indent.py` on Java files before committing formatting changes.
+
+## Project notes and agent handoff
+
+- Keep changes consistent with the architecture described in README.md
+  and design / documentation principles indicated above.
+- [AGENTS.md](./AGENTS.md) provides a reasonable primer for Clankers who
+  are asked to contribute.
+
+A good prompt to get your sessions primed:
+
+> I would like you to internalize the information in AGENTS.md and perhaps do some extra reading on the side.
+> I will then fork this conversation for new tasks in order to have the core information cached.
+
+In VS Code, you can then `/fork My new pre-primed session` to have that info cached
+and save some processing time.  OpenCode provides simialar facilities.
 
 ## Tooling
 
