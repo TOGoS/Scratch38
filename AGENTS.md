@@ -90,5 +90,5 @@ The identity encodes the agent and the tool that ran it:
   with spaces replaced by dots, and `<harness>` is `opencode`, `copilot`, or the tool's name in lowercase.
   The `togos00+` prefix records that the owner is responsible for the commit.
 
-For example, `Master Haiku <togos00+master.hiaku.opencode@gmail.com>`. The same agent running
-under CoPilot uses `togos00+master.hiaku.copilot@gmail.com`.
+For example, `Master Haiku <togos00+master.haiku.opencode@gmail.com>`. The same agent running
+under CoPilot uses `togos00+master.haiku.copilot@gmail.com`.

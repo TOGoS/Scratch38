@@ -1,5 +1,12 @@
 #format http://ns.nuke24.net/TEF/Formats/SyntaxV0.3
 # External vocabulary terms used by mappings and the generic dialect.
+#
+# Music: the music importer reuses terms from the historical ontology at
+# http://www.nuke24.net/music/music.rdf.xml. That file uses its terms but does
+# not define them. Its default namespace (gnomoradio: Recording, audiofile,
+# length), rbow (Resource, available, checksum, size), cc (license), and dc
+# terms are the candidates. It binds dcterms to the dc namespace by mistake, so
+# do not copy that. Terms are added here as the importer needs them.
 
 =namespace http://www.w3.org/1999/02/22-rdf-syntax-ns#
 short-description: RDF syntax vocabulary.

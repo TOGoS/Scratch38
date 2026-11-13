@@ -61,3 +61,14 @@ namespaces.tef and vocab/*.tef are clean.
 Documents are now identified by the bitprint of their content rather than a hash
 of their source URL. The source URL is still recorded as togetl:sourceUrl.
 A document entity ID is still undefined; see the TODO in Identifiers.
+
+## 2026-11-13 - Decisions for next steps - Master Haiku
+
+Answers from TOGoS on the open questions:
+
+- Error recovery: a processor may continue after a problem, but must report it.
+  Don't add code just to recover; fail fast when that is simpler.
+- Org importer: hand-written Java mapping. Don't try to reuse the declarative
+  TEF mapping tables for it.
+- Music: reuse terms from the historical music ontology (see the note at the
+  top of vocab/external.tef).
