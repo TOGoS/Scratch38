@@ -98,6 +98,7 @@ public final class TestMain {
 		run("org heading metadata", TestMain::testOrgHeadingMetadata);
 		run("org directives and tables", TestMain::testOrgDirectivesAndTables);
 		run("org recovery", TestMain::testOrgRecovery);
+		run("org line endings and cells", TestMain::testOrgLineEndingsAndCells);
 		run("import command", TestMain::testImportCommand);
 		
 		System.out.println();
@@ -865,6 +866,29 @@ public final class TestMain {
 		check(!table.getRows().get(1).isSeparator(), "data row is not a separator");
 		check(table.getRows().get(2).isSeparator(), "|---+---| is a separator");
 		assertEquals(0, tables.getDiagnostics().size(), "well-formed document has no diagnostics");
+	}
+	
+	private static void testOrgLineEndingsAndCells() {
+		OrgDocument crlf = OrgReader.read(
+				"* A\r\n:PROPERTIES:\r\n:CUSTOM_ID: a\r\n:END:\r\n* B\r\n".getBytes(StandardCharsets.UTF_8));
+		assertEquals(2, crlf.getHeadings().size(), "CRLF heading count");
+		assertEquals("a", crlf.getHeadings().get(0).getProperty("CUSTOM_ID"), "CRLF property value");
+		assertEquals(5, crlf.getHeadings().get(1).getLine(), "CRLF heading line number");
+		assertEquals("B", crlf.getHeadings().get(1).getTitle(), "CRLF heading title has no CR");
+		
+		OrgDocument loneCr = OrgReader.read("* A\rstill A\n* B\n".getBytes(StandardCharsets.UTF_8));
+		assertEquals(2, loneCr.getHeadings().size(), "lone CR does not end a line");
+		assertEquals(2, loneCr.getHeadings().get(1).getLine(), "lone CR does not add a line");
+		
+		OrgDocument cells = OrgReader.read(
+				"* T\n| a \\| b | c |\n|-foo|\n".getBytes(StandardCharsets.UTF_8));
+		OrgTable table = cells.getTables().get(0);
+		assertEquals(2, table.getRows().size(), "table row count");
+		OrgTableRow row = table.getRows().get(0);
+		assertEquals(3, row.getCellCount(), "a bare pipe always separates cells, as in Org");
+		assertEquals("a \\", row.getCell(0), "cell before the pipe keeps its backslash");
+		assertEquals("b", row.getCell(1), "cell after the pipe");
+		check(table.getRows().get(1).isSeparator(), "line starting with |- is a horizontal rule");
 	}
 	
 	private static void testImportCommand() throws Exception {

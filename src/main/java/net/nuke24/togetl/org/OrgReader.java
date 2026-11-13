@@ -1,6 +1,5 @@
 package net.nuke24.togetl.org;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -21,37 +20,37 @@ import java.util.regex.Pattern;
  */
 public final class OrgReader {
 	private static final Pattern HEADING =
-			Pattern.compile("^(\\*+)[ \t]+(.*)$");
+			Pattern.compile("^(\\*+)[ \t]+(.*)$", Pattern.UNIX_LINES);
 	private static final Pattern TAGS =
-			Pattern.compile("(:[^\\s:]+(?::[^\\s:]+)*:)\\s*$");
+			Pattern.compile("(:[^\\s:]+(?::[^\\s:]+)*:)\\s*$", Pattern.UNIX_LINES);
 	private static final Pattern PRIORITY =
-			Pattern.compile("\\[#([A-Za-z0-9])\\]");
+			Pattern.compile("\\[#([A-Za-z0-9])\\]", Pattern.UNIX_LINES);
 	private static final Pattern PROPERTY =
-			Pattern.compile("^\\s*:([^:\\s]+):[ \t]*(.*)$");
+			Pattern.compile("^\\s*:([^:\\s]+):[ \t]*(.*)$", Pattern.UNIX_LINES);
 	private static final Pattern DRAWER =
-			Pattern.compile("^\\s*:([A-Za-z0-9_@#%+-]+):[ \t]*$");
+			Pattern.compile("^\\s*:([A-Za-z0-9_@#%+-]+):[ \t]*$", Pattern.UNIX_LINES);
 	private static final Pattern DRAWER_END =
-			Pattern.compile("^\\s*:END:[ \t]*$");
+			Pattern.compile("^\\s*:END:[ \t]*$", Pattern.UNIX_LINES);
 	private static final Pattern PLANNING_START =
-			Pattern.compile("^\\s*(SCHEDULED|DEADLINE|CLOSED):[ \t]*(.*)$");
+			Pattern.compile("^\\s*(SCHEDULED|DEADLINE|CLOSED):[ \t]*(.*)$", Pattern.UNIX_LINES);
 	private static final Pattern PLANNING =
-			Pattern.compile("(SCHEDULED|DEADLINE|CLOSED):[ \t]*(<\\d{4}-[^>\\n]*>|\\[\\d{4}-[^\\]\\n]*\\])");
+			Pattern.compile("(SCHEDULED|DEADLINE|CLOSED):[ \t]*(<\\d{4}-[^>\\n]*>|\\[\\d{4}-[^\\]\\n]*\\])", Pattern.UNIX_LINES);
 	private static final Pattern DIRECTIVE =
-			Pattern.compile("^\\s*#\\+([A-Za-z0-9_-]+):[ \t]*(.*)$");
+			Pattern.compile("^\\s*#\\+([A-Za-z0-9_-]+):[ \t]*(.*)$", Pattern.UNIX_LINES);
 	private static final Pattern BLOCK_BEGIN =
-			Pattern.compile("^\\s*#\\+begin_([A-Za-z0-9_-]+)(?:[ \t]+(.*))?$", Pattern.CASE_INSENSITIVE);
+			Pattern.compile("^\\s*#\\+begin_([A-Za-z0-9_-]+)(?:[ \t]+(.*))?$", Pattern.CASE_INSENSITIVE | Pattern.UNIX_LINES);
 	private static final Pattern BLOCK_END =
-			Pattern.compile("^\\s*#\\+end_([A-Za-z0-9_-]+)[ \t]*$", Pattern.CASE_INSENSITIVE);
+			Pattern.compile("^\\s*#\\+end_([A-Za-z0-9_-]+)[ \t]*$", Pattern.CASE_INSENSITIVE | Pattern.UNIX_LINES);
 	private static final Pattern TABLE_ROW =
-			Pattern.compile("^\\s*\\|(.*)\\|\\s*$");
+			Pattern.compile("^\\s*\\|(.*)\\|\\s*$", Pattern.UNIX_LINES);
 	private static final Pattern TABLE_SEPARATOR =
-			Pattern.compile("^\\s*\\|-[-+|]*\\s*$");
+			Pattern.compile("^\\s*\\|-.*$", Pattern.UNIX_LINES);
 	private static final Pattern LINK =
-			Pattern.compile("\\[\\[([^\\]]+)\\](?:\\[([^\\]]*)\\])?\\]");
+			Pattern.compile("\\[\\[([^\\]]+)\\](?:\\[([^\\]]*)\\])?\\]", Pattern.UNIX_LINES);
 	private static final Pattern TIMESTAMP =
-			Pattern.compile("(<\\d{4}-[^>\\n]*>|\\[\\d{4}-[^\\]\\n]*\\])");
+			Pattern.compile("(<\\d{4}-[^>\\n]*>|\\[\\d{4}-[^\\]\\n]*\\])", Pattern.UNIX_LINES);
 	private static final Pattern CHECKBOX =
-			Pattern.compile("(^|\\s)\\[( |x|X|-)\\](?=\\s|$)");
+			Pattern.compile("(^|\\s)\\[( |x|X|-)\\](?=\\s|$)", Pattern.UNIX_LINES);
 			
 	private static final List<String> DEFAULT_TODO_KEYWORDS = Arrays.asList(
 			"TODO", "DONE", "WAIT", "WAITING", "HOLD", "STARTED", "NEXT",
@@ -69,13 +68,12 @@ public final class OrgReader {
 	}
 	
 	/**
-	 * Parses an Org document one line at a time. A leading UTF-8 byte order
-	 * mark (decoded as U+FEFF) is recorded and removed.
+	 * Parses an Org document one line at a time. Only LF ends a line (see
+	 * {@link OrgLineReader}). A leading UTF-8 byte order mark (decoded as
+	 * U+FEFF) is recorded and removed.
 	 */
 	public static OrgDocument read(Reader reader) throws IOException {
-		BufferedReader lines = reader instanceof BufferedReader
-				? (BufferedReader) reader
-				: new BufferedReader(reader);
+		OrgLineReader lines = new OrgLineReader(reader);
 		boolean bom = false;
 		List<OrgHeading> headings = new ArrayList<OrgHeading>();
 		List<OrgDirective> directives = new ArrayList<OrgDirective>();
@@ -94,10 +92,9 @@ public final class OrgReader {
 		String drawerName = null;
 		int drawerLine = 0;
 		int lineNumber = 0;
-		String rawLine;
-		while ((rawLine = lines.readLine()) != null) {
+		String line;
+		while ((line = lines.readLine()) != null) {
 			lineNumber++;
-			String line = rawLine;
 			if (lineNumber == 1 && line.startsWith("\uFEFF")) {
 				bom = true;
 				line = line.substring(1);
