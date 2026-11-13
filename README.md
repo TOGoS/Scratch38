@@ -56,10 +56,7 @@ The build targets Java 8 and does not require Maven.
   the same load replaces that batch instead of duplicating statements.
 - Read-only PHP browser in `web/` with overview, subject, predicate, document,
   vocabulary, issue, and part pages.
-- Org structure importer: `--dialect org-structure` parses headings, outline
-  links, `CUSTOM_ID`, TODO keywords, priorities, tags, planning entries,
-  properties, links, timestamps, checkbox states, `#+` directives, and tables.
-- Org named table mapping and the music importer are added in later milestones.
+- Org and music importers are added in later milestones.
 
 ## Usage
 
@@ -76,11 +73,6 @@ The build targets Java 8 and does not require Maven.
 ./togetl import --dialect namespaces \
     --input fixtures/upstream/namespaces.tef \
     --output out/namespaces.togetltsv
-
-# Org structure import (headings and markers).
-./togetl import --dialect org-structure \
-    --input fixtures/upstream/3DPrintingLog.org \
-    --output out/3dprinting-log-structure.togetltsv
 
 # Check mapping terms against vocabulary definitions.
 ./togetl vocab --report out/vocab-report.tsv

@@ -43,14 +43,6 @@ public final class Vocab {
 	public static final IRI TOGETL_STANDARD = general("Standard");
 	public static final IRI TOGETL_NARRATION = data("Narration");
 	public static final IRI TOGETL_NAMESPACE = togetl("Namespace");
-	public static final IRI TOGETL_ORG_HEADING = togetl("OrgHeading");
-	public static final IRI TOGETL_ORG_PROPERTY = togetl("OrgProperty");
-	public static final IRI TOGETL_ORG_PLANNING = togetl("OrgPlanning");
-	public static final IRI TOGETL_ORG_LINK_NODE = togetl("OrgLink");
-	public static final IRI TOGETL_ORG_DIRECTIVE = togetl("OrgDirective");
-	public static final IRI TOGETL_ORG_TABLE = togetl("OrgTable");
-	public static final IRI TOGETL_ORG_TABLE_ROW = togetl("OrgTableRow");
-	public static final IRI TOGETL_ORG_TABLE_CELL = togetl("OrgTableCell");
 	public static final IRI TOGETL_PROJECT_BASE = general("ProjectBase");
 	public static final IRI TOGETL_FORMAT_CLASS = general("Format");
 	public static final IRI TEF_ENTRY = tef("Entry");
@@ -124,37 +116,6 @@ public final class Vocab {
 	public static final IRI TOGETL_PROJECT_HOMEPAGE = general("projectHomepage");
 	public static final IRI TOGETL_SUBFORMAT_OF = general("subformatOf");
 	public static final IRI TOGETL_CONTENT_TYPE = togetl("contentType");
-	public static final IRI TOGETL_ORG_HEADING_LINK = togetl("orgHeading");
-	public static final IRI TOGETL_OUTLINE_PARENT = togetl("outlineParent");
-	public static final IRI TOGETL_OUTLINE_PATH = togetl("outlinePath");
-	public static final IRI TOGETL_OUTLINE_LEVEL = togetl("outlineLevel");
-	public static final IRI TOGETL_OUTLINE_INDEX = togetl("outlineIndex");
-	public static final IRI TOGETL_CUSTOM_ID = togetl("customId");
-	public static final IRI TOGETL_ORG_TODO_KEYWORD = togetl("orgTodoKeyword");
-	public static final IRI TOGETL_ORG_PRIORITY = togetl("orgPriority");
-	public static final IRI TOGETL_ORG_PROPERTY_LINK = togetl("orgProperty");
-	public static final IRI TOGETL_ORG_PROPERTY_NAME = togetl("orgPropertyName");
-	public static final IRI TOGETL_ORG_PROPERTY_VALUE = togetl("orgPropertyValue");
-	public static final IRI TOGETL_ORG_PLANNING_LINK = togetl("orgPlanning");
-	public static final IRI TOGETL_ORG_PLANNING_KEYWORD = togetl("orgPlanningKeyword");
-	public static final IRI TOGETL_ORG_TIMESTAMP = togetl("orgTimestamp");
-	public static final IRI TOGETL_ORG_TIMESTAMP_ACTIVE = togetl("orgTimestampActive");
-	public static final IRI TOGETL_ORG_CHECKBOX_STATE = togetl("orgCheckboxState");
-	public static final IRI TOGETL_ORG_LINK = togetl("orgLink");
-	public static final IRI TOGETL_ORG_LINK_TARGET = togetl("orgLinkTarget");
-	public static final IRI TOGETL_ORG_LINK_LABEL = togetl("orgLinkLabel");
-	public static final IRI TOGETL_ORG_DIRECTIVE_LINK = togetl("orgDirective");
-	public static final IRI TOGETL_ORG_DIRECTIVE_NAME = togetl("orgDirectiveName");
-	public static final IRI TOGETL_ORG_DIRECTIVE_VALUE = togetl("orgDirectiveValue");
-	public static final IRI TOGETL_ORG_TABLE_LINK = togetl("orgTable");
-	public static final IRI TOGETL_ORG_TABLE_NAME = togetl("orgTableName");
-	public static final IRI TOGETL_ORG_TABLE_CAPTION = togetl("orgTableCaption");
-	public static final IRI TOGETL_ORG_TABLE_ROW_LINK = togetl("orgTableRow");
-	public static final IRI TOGETL_ORG_TABLE_ROW_INDEX = togetl("orgTableRowIndex");
-	public static final IRI TOGETL_ORG_TABLE_ROW_SEPARATOR = togetl("orgTableRowSeparator");
-	public static final IRI TOGETL_ORG_TABLE_CELL_LINK = togetl("orgTableCell");
-	public static final IRI TOGETL_ORG_TABLE_CELL_INDEX = togetl("orgTableCellIndex");
-	public static final IRI TOGETL_ORG_TABLE_CELL_VALUE = togetl("orgTableCellValue");
 	
 	private Vocab() {
 	}

@@ -11,9 +11,7 @@ import java.util.Objects;
 
 import net.nuke24.togetl.cli.ImportCommand;
 import net.nuke24.togetl.cli.VocabCommand;
-import net.nuke24.togetl.dialect.Dialects;
 import net.nuke24.togetl.dialect.GenericTEFDialect;
-import net.nuke24.togetl.dialect.OrgStructureDialect;
 import net.nuke24.togetl.dialect.TEFDialect;
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
@@ -99,9 +97,7 @@ public final class TestMain {
 		run("org reader", TestMain::testOrgReader);
 		run("org heading metadata", TestMain::testOrgHeadingMetadata);
 		run("org directives and tables", TestMain::testOrgDirectivesAndTables);
-		run("org custom ID links", TestMain::testOrgCustomIdLinks);
 		run("import command", TestMain::testImportCommand);
-		run("import command org-structure", TestMain::testImportCommandOrgStructure);
 		
 		System.out.println();
 		if (failures > 0) {
@@ -852,46 +848,6 @@ public final class TestMain {
 		assertEquals(0, document.getDirectives().get(4).getHeadingIndex(), "directive heading index");
 	}
 	
-	private static void testOrgCustomIdLinks() throws Exception {
-		String org = ""
-				+ "* Target heading\n"
-				+ ":PROPERTIES:\n"
-				+ ":CUSTOM_ID: target-id\n"
-				+ ":END:\n"
-				+ "* Duplicate target heading\n"
-				+ ":PROPERTIES:\n"
-				+ ":CUSTOM_ID: target-id\n"
-				+ ":END:\n"
-				+ "* Linking heading\n"
-				+ "See [[#target-id]], [[notes.org::#target-id]], "
-				+ "[[https://example.com/x][External]], and [[relative/path]].\n";
-		byte[] bytes = org.getBytes(StandardCharsets.UTF_8);
-		String sourceUrl = "https://example.com/links.org";
-		OrgDocument document = OrgReader.read(sourceUrl, bytes);
-		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "org", "test/1");
-		ImportReport report = new ImportReport();
-		List<Statement> statements = collectOrg(
-				new OrgStructureDialect(), document, source, report);
-				
-		String target = Identifiers.mint("org-heading", "target-id");
-		check(has(statements, source.getDocumentIri(), Vocab.TOGETL_ORG_HEADING_LINK, target),
-				"document links to CUSTOM_ID heading");
-		assertEquals(2, countObject(statements, Vocab.TOGETL_ORG_LINK_TARGET, target),
-				"internal links resolve to CUSTOM_ID heading");
-		check(has(statements, source.getDocumentIri(), Vocab.TOGETL_ORG_HEADING_LINK,
-				Identifiers.mint("org-heading",
-						Identifiers.documentKey(source.getDocumentIri()) + ":2")),
-				"heading without CUSTOM_ID uses document-scoped IRI");
-		assertEquals(1, countObject(statements, Vocab.TOGETL_ORG_LINK_TARGET,
-				IRI.of("https://example.com/x").toString()), "absolute URI link emitted as IRI");
-		assertEquals(1, countObject(statements, Vocab.TOGETL_ORG_LINK_TARGET,
-				Literal.of("relative/path").toString()), "relative link emitted as literal");
-		assertEquals(4, countObject(statements, Vocab.RDF_TYPE,
-				Vocab.TOGETL_ORG_LINK_NODE.toString()), "links typed as OrgLink");
-		check(reportHas(report, "conflict", "org-heading", "CUSTOM_ID"),
-				"duplicate CUSTOM_ID reported");
-	}
-	
 	private static void testImportCommand() throws Exception {
 		Path dir = Files.createTempDirectory("togetl-test");
 		Path input = dir.resolve("data.tef");
@@ -934,157 +890,9 @@ public final class TestMain {
 		check(reportLines.size() > 1, "report has rows");
 	}
 	
-	private static void testImportCommandOrgStructure() throws Exception {
-		Path dir = Files.createTempDirectory("togetl-org-test");
-		Path input = dir.resolve("log.org");
-		Path output = dir.resolve("log.togetltsv");
-		dir.toFile().deleteOnExit();
-		input.toFile().deleteOnExit();
-		output.toFile().deleteOnExit();
-		
-		String text = ""
-				+ "#+TODO: TODO | DONE\n"
-				+ "* TODO [#A] Root :log:\n"
-				+ ":PROPERTIES:\n"
-				+ ":CUSTOM_ID: print-log\n"
-				+ ":slicer_xy_compensation: -0.15\n"
-				+ ":END:\n"
-				+ "SCHEDULED: <2026-11-12 Thu>\n"
-				+ "#+NAME: printers\n"
-				+ "| Printer | Item       |\n"
-				+ "|---------+------------|\n"
-				+ "| KM      | WSITEM-6013 |\n"
-				+ "** Child\n"
-				+ "- [ ] queue item\n";
-		Files.write(input, text.getBytes(StandardCharsets.UTF_8));
-		
-		assertEquals(0, ImportCommand.run(new String[] {
-				"--input", input.toString(),
-				"--output", output.toString(),
-				"--dialect", Dialects.ORG_STRUCTURE
-		}), "org import exit code");
-		
-		List<Statement> read = TOGETLTSVReader.readAll(
-				new StringReader(new String(Files.readAllBytes(output), StandardCharsets.UTF_8)));
-		check(read.size() > 0, "org import produced statements");
-		
-		IRI orgHeadingPredicate = Vocab.TOGETL_ORG_HEADING_LINK;
-		IRI customIdPredicate = Vocab.TOGETL_CUSTOM_ID;
-		IRI outlineParentPredicate = Vocab.TOGETL_OUTLINE_PARENT;
-		IRI checkboxPredicate = Vocab.TOGETL_ORG_CHECKBOX_STATE;
-		
-		int headingLinkCount = 0;
-		String rootSubject = null;
-		for (Statement statement : read) {
-			if (statement.getPredicate().equals(orgHeadingPredicate)) {
-				headingLinkCount++;
-			}
-			if (statement.getPredicate().equals(customIdPredicate)
-					&& "data:,print-log".equals(statement.getObject().toString())) {
-				rootSubject = statement.getSubject().toString();
-			}
-		}
-		assertEquals(2, headingLinkCount, "org heading link count");
-		check(rootSubject != null, "found root heading by CUSTOM_ID");
-		
-		boolean hasOutlineParent = false;
-		boolean hasUncheckedCheckbox = false;
-		String propertySubject = null;
-		String planningSubject = null;
-		String tableSubject = null;
-		String directiveSubject = null;
-		for (Statement statement : read) {
-			if (statement.getPredicate().equals(outlineParentPredicate)
-					&& statement.getObject().toString().equals(rootSubject)) {
-				hasOutlineParent = true;
-			}
-			if (statement.getPredicate().equals(checkboxPredicate)
-					&& "data:,unchecked".equals(statement.getObject().toString())) {
-				hasUncheckedCheckbox = true;
-			}
-			if (statement.getPredicate().equals(Vocab.TOGETL_ORG_PROPERTY_LINK)
-					&& statement.getSubject().toString().equals(rootSubject)) {
-				propertySubject = statement.getObject().toString();
-			}
-			if (statement.getPredicate().equals(Vocab.TOGETL_ORG_PLANNING_LINK)
-					&& statement.getSubject().toString().equals(rootSubject)) {
-				planningSubject = statement.getObject().toString();
-			}
-			if (statement.getPredicate().equals(Vocab.TOGETL_ORG_TABLE_LINK)
-					&& statement.getSubject().toString().equals(rootSubject)) {
-				tableSubject = statement.getObject().toString();
-			}
-			if (statement.getPredicate().equals(Vocab.TOGETL_ORG_DIRECTIVE_LINK)
-					&& statement.getSubject().toString().equals(rootSubject)) {
-				directiveSubject = statement.getObject().toString();
-			}
-		}
-		check(hasOutlineParent, "child heading links to parent");
-		check(hasUncheckedCheckbox, "checkbox state emitted");
-		check(has(read, rootSubject, Vocab.TOGETL_ORG_TODO_KEYWORD, Literal.of("TODO").toString()),
-				"TODO keyword emitted");
-		check(has(read, rootSubject, Vocab.TOGETL_ORG_PRIORITY, Literal.of("A").toString()),
-				"priority emitted");
-		check(has(read, rootSubject, Vocab.TOGETL_TAG, Literal.of("log").toString()),
-				"heading tag emitted");
-		check(propertySubject != null, "property node emitted");
-		check(has(read, propertySubject, Vocab.TOGETL_ORG_PROPERTY_NAME,
-				Literal.of("slicer_xy_compensation").toString()), "property name emitted");
-		check(has(read, propertySubject, Vocab.TOGETL_ORG_PROPERTY_VALUE,
-				Literal.of("-0.15").toString()), "property value emitted");
-		check(planningSubject != null, "planning node emitted");
-		check(has(read, planningSubject, Vocab.TOGETL_ORG_PLANNING_KEYWORD,
-				Literal.of("SCHEDULED").toString()), "planning keyword emitted");
-		check(has(read, planningSubject, Vocab.TOGETL_ORG_TIMESTAMP,
-				Literal.of("<2026-11-12 Thu>").toString()), "planning timestamp emitted");
-		check(tableSubject != null, "table node emitted");
-		check(has(read, tableSubject, Vocab.TOGETL_ORG_TABLE_NAME,
-				Literal.of("printers").toString()), "table name emitted");
-				
-		String dataRowSubject = null;
-		for (Statement statement : read) {
-			if (statement.getPredicate().equals(Vocab.TOGETL_ORG_TABLE_ROW_INDEX)
-					&& Literal.of("2", Vocab.XSD_INTEGER).toString()
-							.equals(statement.getObject().toString())) {
-				dataRowSubject = statement.getSubject().toString();
-			}
-		}
-		check(dataRowSubject != null, "table data row emitted");
-		boolean hasTableCell = false;
-		for (Statement statement : read) {
-			if (statement.getPredicate().equals(Vocab.TOGETL_ORG_TABLE_CELL_VALUE)
-					&& "data:,WSITEM-6013".equals(statement.getObject().toString())) {
-				hasTableCell = true;
-			}
-		}
-		check(hasTableCell, "table cell value emitted");
-		check(directiveSubject != null, "directive node emitted");
-		check(has(read, directiveSubject, Vocab.TOGETL_ORG_DIRECTIVE_NAME,
-				Literal.of("NAME").toString()), "directive name emitted");
-		check(has(read, directiveSubject, Vocab.TOGETL_ORG_DIRECTIVE_VALUE,
-				Literal.of("printers").toString()), "directive value emitted");
-	}
-	
 	private static List<Statement> collect(
 			TEFDialect dialect,
 			TEFDocument document,
-			SourceDocument source,
-			ImportReport report
-	) throws Exception {
-		final List<Statement> statements = new ArrayList<Statement>();
-		StatementConsumer consumer = new StatementConsumer() {
-			@Override
-			public void accept(Statement statement) {
-				statements.add(statement);
-			}
-		};
-		dialect.map(document, source, consumer, report);
-		return statements;
-	}
-	
-	private static List<Statement> collectOrg(
-			OrgStructureDialect dialect,
-			OrgDocument document,
 			SourceDocument source,
 			ImportReport report
 	) throws Exception {

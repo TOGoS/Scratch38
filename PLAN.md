@@ -287,13 +287,9 @@ the same format the system imports.
 
 Two layers:
 
-1. **Document structure** — headings (including TODO keyword, priority cookie, and
-   tags), outline path, `CUSTOM_ID`, planning entries, property drawers, timestamps,
-   checkboxes, links, `#+` directives, and table rows/cells. Headings become
-   `togetl:orgHeading` resources; a heading with a `CUSTOM_ID` gets a stable tag URI
-    that does not depend on the document, and internal links `[[#id]]` or
-    `[[file::#id]]` resolve to that heading. Absolute URI link targets are emitted as
-    IRIs; other targets stay literals.
+1. **Document structure** — headings, outline path, `CUSTOM_ID`, timestamps, checkboxes,
+   links. Headings become `togetl:orgHeading` resources; a heading with a `CUSTOM_ID`
+   gets a stable tag URI.
 2. **Named tables** — `#+NAME:` tables become typed rows. Column names come from the
    header row; mappings under `mappings/org-3dparts-log.tsv` assign predicates and
    value parsers. Foreign keys are resolved through the same mapping layer
