@@ -8,6 +8,8 @@ import java.util.List;
  * The result of reading one TEF document.
  */
 public final class TEFDocument {
+	// TODO: document entity ID. Documents may want an entity ID in addition to the
+	// hash-based ID of a specific snapshot of the file.
 	private final String sourceIri;
 	private final long byteLength;
 	private final boolean bom;
