@@ -49,12 +49,14 @@ The build targets Java 8 and does not require Maven.
 
 # Parts data with the domain mapping.
 ./togetl import --dialect parts \
+    --derive-source-url bitprint \
     --input fixtures/upstream/3DPrintingData.tef \
     --output out/3dparts-data.togetltsv \
     --report out/3dparts-data-report.tsv
 
 # Shared namespace vocabulary.
 ./togetl import --dialect namespaces \
+    --derive-source-url bitprint \
     --input fixtures/upstream/namespaces.tef \
     --output out/namespaces.togetltsv
 
@@ -71,8 +73,16 @@ The build targets Java 8 and does not require Maven.
 TOGETL_DB=out/togetl.sqlite3 php -S localhost:8080 web/router.php
 ```
 
-`import` defaults to the `generic` dialect. Local files
-are identified by their absolute `file:` URL unless `--source-url` overrides it.
+`import` defaults to the `generic` dialect. Every import needs a source
+identity, given as exactly one of:
+
+- `--derive-source-url bitprint`: the source URI is the bitprint of the content.
+  The input is digested before it is parsed.
+- `--source-url <uri>`: the source URI is given. If it is a `urn:bitprint:` URN,
+  the importer checks it against the content and fails on a mismatch. Any other
+  URI is accepted with a warning.
+
+A document is identified by its source URI.
 
 Mapping tables live in `mappings/*.tsv` and are selected by name. Each table has
 an `#entry` section mapping entry types to subject templates and RDF types, and a

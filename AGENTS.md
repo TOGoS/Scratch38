@@ -43,6 +43,9 @@ Some specific cases:
 - `doc-ref` maps to `general:isDocumentedBy`.
 - Mapped domain subjects should **not** get automatic `togetl:document` links just because they came from a TEF file;
   that is part of the 'provenance metadata' that is represented at a lower level (first two columns) in the TOGETLTSV stream.
+- A document is identified by its source URI. That is either the bitprint of its content
+  (`--derive-source-url bitprint`) or a URI given explicitly (`--source-url`); the document IRI
+  is the source URI itself. `togetl:sha256` is recorded as provenance.
 - For `fileRef` values with `filename + urn:bitprint:*`, importer canonicalizes to:
   `http://wherever-files.nuke24.net/uri-res/raw/<urn>/<filename>`,
   avoiding having to emit a blank node with separate `general:filename` / `rdf:type togetl:File` properties.
