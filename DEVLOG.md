@@ -20,3 +20,13 @@ Only edit them to make necessary corrections of if I ask you to, thanks.
 (But as per the paragraph at the top of this file, I don't actually
 expect anyone to read this message!  It's duplicating principles
 alredy specified in CONTRIBUTING.md, anyway.)
+
+## 2026-11-13 - Deleting the pickle branch - TOGoS
+
+Deleting subtrees/s0036/20261111-pickle,
+which was pointing at 15131fa0a709369f9ba9da4aff34ed0232827efa,
+since agents kept thinking it had unmerged work (it did not;
+it had been rebased into master).
+
+Noting here on the off chance there's any value in remembering
+that alternate history.
