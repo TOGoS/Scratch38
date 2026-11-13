@@ -35,6 +35,19 @@ The Java code itself is the canonical source of truth about the Java code.
 Design decisions and the change-request backlog now live in the issue tracker / PR
 discussion; there is no live PLAN.md or TODO.tef anymore (see `.archived-docs/`).
 
+## Design principles
+
+Aim for simplicity in API, then simplicity in implementation. Specifically,
+recovering from badly-formed input is a non-goal. Known typos should be errors.
+Other unrecognized terms should be warnings. Erroneous syntax (malformed TEF
+headers, unclosed tags in Org/JSON/XML, etc.) are definitely errors. Continue
+parsing only when doing so does not complicate the parser implementation.
+
+**Do** make an effort to provide clear and specific error messages so that problems
+in the source material can be easily identified and corrected (one reason we go
+out of our way to track line/column numbers through the entire process) or new
+rules added to the parser.
+
 ## Tooling
 
 - The Java source tree is built with `./build.sh`.

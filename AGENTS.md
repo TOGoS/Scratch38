@@ -70,9 +70,9 @@ The Visual Studio Code 'devcontainer' runs on alpine and should have
 Sometimes VS Code agents find that it is not set correctly,
 in which case it can be worked-around with an `export JAVA_HOME=/usr/lib/jvm/java-1.8-openjdk` before the command.
 
-## Documentation
+## Documentation and design principles
 
-See CONTRIBUTING.md for documentation conventions.
+See CONTRIBUTING.md for documentation conventions and design principles.
 
 ## Commit attribution
 
