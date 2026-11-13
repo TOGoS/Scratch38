@@ -48,33 +48,15 @@ the SQLite loader knows nothing about TEF or Org.
 
 **Streaming.** Readers and dialects should consume input incrementally and emit
 statements as they go, so large documents don't have to be held in memory as text.
-
-Design direction: stages are push-based. A source pushes chunks into a stage; a stage
-never pulls from upstream. A line-splitting stage sits between byte/char input and the
-parsers, and pushes complete lines as `String`s to the next stage.
+Stages are push-based: a source pushes chunks into a stage; a stage never pulls from
+upstream. A line-splitting stage sits between byte/char input and the parsers, and
+pushes complete lines as `String`s to the next stage.
 
 Stage convention: a stage is a `Consumer<Optional<T>>`. `Optional.of(x)` is an item;
 `Optional.empty()` is end of input and is pushed exactly once, after the last item. A
 stage that receives end of input finishes its work and forwards `Optional.empty()`
 downstream. The terminal stage exposes its result after end of input. Stages hold their
 own state and need no sentinel values.
-
-Current state:
-
-- The Org pipeline is push-based: a source pushes text chunks into `OrgLineSplitter`,
-  which pushes complete lines into `OrgParser.accept(Optional<String>)`. Its output is a whole
-  document model, which is intentional for now: the Org analyzer needs outline context
-  (for example, `CUSTOM_ID` resolution across the document).
-- `TEFReader` reads the whole file into a byte array.
-- `ImportCommand` reads the whole input before parsing. It needs the SHA-256 and byte
-  length for document metadata, which can be computed in a separate pass with a
-  `DigestInputStream` if the input is streamed.
-- `TOGETLTSVReader.readAll` returns a `List`, and `LoadCommand` reads whole stream
-  files.
-
-These are deferred until the feature branches are merged. New code should take a
-`Reader` or `InputStream` and a `StatementConsumer` where practical, rather than a
-`String` or `byte[]`.
 
 ## 4. TOGETLTSV output
 
@@ -107,16 +89,6 @@ and can also be a member of a batch (batch ontology is not yet formalized).
 - Literals are written as `data:` URIs containing percent-encoded UTF-8. A datatype may
   be appended after a pipe: `data:,123|http://www.w3.org/2001/XMLSchema#integer`.
 - A `|` chain is the general TS34-like "encoded value" convention.
-
-Our writer:
-
-- emits a fixed, small alias block (`rdf:`, `rdfs:`, `xsd:`, `togetl:`, `tef:`, `cc:`,
-  `dc:`, `dcterms:`) at the top of each file;
-- writes all statements in source order;
-- derives blank-node names deterministically from document IRI + entry ordinal + field
-  ordinal, so the same input always produces the same names;
-- writes one stream per input document by default. `--output-dir` may split by document;
-  concatenating the results remains valid.
 
 ## 5. Identifiers
 
@@ -182,28 +154,11 @@ Default mode records document, document import, batch membership, and location.
 
 ## 7. TEF parsing
 
-### 7.1 Vendored parser
-
 The TEF parser from TScript34 (MIT) is vendored into the repository and patched. The
 published `tscript34-p0014` artifact is not used directly because the patches below need
 to change its chunk model.
 
-Vendored files (package names adjusted):
-
-```
-net.nuke24.togetl.tef.TEFParser
-net.nuke24.togetl.tef.LLChunks
-net.nuke24.togetl.tef.LLChunkMerger
-net.nuke24.togetl.tef.util.ArrayUtil
-net.nuke24.togetl.tef.util.DucerUtil
-net.nuke24.togetl.ducer.Function
-net.nuke24.togetl.ducer.DucerChunk
-net.nuke24.togetl.ducer.DucerState2
-```
-
-Original copyright and license headers are preserved; a `NOTICE` records the origin.
-
-### 7.2 Patches
+Patches:
 
 1. Add source spans to every chunk: line, column, byte start/end, end line/column.
 2. Emit `Comment` chunks instead of discarding `#`-prefixed header lines.
@@ -217,31 +172,7 @@ Original copyright and license headers are preserved; a `NOTICE` records the ori
    content ending at `\n=`, trailing LF at EOF being content, lone CR as content, CRLF
    line endings.
 
-### 7.3 Entry model
-
-`TefReader` merges chunks into entries:
-
-```java
-final class TEFEntry {
-    String type;              // "part"
-    String value;             // "p1310"
-    List<TEFHeader> headers;  // ordered, duplicates preserved
-    String content;           // may be empty
-    SourceSpan span;
-    List<TEFComment> comments;
-    List<TEFDirective> directives;
-}
-```
-
-`tef:content` is the entry's free-form note or description,
-and in mapped dialects should be translated into an appropriate
-domain predicate (currently `rdfs:comment`) on the mapped subject.
-
-The parser keeps the full raw entry form available.
-The `generic` dialect emits that structure directly, while mapped dialects
-emit domain/provenance statements and report unmapped constructs by location.
-
-### 7.4 Tolerance
+### 7.1 Tolerance
 
 `--tolerance strict|warn|lenient`, default `warn`.
 
@@ -266,18 +197,10 @@ Automatic dialect detection (manifest, `#format`, filename, key signature) is a
 post-MVP idea. The `Dialect` interface is designed so a registry can be added later
 without changing importers.
 
-Mapping tables are TSV files under `mappings/`:
-
-```
-#entry  part  tag:nuke24.net,2026-11:togetl:part:${value}
-entryType       subjectTemplate                 type
-part            tag:nuke24.net,2026-11:togetl:part:${value}  togetl:Part
-
-#field  entryType  header       predicate          valueParser  cardinality
-field    part       name         togetl:name        plain        1
-field    part       stl-file     togetl:stlFile     fileRef      *
-field    part       tags         togetl:tag         plain        *
-```
+Mapping tables are TSV files under `mappings/`. Each table has an `#entry` section
+mapping entry types to subject templates and RDF types, and a `#field` section mapping
+headers to predicates, value parsers, and cardinality. Rules with `entryType` `*` apply
+unless a more specific rule exists.
 
 - `subjectTemplate` supports `${value}` and `${header:name}` substitutions.
 - `valueParser` is one of `plain`, `iri`, `fileRef`, `number`, `timestamp`, `bool`,
@@ -432,74 +355,9 @@ A build check fails if a mapping references an undefined predicate.
 
 ## 10. Database
 
-SQLite, loaded by Java. The schema is source-agnostic:
-
-```sql
-CREATE TABLE document (
-    iri TEXT PRIMARY KEY,
-    source_url TEXT NOT NULL,
-    sha256 TEXT NOT NULL,
-    byte_length INTEGER NOT NULL,
-    detected_format TEXT,
-    parser_version TEXT
-);
-
-CREATE TABLE batch (
-    iri TEXT PRIMARY KEY,
-    started_at TEXT NOT NULL,
-    importer_version TEXT NOT NULL,
-    options_json TEXT NOT NULL
-);
-
-CREATE TABLE loading (
-    iri TEXT PRIMARY KEY,
-    batch_iri TEXT NOT NULL REFERENCES batch(iri),
-    document_iri TEXT NOT NULL REFERENCES document(iri)
-);
-
-CREATE TABLE statement (
-    id INTEGER PRIMARY KEY,
-    source TEXT NOT NULL,
-    line INTEGER,
-    column INTEGER,
-    end_line INTEGER,
-    end_column INTEGER,
-    subject TEXT NOT NULL,
-    predicate TEXT NOT NULL,
-    object TEXT NOT NULL,
-    object_kind TEXT NOT NULL,   -- iri | blank | literal
-    datatype TEXT,
-    batch_iri TEXT,
-    loading_iri TEXT
-);
-
-CREATE INDEX statement_subject ON statement(subject);
-CREATE INDEX statement_predicate ON statement(predicate);
-CREATE INDEX statement_object ON statement(object);
-CREATE INDEX statement_subject_predicate ON statement(subject, predicate);
-
-CREATE TABLE parse_issue (
-    id INTEGER PRIMARY KEY,
-    document_iri TEXT NOT NULL,
-    line INTEGER,
-    column INTEGER,
-    severity TEXT NOT NULL,
-    code TEXT NOT NULL,
-    message TEXT NOT NULL,
-    raw TEXT
-);
-
-CREATE TABLE vocab_term (
-    iri TEXT PRIMARY KEY,
-    kind TEXT,
-    label TEXT,
-    comment TEXT,
-    status TEXT,
-    defined_in TEXT
-);
-```
-
-Views for browsing (`part`, `part_file`, `part_alias`, `conflict`) are added per domain.
+SQLite, loaded by Java. The schema is source-agnostic: documents, batches, loadings,
+statements, parse issues, report rows, and vocabulary terms. Domain views (for example,
+`part`, `part_file`, `part_alias`, `conflict`) are layered on top.
 
 The loader reads TOGETLTSV, so it can also load streams produced by other tools.
 
@@ -507,15 +365,7 @@ The loader reads TOGETLTSV, so it can also load streams produced by other tools.
 
 Read-only PDO SQLite. Open with `PRAGMA query_only = ON`.
 
-Pages:
-
-- `/` — counts, sources, recent batches, issue summary
-- `/subject?iri=...` — all statements, grouped by predicate, with provenance
-- `/predicate?iri=...` — subjects using a predicate
-- `/document?iri=...` — metadata, loadings, issues
-- `/vocab` — vocabulary report
-- `/issues` — parse issues and conflicts
-- `/part/<id>` — domain view over the generic tables
+Pages: overview, subject, predicate, document, vocabulary, issues, and a domain part view.
 
 No authentication, no editing, no writes.
 
@@ -526,12 +376,8 @@ No authentication, no editing, no writes.
 ├── PLAN.md
 ├── README.md
 ├── build.sh
-├── .gitignore
 ├── lib/                      # pinned jars (sqlite-jdbc), checksums
-├── scripts/
-│   ├── get-jdk.sh
-│   ├── get-sqlite-jdbc.sh
-│   └── fetch-fixtures.sh
+├── scripts/                  # get-jdk.sh, get-sqlite-jdbc.sh, fetch-fixtures.sh, install-deps.sh
 ├── src/main/java/net/nuke24/togetl/
 │   ├── cli/
 │   ├── tef/
@@ -545,11 +391,7 @@ No authentication, no editing, no writes.
 ├── vocab/
 ├── mappings/
 ├── fixtures/
-│   ├── small/
-│   ├── expected/
-│   └── upstream/             # fetched, gitignored
 ├── test/
-│   └── run-tests.sh
 └── web/
 ```
 
@@ -561,27 +403,11 @@ No authentication, no editing, no writes.
 - `build.sh` uses `--release 8` when available and falls back to `-source 1.8 -target 1.8`
   on a real JDK 8.
 - `scripts/get-jdk.sh` downloads a pinned Temurin 8 release into `.toolchain/jdk8` and
-  verifies its SHA-256. Pinned version: `8u512-b09`.
-- `scripts/get-sqlite-jdbc.sh` downloads `sqlite-jdbc-3.46.1.3.jar` into `lib/` and
+  verifies its SHA-256.
+- `scripts/get-sqlite-jdbc.sh` downloads a pinned `sqlite-jdbc` jar into `lib/` and
   verifies its checksum.
 - Tests use a small built-in harness (`TestMain`) rather than JUnit, to keep the
   dependency set to one jar.
-
-Commands:
-
-```sh
-./scripts/get-jdk.sh
-./scripts/get-sqlite-jdbc.sh
-./build.sh
-./test/run-tests.sh
-
-./togetl import --dialect parts --input fixtures/upstream/3DPrintingData.tef \
-    --output out/3dparts-data.togetltsv
-./togetl import --dialect namespaces --input vocab/togetl.tef \
-    --output out/togetl-vocab.togetltsv
-./togetl vocab --input out/togetl-vocab.togetltsv --report out/vocab-report.tsv
-./togetl db --tsv out/*.togetltsv --db out/togetl.sqlite
-```
 
 ## 14. Milestones
 
@@ -631,10 +457,5 @@ re-parsing.
 - Which `CUSTOM_ID` forms count as global is not yet decided. The list of recognized
   forms should be written here once it has been sampled from the real corpus
   (`3DPrintingLog.org`, and the author's other documents).
-- Conflict policy for functional headers is per-property; the first pass will treat
-  `name`, `description`, and `obsoleted-by` as functional and everything else as
-  multi-valued.
-  - Editor's note: This is a little bit overly-specific for how hand-wavily
-    we actually did the first implementation.  We can probably leave this out of PLAN.
 - The PHP browser requires the PDO SQLite extension at deployment time. It is not needed
   to build or test the Java side.
