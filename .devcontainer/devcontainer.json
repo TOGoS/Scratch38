@@ -8,7 +8,7 @@
 		"JAVA_HOME": "/usr/lib/jvm/java-1.8-openjdk",
 		"PHP_BIN": "/usr/bin/php"
 	},
-	"postCreateCommand": "./scripts/install-deps.sh --distro alpine"
+	"postCreateCommand": "./scripts/install-deps.sh --distro alpine --include-vs-code-tools"
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},

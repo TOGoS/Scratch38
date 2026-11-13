@@ -8,6 +8,7 @@ Usage: scripts/install-deps.sh --distro NAME [--dry-run]
 
 Options:
   --distro NAME  Required. One of: debian, alpine.
+  --include-vs-code-tools
   --dry-run      Print the commands instead of running them.
   -h, --help     Show this message.
 
@@ -22,6 +23,7 @@ die() {
 
 distro=""
 dry_run=no
+include_vs_code_tools=no
 
 while [ $# -gt 0 ]; do
 	case "$1" in
@@ -29,6 +31,10 @@ while [ $# -gt 0 ]; do
 			[ $# -ge 2 ] || die "--distro requires a value"
 			distro=$2
 			shift 2
+			;;
+		--include-vs-code-tools)
+			include_vs_code_tools=yes
+			shift
 			;;
 		--dry-run)
 			dry_run=yes
@@ -64,6 +70,10 @@ case "$distro" in
 		;;
 	alpine)
 		run $SUDO apk add --no-cache curl ca-certificates openjdk8-jdk php php-pdo_sqlite
+		if [ "$include_vs_code_tools" = yes ]; then
+			# Needed for the Red Hat Java extension, apparently
+			run $SUDO apk add --no-cache openjdk25-jdk
+		fi
 		;;
 	"")
 		usage >&2
