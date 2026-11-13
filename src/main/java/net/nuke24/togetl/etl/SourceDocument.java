@@ -49,6 +49,23 @@ public final class SourceDocument {
 				format,
 				parserVersion);
 	}
+
+	/** For callers that stream their input and digest it as they go. */
+	public static SourceDocument of(
+			String sourceIri,
+			String sha256,
+			long byteLength,
+			String format,
+			String parserVersion
+	) {
+		if (sourceIri == null || sourceIri.isEmpty()) {
+			throw new IllegalArgumentException("sourceIri must not be empty");
+		}
+		if (sha256 == null || sha256.isEmpty()) {
+			throw new IllegalArgumentException("sha256 must not be empty");
+		}
+		return new SourceDocument(sourceIri, sha256, byteLength, format, parserVersion);
+	}
 	
 	public String getSourceIri() {
 		return sourceIri;

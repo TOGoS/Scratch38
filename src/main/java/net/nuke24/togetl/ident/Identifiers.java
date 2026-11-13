@@ -177,7 +177,7 @@ public final class Identifiers {
 		}
 	}
 	
-	private static String hex(byte[] bytes) {
+	public static String hex(byte[] bytes) {
 		char[] chars = new char[bytes.length * 2];
 		for (int i = 0; i < bytes.length; i++) {
 			int b = bytes[i] & 0xFF;

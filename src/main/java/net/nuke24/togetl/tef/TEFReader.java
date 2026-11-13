@@ -1,9 +1,14 @@
 package net.nuke24.togetl.tef;
 
-import java.io.File;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CoderResult;
+import java.nio.charset.CodingErrorAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -18,140 +23,194 @@ import net.nuke24.togetl.tef.LLChunks.Directive;
 import net.nuke24.togetl.tef.LLChunks.Header;
 import net.nuke24.togetl.tef.LLChunks.HeaderValuePiece;
 import net.nuke24.togetl.tef.LLChunks.NewEntryLine;
-import net.nuke24.togetl.tef.LLChunks.SyntaxError;
-import net.nuke24.togetl.util.Tolerance;
 
 /**
- * Reads a TEF document into entries, comments, directives, and issues.
+ * Reads a TEF document into entries, comments, and directives.
  *
- * <p>The lexer works on bytes; this class strips a UTF-8 BOM, validates the
- * remaining input, drives the incremental parser, merges chunks, and
- * assembles entries. Recoverable problems become {@link TEFIssue}s under
- * {@link Tolerance#WARN} and {@link Tolerance#LENIENT}; under
- * {@link Tolerance#STRICT} the first problem aborts the read.</p>
+ * <p>Input is consumed incrementally: each block goes through UTF-8 checking,
+ * the lexer, the chunk merger, and the entry assembler before the next block
+ * is read. Only the assembled entries are held in memory.</p>
+ *
+ * <p>Syntax errors are fatal. The read stops at the first one, and the
+ * resulting {@link TEFReadException} names its location.</p>
  */
 public final class TEFReader {
 	private static final Charset UTF8 = Charset.forName("UTF-8");
-	private static final byte[] EMPTY_BYTES = new byte[0];
 	private static final int FEED_BLOCK_SIZE = 65536;
+	private static final byte[] UTF8_BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
 	
 	private TEFReader() {
 	}
 	
-	public static TEFDocument read(String sourceIri, byte[] input) throws TEFReadException {
-		return read(sourceIri, input, Tolerance.WARN);
-	}
-	
-	public static TEFDocument read(String sourceIri, byte[] input, Tolerance tolerance)
-			throws TEFReadException {
-		if (sourceIri == null || sourceIri.isEmpty()) {
-			throw new IllegalArgumentException("sourceIri must not be empty");
-		}
+	public static TEFDocument read(String sourceIri, byte[] input)
+			throws IOException, TEFReadException {
 		if (input == null) {
 			throw new IllegalArgumentException("input must not be null");
 		}
-		if (tolerance == null) {
-			throw new IllegalArgumentException("tolerance must not be null");
-		}
-		
-		long byteLength = input.length;
-		boolean bom = hasUtf8Bom(input);
-		byte[] bytes = bom ? Arrays.copyOfRange(input, 3, input.length) : input;
-		
-		List<TEFIssue> issues = new ArrayList<TEFIssue>();
-		checkUtf8(bytes, issues, tolerance);
-		
-		List<Chunk> rawChunks = parseChunks(bytes);
-		Chunk[] mergedChunks = mergeChunks(rawChunks);
-		
-		return assemble(sourceIri, byteLength, bom, bytes, mergedChunks, issues, tolerance);
+		return read(sourceIri, new ByteArrayInputStream(input));
 	}
 	
-	public static TEFDocument readFile(String sourceIri, File file) throws IOException, TEFReadException {
-		return readFile(sourceIri, file, Tolerance.WARN);
-	}
-	
-	public static TEFDocument readFile(String sourceIri, File file, Tolerance tolerance)
+	public static TEFDocument read(String sourceIri, InputStream in)
 			throws IOException, TEFReadException {
-		return read(sourceIri, Files.readAllBytes(file.toPath()), tolerance);
-	}
-	
-	private static boolean hasUtf8Bom(byte[] input) {
-		return input.length >= 3
-				&& (input[0] & 0xFF) == 0xEF
-				&& (input[1] & 0xFF) == 0xBB
-				&& (input[2] & 0xFF) == 0xBF;
-	}
-	
-	private static void checkUtf8(byte[] bytes, List<TEFIssue> issues, Tolerance tolerance)
-			throws TEFReadException {
-		int invalidOffset = findInvalidUtf8Offset(bytes);
-		if (invalidOffset < 0) {
-			return;
+		if (sourceIri == null || sourceIri.isEmpty()) {
+			throw new IllegalArgumentException("sourceIri must not be empty");
 		}
-		TEFSpan span = spanAt(bytes, invalidOffset);
-		addIssue(
-				new TEFIssue(
-						TEFIssue.Severity.ERROR,
-						"invalid-utf8",
-						"Invalid UTF-8 byte sequence",
-						span,
-						null),
-				issues,
-				tolerance);
-	}
-	
-	private static List<Chunk> parseChunks(byte[] bytes) throws TEFReadException {
-		List<Chunk> chunks = new ArrayList<Chunk>();
-		DucerState2<byte[], Chunk[]> state = TEFParser.INIT;
-		try {
-			for (int offset = 0; offset < bytes.length; offset += FEED_BLOCK_SIZE) {
-				int end = Math.min(bytes.length, offset + FEED_BLOCK_SIZE);
-				byte[] block = Arrays.copyOfRange(bytes, offset, end);
-				state = state.process(new DucerChunk<byte[]>(block, false));
-				collectChunks(state.output, chunks);
-			}
-			state = state.process(new DucerChunk<byte[]>(EMPTY_BYTES, true));
-			collectChunks(state.output, chunks);
-		} catch (RuntimeException e) {
-			throw new TEFReadException("TEF parse failed: " + e.getMessage(), e);
+		if (in == null) {
+			throw new IllegalArgumentException("input must not be null");
 		}
-		return chunks;
-	}
-	
-	private static void collectChunks(DucerChunk<Chunk[]> output, List<Chunk> chunks) {
-		if (output == null || output.payload == null) {
-			return;
-		}
-		Collections.addAll(chunks, output.payload);
-	}
-	
-	private static Chunk[] mergeChunks(List<Chunk> rawChunks) throws TEFReadException {
-		try {
-			Chunk[] array = rawChunks.toArray(new Chunk[rawChunks.size()]);
-			DucerState2<Chunk[], Chunk[]> state =
-					LLChunkMerger.FULL.process(new DucerChunk<Chunk[]>(array, true));
-			return state.output.payload;
-		} catch (RuntimeException e) {
-			throw new TEFReadException("TEF chunk merge failed: " + e.getMessage(), e);
-		}
-	}
-	
-	private static TEFDocument assemble(
-			String sourceIri,
-			long byteLength,
-			boolean bom,
-			byte[] bytes,
-			Chunk[] chunks,
-			List<TEFIssue> issues,
-			Tolerance tolerance
-	) throws TEFReadException {
-		List<TEFEntry> entries = new ArrayList<TEFEntry>();
-		List<TEFComment> documentComments = new ArrayList<TEFComment>();
-		List<TEFDirective> documentDirectives = new ArrayList<TEFDirective>();
 		
-		EntryBuilder current = null;
-		for (Chunk chunk : chunks) {
+		Pipeline pipeline = new Pipeline(sourceIri);
+		byte[] block = new byte[FEED_BLOCK_SIZE];
+		int filled = fill(in, block);
+		long byteLength = filled;
+		boolean bom = startsWithBom(block, filled);
+		int offset = bom ? UTF8_BOM.length : 0;
+		boolean last = filled < block.length;
+		while (true) {
+			pipeline.feed(Arrays.copyOfRange(block, offset, filled));
+			if (last) {
+				break;
+			}
+			filled = fill(in, block);
+			byteLength += filled;
+			last = filled < block.length;
+			offset = 0;
+		}
+		return pipeline.finish(byteLength, bom);
+	}
+	
+	/** Reads until the buffer is full or the stream ends. */
+	private static int fill(InputStream in, byte[] buffer) throws IOException {
+		int total = 0;
+		while (total < buffer.length) {
+			int n = in.read(buffer, total, buffer.length - total);
+			if (n < 0) {
+				break;
+			}
+			total += n;
+		}
+		return total;
+	}
+	
+	private static boolean startsWithBom(byte[] block, int filled) {
+		return filled >= UTF8_BOM.length
+				&& block[0] == UTF8_BOM[0]
+				&& block[1] == UTF8_BOM[1]
+				&& block[2] == UTF8_BOM[2];
+	}
+	
+	/** The streaming stages, carried from one block to the next. */
+	private static final class Pipeline {
+		private final String sourceIri;
+		private final Utf8Checker utf8 = new Utf8Checker();
+		private final Assembler assembler;
+		private DucerState2<byte[], Chunk[]> lexer = TEFParser.INIT;
+		private DucerState2<Chunk[], Chunk[]> merger = LLChunkMerger.FULL;
+		
+		Pipeline(String sourceIri) {
+			this.sourceIri = sourceIri;
+			this.assembler = new Assembler(sourceIri);
+		}
+		
+		void feed(byte[] bytes) throws TEFReadException {
+			step(bytes, false);
+		}
+		
+		TEFDocument finish(long byteLength, boolean bom) throws TEFReadException {
+			step(new byte[0], true);
+			return assembler.build(byteLength, bom);
+		}
+		
+		private void step(byte[] bytes, boolean end) throws TEFReadException {
+			try {
+				utf8.check(bytes, end);
+				lexer = lexer.process(new DucerChunk<byte[]>(bytes, end));
+				merger = merger.process(new DucerChunk<Chunk[]>(lexer.output.payload, end));
+				for (Chunk chunk : merger.output.payload) {
+					assembler.accept(chunk);
+				}
+			} catch (TEFSyntaxException e) {
+				throw new TEFReadException(
+						sourceIri + " " + e.getSpan().toLocation() + ": " + e.getMessage());
+			} catch (RuntimeException e) {
+				throw new TEFReadException("TEF parse failed: " + e.getMessage(), e);
+			}
+		}
+	}
+	
+	/**
+	 * Checks UTF-8 across block boundaries. A sequence cut by a block boundary
+	 * is carried into the next check, so only a few bytes are ever buffered.
+	 */
+	private static final class Utf8Checker {
+		private static final int MAX_CARRY = 3;
+		
+		private final CharsetDecoder decoder = UTF8.newDecoder()
+				.onMalformedInput(CodingErrorAction.REPORT)
+				.onUnmappableCharacter(CodingErrorAction.REPORT);
+		private final CharBuffer chars = CharBuffer.allocate(FEED_BLOCK_SIZE + MAX_CARRY);
+		private byte[] carry = new byte[0];
+		/** Byte offset (in the BOM-stripped input) of carry[0]. */
+		private long offset;
+		private int line = 1;
+		private int column = 1;
+		
+		void check(byte[] bytes, boolean end) throws TEFReadException {
+			byte[] buf = new byte[carry.length + bytes.length];
+			System.arraycopy(carry, 0, buf, 0, carry.length);
+			System.arraycopy(bytes, 0, buf, carry.length, bytes.length);
+			
+			ByteBuffer in = ByteBuffer.wrap(buf);
+			chars.clear();
+			CoderResult result = decoder.decode(in, chars, end);
+			if (result.isError() || (end && in.hasRemaining())) {
+				throw invalidAt(buf, in.position());
+			}
+			if (end) {
+				decoder.flush(chars);
+			}
+			
+			int consumed = in.position();
+			advance(buf, consumed);
+			carry = Arrays.copyOfRange(buf, consumed, buf.length);
+			offset += consumed;
+		}
+		
+		private void advance(byte[] buf, int count) {
+			for (int i = 0; i < count; i++) {
+				if (buf[i] == '\n') {
+					line++;
+					column = 1;
+				} else {
+					column++;
+				}
+			}
+		}
+		
+		private TEFSyntaxException invalidAt(byte[] buf, int index) {
+			int savedLine = line;
+			int savedColumn = column;
+			advance(buf, index);
+			TEFSpan span = TEFSpan.point(offset + index, line, column);
+			line = savedLine;
+			column = savedColumn;
+			return new TEFSyntaxException("Invalid UTF-8 byte sequence", span);
+		}
+	}
+	
+	/** Turns merged chunks into entries, comments, and directives. */
+	private static final class Assembler {
+		private final String sourceIri;
+		private final List<TEFEntry> entries = new ArrayList<TEFEntry>();
+		private final List<TEFComment> documentComments = new ArrayList<TEFComment>();
+		private final List<TEFDirective> documentDirectives = new ArrayList<TEFDirective>();
+		private EntryBuilder current;
+		
+		Assembler(String sourceIri) {
+			this.sourceIri = sourceIri;
+		}
+		
+		void accept(Chunk chunk) {
 			if (chunk instanceof NewEntryLine) {
 				if (current != null) {
 					entries.add(current.build());
@@ -188,158 +247,29 @@ public final class TEFReader {
 					current.addDirective(value);
 				}
 			} else if (chunk instanceof HeaderValuePiece) {
-				if (current == null) {
-					current = startImplicitEntry(chunk.getSpan());
-				}
-				HeaderValuePiece piece = (HeaderValuePiece) chunk;
-				current.appendOrphanContent(recoverOrphanText(piece, bytes));
-				current.touch(piece.getSpan());
-			} else if (chunk instanceof SyntaxError) {
-				SyntaxError error = (SyntaxError) chunk;
-				addIssue(
-						new TEFIssue(
-								TEFIssue.Severity.ERROR,
-								codeForSyntaxError(error.message),
-								error.message,
-								error.getSpan(),
-								null),
-						issues,
-						tolerance);
+				throw new TEFSyntaxException(
+						"Unexpected header continuation", chunk.getSpan());
 			}
-		}
-		if (current != null) {
-			entries.add(current.build());
 		}
 		
-		return new TEFDocument(
-				sourceIri,
-				byteLength,
-				bom,
-				documentComments,
-				documentDirectives,
-				entries,
-				issues);
-	}
-	
-	private static EntryBuilder startImplicitEntry(TEFSpan span) {
-		return new EntryBuilder("", "", span);
-	}
-	
-	/**
-	 * Reconstructs the original text of an orphan continuation block from its
-	 * byte span. The parser discards the leading whitespace byte, so using the
-	 * span keeps the source text intact. If the span is unusable, fall back to
-	 * the parsed value.
-	 */
-	private static String recoverOrphanText(HeaderValuePiece piece, byte[] bytes) {
-		TEFSpan span = piece.getSpan();
-		if (span != null
-				&& span != TEFSpan.NONE
-				&& span.byteStart >= 0
-				&& span.byteEnd >= span.byteStart
-				&& span.byteEnd <= bytes.length) {
-			int start = (int) span.byteStart;
-			int end = (int) span.byteEnd;
-			return new String(bytes, start, end - start, UTF8);
-		}
-		return piece.data;
-	}
-	
-	private static String codeForSyntaxError(String message) {
-		if (message.startsWith("Illegal header continuation")) {
-			return "orphan-continuation";
-		}
-		if (message.startsWith("Improperly terminated header key")) {
-			return "unterminated-header-key";
-		}
-		if (message.startsWith("Missing space after header colon")) {
-			return "tight-header-colon";
-		}
-		if (message.startsWith("Header line has no colon")) {
-			return "header-without-colon";
-		}
-		return "syntax-error";
-	}
-	
-	private static void addIssue(TEFIssue issue, List<TEFIssue> issues, Tolerance tolerance)
-			throws TEFReadException {
-		if (tolerance == Tolerance.STRICT) {
-			throw new TEFReadException(formatIssue(issue));
-		}
-		issues.add(issue);
-	}
-	
-	private static String formatIssue(TEFIssue issue) {
-		String location = issue.getSpan() == null
-				? "-"
-				: issue.getSpan().toLocation().toString();
-		return location + ": " + issue.getCode() + ": " + issue.getMessage();
-	}
-	
-	private static TEFSpan spanAt(byte[] bytes, int offset) {
-		int line = 1;
-		int column = 1;
-		for (int i = 0; i < offset; i++) {
-			if (bytes[i] == '\n') {
-				line++;
-				column = 1;
-			} else {
-				column++;
+		TEFDocument build(long byteLength, boolean bom) {
+			if (current != null) {
+				entries.add(current.build());
+				current = null;
 			}
+			return new TEFDocument(
+					sourceIri,
+					byteLength,
+					bom,
+					documentComments,
+					documentDirectives,
+					entries,
+					Collections.<TEFIssue>emptyList());
 		}
-		return TEFSpan.point(offset, line, column);
-	}
-	
-	/**
-	 * @return the offset of the first invalid UTF-8 byte, or -1 if the whole
-	 *         array is valid UTF-8.
-	 */
-	private static int findInvalidUtf8Offset(byte[] bytes) {
-		int i = 0;
-		while (i < bytes.length) {
-			int b = bytes[i] & 0xFF;
-			if (b < 0x80) {
-				i++;
-				continue;
-			}
-			
-			int continuationBytes;
-			int minimumCodePoint;
-			if ((b & 0xE0) == 0xC0) {
-				continuationBytes = 1;
-				minimumCodePoint = 0x80;
-			} else if ((b & 0xF0) == 0xE0) {
-				continuationBytes = 2;
-				minimumCodePoint = 0x800;
-			} else if ((b & 0xF8) == 0xF0) {
-				continuationBytes = 3;
-				minimumCodePoint = 0x10000;
-			} else {
-				return i;
-			}
-			
-			if (i + continuationBytes >= bytes.length) {
-				return i;
-			}
-			
-			int[] initialMasks = {0x7F, 0x1F, 0x0F, 0x07};
-			int codePoint = b & initialMasks[continuationBytes];
-			for (int j = 1; j <= continuationBytes; j++) {
-				int continuation = bytes[i + j] & 0xFF;
-				if ((continuation & 0xC0) != 0x80) {
-					return i;
-				}
-				codePoint = (codePoint << 6) | (continuation & 0x3F);
-			}
-			
-			if (codePoint < minimumCodePoint
-					|| codePoint > 0x10FFFF
-					|| (codePoint >= 0xD800 && codePoint <= 0xDFFF)) {
-				return i;
-			}
-			i += continuationBytes + 1;
+		
+		private static EntryBuilder startImplicitEntry(TEFSpan span) {
+			return new EntryBuilder("", "", span);
 		}
-		return -1;
 	}
 	
 	private static final class EntryBuilder {
@@ -379,13 +309,6 @@ public final class TEFReader {
 		}
 		
 		void appendContent(String text) {
-			content.append(text);
-		}
-		
-		void appendOrphanContent(String text) {
-			if (content.length() > 0) {
-				content.append('\n');
-			}
 			content.append(text);
 		}
 		

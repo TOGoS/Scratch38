@@ -14,7 +14,6 @@ import net.nuke24.togetl.tef.TEFEntry;
 import net.nuke24.togetl.tef.TEFHeader;
 import net.nuke24.togetl.tef.TEFReadException;
 import net.nuke24.togetl.tef.TEFReader;
-import net.nuke24.togetl.util.Tolerance;
 
 /**
  * Reads vocabulary definitions from TEF documents written in the namespaces
@@ -41,7 +40,7 @@ public final class VocabularyLoader {
 	public static void loadInto(Vocabulary vocabulary, Path path) throws IOException, TEFReadException {
 		byte[] bytes = Files.readAllBytes(path);
 		String sourceUrl = path.toAbsolutePath().normalize().toUri().toString();
-		TEFDocument document = TEFReader.read(sourceUrl, bytes, Tolerance.WARN);
+		TEFDocument document = TEFReader.read(sourceUrl, bytes);
 		String sourceName = path.getFileName().toString();
 		for (TEFEntry entry : document.getEntries()) {
 			String kind = kindOf(entry.getType());

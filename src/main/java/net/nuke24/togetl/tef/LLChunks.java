@@ -215,28 +215,6 @@ public final class LLChunks {
 		}
 	}
 	
-	public static final class SyntaxError implements Chunk {
-		public final int lineNum;
-		public final String message;
-		private final TEFSpan span;
-		
-		public SyntaxError(int lineNum, String message, TEFSpan span) {
-			this.lineNum = lineNum;
-			this.message = message;
-			this.span = span;
-		}
-		
-		@Override
-		public TEFSpan getSpan() {
-			return span;
-		}
-		
-		@Override
-		public String toString() {
-			return "SyntaxError[lineNum=" + lineNum + ", message=" + quote(message) + "]";
-		}
-	}
-	
 	/**
 	 * A '#' line is a comment when it is "#" alone, "# " (hash + whitespace),
 	 * or "#!" (shebang style). Anything else is a SharpFormat directive.

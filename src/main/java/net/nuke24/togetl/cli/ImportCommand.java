@@ -1,12 +1,14 @@
 package net.nuke24.togetl.cli;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -16,6 +18,7 @@ import net.nuke24.togetl.dialect.Dialects;
 import net.nuke24.togetl.dialect.TEFDialect;
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
+import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.rdf.Statement;
 import net.nuke24.togetl.rdf.StatementConsumer;
 import net.nuke24.togetl.tef.TEFDocument;
@@ -23,7 +26,6 @@ import net.nuke24.togetl.tef.TEFReadException;
 import net.nuke24.togetl.tef.TEFReader;
 import net.nuke24.togetl.togetltsv.AliasTable;
 import net.nuke24.togetl.togetltsv.TOGETLTSVWriter;
-import net.nuke24.togetl.util.Tolerance;
 
 /**
  * {@code togetl import}: read one source document and write a TOGETLTSV stream.
@@ -33,7 +35,6 @@ public final class ImportCommand {
 	private String output = "-";
 	private String sourceUrl;
 	private String dialect = "generic";
-	private String tolerance = "warn";
 	private String reportPath;
 	
 	private ImportCommand() {
@@ -85,8 +86,6 @@ public final class ImportCommand {
 				sourceUrl = value != null ? value : next(args, ++i, key);
 			} else if ("--dialect".equals(key)) {
 				dialect = value != null ? value : next(args, ++i, key);
-			} else if ("--tolerance".equals(key)) {
-				tolerance = value != null ? value : next(args, ++i, key);
 			} else if ("--report".equals(key)) {
 				reportPath = value != null ? value : next(args, ++i, key);
 			} else {
@@ -109,17 +108,25 @@ public final class ImportCommand {
 	}
 	
 	private void execute() throws IOException, TEFReadException {
-		Tolerance toleranceValue = Tolerance.parse(tolerance);
 		TEFDialect selectedDialect = Dialects.byName(dialect);
 		
-		byte[] content = readInput(input);
 		String effectiveSourceUrl = sourceUrl != null ? sourceUrl : defaultSourceUrl(input);
+		MessageDigest digest = sha256();
+		TEFDocument document;
+		InputStream in = openInput(input);
+		try {
+			document = TEFReader.read(effectiveSourceUrl, new DigestInputStream(in, digest));
+		} finally {
+			if (!"-".equals(input)) {
+				in.close();
+			}
+		}
 		SourceDocument source = SourceDocument.of(
 				effectiveSourceUrl,
-				content,
+				Identifiers.hex(digest.digest()),
+				document.getByteLength(),
 				"tef",
 				Version.TEF_PARSER_VERSION);
-		TEFDocument document = TEFReader.read(effectiveSourceUrl, content, toleranceValue);
 		
 		ImportReport report = new ImportReport();
 		long statementCount = 0;
@@ -164,21 +171,19 @@ public final class ImportCommand {
 				+ " occurrence(s) in " + report.getRowCount() + " row(s)");
 	}
 	
-	private static byte[] readInput(String path) throws IOException {
+	private static InputStream openInput(String path) throws IOException {
 		if ("-".equals(path)) {
-			return readAll(System.in);
+			return System.in;
 		}
-		return Files.readAllBytes(Paths.get(path));
+		return Files.newInputStream(Paths.get(path));
 	}
 	
-	private static byte[] readAll(InputStream in) throws IOException {
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		byte[] buffer = new byte[65536];
-		int n;
-		while ((n = in.read(buffer)) >= 0) {
-			out.write(buffer, 0, n);
+	private static MessageDigest sha256() {
+		try {
+			return MessageDigest.getInstance("SHA-256");
+		} catch (NoSuchAlgorithmException e) {
+			throw new IllegalStateException("SHA-256 is unavailable", e);
 		}
-		return out.toByteArray();
 	}
 	
 	private static String defaultSourceUrl(String input) throws IOException {
@@ -224,7 +229,6 @@ public final class ImportCommand {
 		err.println("  --output <file|->      TOGETLTSV output (default: -)");
 		err.println("  --source-url <url>     Canonical source URL (default: file: URI)");
 		err.println("  --dialect <name>       " + Dialects.names() + " (default: generic)");
-		err.println("  --tolerance <level>    strict, warn, or lenient (default: warn)");
 		err.println("  --report <file>        Write the unmapped-construct report as TSV");
 	}
 	

@@ -12,7 +12,7 @@ which are then loaded into a SQLite database and browsed read-only via a PHP vie
 ## Current status
 
 Implemented:
-- TEF reader and generic TEF dialect (source metadata, entries, headers, comments, directives, parse issues)
+- TEF reader (streams its input; syntax errors are fatal) and generic TEF dialect (source metadata, entries, headers, comments, directives)
 - Declarative mapping dialects (`parts`, `namespaces`) driven by TSV tables under `mappings/`
 - TOGETLTSV 202601 writer and reader, with alias handling and round-trip tests
 - SQLite loader (`togetl load`) with source-agnostic schema, deterministic batch/loading IRIs
@@ -23,7 +23,6 @@ Not yet implemented:
 - Org importer (an Org parser library with tests exists, but no domain mapping to TOGETLTSV)
 - Music importer
 - Batch ontology formalization
-- TEF parser should be refactored to stream input (similar to Org reader)
 
 ## Build
 
@@ -72,7 +71,7 @@ The build targets Java 8 and does not require Maven.
 TOGETL_DB=out/togetl.sqlite3 php -S localhost:8080 web/router.php
 ```
 
-`import` defaults to the `generic` dialect and `warn` tolerance. Local files
+`import` defaults to the `generic` dialect. Local files
 are identified by their absolute `file:` URL unless `--source-url` overrides it.
 
 Mapping tables live in `mappings/*.tsv` and are selected by name. Each table has

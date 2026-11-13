@@ -21,7 +21,6 @@ import net.nuke24.togetl.tef.LLChunks.Directive;
 import net.nuke24.togetl.tef.LLChunks.HeaderKey;
 import net.nuke24.togetl.tef.LLChunks.HeaderValuePiece;
 import net.nuke24.togetl.tef.LLChunks.NewEntryLine;
-import net.nuke24.togetl.tef.LLChunks.SyntaxError;
 import net.nuke24.togetl.tef.util.ArrayUtil;
 
 /**
@@ -214,10 +213,10 @@ public final class TEFParser
 					if (isHorizontalWhitespace(char0)) {
 						if (state == State.HEADER) {
 							int column = (int) (baseOffset + remainingOffset - lineStartOffset) + 1;
-							output.add(new SyntaxError(
-									lineNum,
-									"Illegal header continuation line",
-									TEFSpan.point(baseOffset + remainingOffset, lineNum, column)));
+							throw new TEFSyntaxException(
+									"Unexpected indented line; headers must not be indented, "
+									+ "and content must follow a blank line",
+									TEFSpan.point(baseOffset + remainingOffset, lineNum, column));
 						}
 						if (pendingNewlineSpan != null) {
 							output.add(new HeaderValuePiece(joiner(state), pendingNewlineSpan));
@@ -318,92 +317,39 @@ public final class TEFParser
 						} else if (remaining[i] == '\n') {
 							if (looksLikeTightHeader(remaining, remainingOffset, firstColon)) {
 								int column = (int) (baseOffset + firstColon - lineStartOffset) + 1;
-								output.add(new SyntaxError(
-										lineNum,
-										"Missing space after header colon",
-										TEFSpan.point(baseOffset + firstColon, lineNum, column)));
-								output.add(new HeaderKey(
-										new String(remaining, remainingOffset, firstColon - remainingOffset, UTF8),
-										makeSpan(
-												remaining,
-												baseOffset,
-												remainingOffset,
-												firstColon,
-												lineNum,
-												lineStartOffset)));
-								remainingOffset = firstColon + 1;
-								pendingNewlineSpan = null;
-								state = State.HEADER_VALUE;
-								continue parse;
+								throw new TEFSyntaxException(
+										"Missing space after header colon; write 'key: value'",
+										TEFSpan.point(baseOffset + firstColon, lineNum, column));
 							}
-							output.add(new SyntaxError(
-									lineNum,
-									"Header line has no colon",
+							throw new TEFSyntaxException(
+									"Header line has no 'key: value' colon; "
+									+ "content must follow a blank line",
 									makeSpan(
 											remaining,
 											baseOffset,
 											remainingOffset,
 											i + 1,
 											lineNum,
-											lineStartOffset)));
-							output.add(new ContentPiece(
-									Arrays.copyOfRange(remaining, remainingOffset, i + 1),
-									makeSpan(
-											remaining,
-											baseOffset,
-											remainingOffset,
-											i + 1,
-											lineNum,
-											lineStartOffset)));
-							++lineNum;
-							remainingOffset = i + 1;
-							lineStartOffset = baseOffset + remainingOffset;
-							pendingNewlineSpan = null;
-							continue parse;
+											lineStartOffset));
 						}
 					}
 					if (isEnd) {
 						if (looksLikeTightHeader(remaining, remainingOffset, firstColon)) {
 							int column = (int) (baseOffset + firstColon - lineStartOffset) + 1;
-							output.add(new SyntaxError(
-									lineNum,
-									"Missing space after header colon",
-									TEFSpan.point(baseOffset + firstColon, lineNum, column)));
-							output.add(new HeaderKey(
-									new String(remaining, remainingOffset, firstColon - remainingOffset, UTF8),
-									makeSpan(
-											remaining,
-											baseOffset,
-											remainingOffset,
-											firstColon,
-											lineNum,
-											lineStartOffset)));
-							remainingOffset = firstColon + 1;
-							pendingNewlineSpan = null;
-							state = State.HEADER_VALUE;
-							continue parse;
+							throw new TEFSyntaxException(
+									"Missing space after header colon; write 'key: value'",
+									TEFSpan.point(baseOffset + firstColon, lineNum, column));
 						}
-						output.add(new SyntaxError(
-								lineNum,
-								"Header line has no colon",
+						throw new TEFSyntaxException(
+								"Header line has no 'key: value' colon; "
+								+ "content must follow a blank line",
 								makeSpan(
 										remaining,
 										baseOffset,
 										remainingOffset,
 										remaining.length,
 										lineNum,
-										lineStartOffset)));
-						output.add(new ContentPiece(
-								Arrays.copyOfRange(remaining, remainingOffset, remaining.length),
-								makeSpan(
-										remaining,
-										baseOffset,
-										remainingOffset,
-										remaining.length,
-										lineNum,
-										lineStartOffset)));
-						remainingOffset = remaining.length;
-						break parse;
+										lineStartOffset));
 					}
 					break parse;
 				}

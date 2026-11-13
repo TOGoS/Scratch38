@@ -2,6 +2,7 @@ package net.nuke24.togetl.test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FilterReader;
+import java.io.InputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Reader;
@@ -51,7 +52,6 @@ import net.nuke24.togetl.togetltsv.AliasTable;
 import net.nuke24.togetl.togetltsv.TOGETLTSVReader;
 import net.nuke24.togetl.togetltsv.TOGETLTSVWriter;
 import net.nuke24.togetl.util.PercentCoder;
-import net.nuke24.togetl.util.Tolerance;
 import net.nuke24.togetl.vocab.Vocab;
 import net.nuke24.togetl.vocab.Vocabulary;
 import net.nuke24.togetl.vocab.VocabularyLoader;
@@ -106,6 +106,7 @@ public final class TestMain {
 		run("tef invalid utf-8", TestMain::testTefInvalidUtf8);
 		run("tef spans", TestMain::testTefSpans);
 		run("tef crlf", TestMain::testTefCrLf);
+		run("tef streamed input", TestMain::testTefStreamedInput);
 		run("identifiers", TestMain::testIdentifiers);
 		run("generic dialect", TestMain::testGenericDialect);
 		run("generic dialect round trip", TestMain::testGenericDialectRoundTrip);
@@ -351,49 +352,19 @@ public final class TestMain {
 	}
 	
 	private static void testTefOrphanContinuation() throws Exception {
-		String text = "=part p1\n name: Bob\n";
-		TEFDocument document = readTef(text);
-		assertEquals(1, document.getIssues().size(), "issue count");
-		assertEquals("orphan-continuation", document.getIssues().get(0).getCode(), "issue code");
-		assertEquals(1, document.getEntries().size(), "entry count");
-		
-		TEFEntry entry = document.getEntries().get(0);
-		assertEquals(0, entry.getHeaders().size(), "header count");
-		assertEquals(" name: Bob", entry.getContent(), "recovered content");
-		
-		checkThrowsStrict(text);
+		checkTefError("=part p1\n name: Bob\n", "Unexpected indented line");
 	}
 	
 	private static void testTefHeaderWithoutColon() throws Exception {
-		String text = "=part p1\nname: Bob\nThis is content.\n\nmore";
-		TEFDocument document = readTef(text);
-		assertEquals(1, document.getIssues().size(), "issue count");
-		assertEquals("header-without-colon", document.getIssues().get(0).getCode(), "issue code");
-		
-		TEFEntry entry = document.getEntries().get(0);
-		assertEquals(1, entry.getHeaders().size(), "header count");
-		assertEquals("This is content.\nmore", entry.getContent(), "recovered content");
-		
-		checkThrowsStrict(text);
+		checkTefError(
+				"=part p1\nname: Bob\nThis is content.\n\nmore",
+				"Header line has no 'key: value' colon");
 	}
 	
 	private static void testTefTightHeader() throws Exception {
-		String text =
-				"=recording x\n"
-				+ "x-rdf-subject:urn:bitprint:ABC\n"
-				+ "title: Bob\n";
-		TEFDocument document = readTef(text);
-		assertEquals(1, document.getIssues().size(), "issue count");
-		assertEquals("tight-header-colon", document.getIssues().get(0).getCode(), "issue code");
-		
-		TEFEntry entry = document.getEntries().get(0);
-		assertEquals(2, entry.getHeaders().size(), "header count");
-		assertEquals("x-rdf-subject", entry.getHeaders().get(0).getKey(), "tight header key");
-		assertEquals("urn:bitprint:ABC", entry.getHeaders().get(0).getValue(), "tight header value");
-		assertEquals("title", entry.getHeaders().get(1).getKey(), "following header key");
-		assertEquals("Bob", entry.getHeaders().get(1).getValue(), "following header value");
-		
-		checkThrowsStrict(text);
+		checkTefError(
+				"=recording x\nx-rdf-subject:urn:bitprint:ABC\ntitle: Bob\n",
+				"Missing space after header colon");
 	}
 	
 	private static void testTefByteOrderMark() throws Exception {
@@ -418,23 +389,53 @@ public final class TestMain {
 		System.arraycopy(prefix, 0, bytes, 0, prefix.length);
 		bytes[prefix.length] = (byte) 0xFF;
 		bytes[prefix.length + 1] = (byte) '\n';
+		checkTefError(bytes, "Invalid UTF-8");
 		
-		TEFDocument document = readTef(bytes, Tolerance.WARN);
-		assertEquals(1, document.getIssues().size(), "issue count");
-		assertEquals("invalid-utf8", document.getIssues().get(0).getCode(), "issue code");
-		assertEquals(1, document.getEntries().size(), "entry count");
-		
-		TEFHeader header = document.getEntries().get(0).getHeaders().get(0);
-		assertEquals("name", header.getKey(), "header key");
-		check(header.getValue().indexOf('\uFFFD') >= 0, "replacement character should be present");
-		
-		boolean threw = false;
-		try {
-			readTef(bytes, Tolerance.STRICT);
-		} catch (TEFReadException expected) {
-			threw = true;
+		byte[] truncated = new byte[prefix.length + 1];
+		System.arraycopy(prefix, 0, truncated, 0, prefix.length);
+		truncated[prefix.length] = (byte) 0xC3;
+		checkTefError(truncated, "Invalid UTF-8");
+	}
+	
+	private static void testTefStreamedInput() throws Exception {
+		StringBuilder text = new StringBuilder("=part p1\nname: Bob\n\n");
+		for (int i = 0; i < 20000; i++) {
+			text.append("caf\u00e9 line ").append(i).append('\n');
 		}
-		check(threw, "strict should reject invalid UTF-8");
+		byte[] body = text.toString().getBytes(StandardCharsets.UTF_8);
+		byte[] bytes = new byte[body.length + 3];
+		bytes[0] = (byte) 0xEF;
+		bytes[1] = (byte) 0xBB;
+		bytes[2] = (byte) 0xBF;
+		System.arraycopy(body, 0, bytes, 3, body.length);
+		
+		TEFDocument expected = TEFReader.read(DOC, bytes);
+		final byte[] source = bytes;
+		InputStream oneByteAtATime = new InputStream() {
+			private int pos;
+			
+			@Override
+			public int read() {
+				return pos < source.length ? (source[pos++] & 0xFF) : -1;
+			}
+			
+			@Override
+			public int read(byte[] b, int off, int len) {
+				if (pos >= source.length) {
+					return -1;
+				}
+				b[off] = source[pos++];
+				return 1;
+			}
+		};
+		TEFDocument streamed = TEFReader.read(DOC, oneByteAtATime);
+		check(streamed.hasBom(), "BOM should be detected across reads");
+		assertEquals((long) bytes.length, streamed.getByteLength(), "byte length");
+		assertEquals(expected.getEntries().size(), streamed.getEntries().size(), "entry count");
+		TEFEntry entry = streamed.getEntries().get(0);
+		assertEquals("Bob", entry.getHeaders().get(0).getValue(), "header value");
+		assertEquals(expected.getEntries().get(0).getContent(), entry.getContent(), "content");
+		check(entry.getContent().contains("caf\u00e9 line 19999"), "content should reach the last line");
 	}
 	
 	private static void testTefSpans() throws Exception {
@@ -1394,21 +1395,28 @@ public final class TestMain {
 	}
 	
 	private static TEFDocument readTef(String text) throws Exception {
-		return readTef(text.getBytes(StandardCharsets.UTF_8), Tolerance.WARN);
+		return readTef(text.getBytes(StandardCharsets.UTF_8));
 	}
 	
-	private static TEFDocument readTef(byte[] bytes, Tolerance tolerance) throws Exception {
-		return TEFReader.read(DOC, bytes, tolerance);
+	private static TEFDocument readTef(byte[] bytes) throws Exception {
+		return TEFReader.read(DOC, bytes);
 	}
 	
-	private static void checkThrowsStrict(String text) throws Exception {
+	private static void checkTefError(String text, String fragment) throws Exception {
+		checkTefError(text.getBytes(StandardCharsets.UTF_8), fragment);
+	}
+	
+	private static void checkTefError(byte[] bytes, String fragment) throws Exception {
 		boolean threw = false;
 		try {
-			readTef(text.getBytes(StandardCharsets.UTF_8), Tolerance.STRICT);
+			readTef(bytes);
 		} catch (TEFReadException expected) {
 			threw = true;
+			check(
+					expected.getMessage().contains(fragment),
+					"error should mention '" + fragment + "': " + expected.getMessage());
 		}
-		check(threw, "strict should reject: " + text);
+		check(threw, "syntax error should be fatal: " + fragment);
 	}
 	
 	private static String write(Statement... statements) throws Exception {
