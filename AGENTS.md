@@ -75,6 +75,16 @@ in which case it can be worked-around with an `export JAVA_HOME=/usr/lib/jvm/jav
 
 ## Commit attribution
 
-When an agent makes a commit entirely on its own, set author identity per commit command as
-`CoPilot Fusion <copilot-fusion@users.noreply.github.com>` (e.g. using `git -c user.name=... -c user.email=... commit ...`),
+When an agent makes a commit entirely on its own, set author identity per commit command
+(e.g. using `git -c user.name=... -c user.email=... commit ...`),
 rather than changing repository or global git config.
+
+The identity encodes the agent and the tool that ran it:
+
+- Name: the agent's display name, e.g. `Master Haiku`.
+- Email: `togos00+<agent>.<harness>@gmail.com`, where `<agent>` is the display name in lowercase
+  with spaces replaced by dots, and `<harness>` is `opencode`, `copilot`, or the tool's name in lowercase.
+  The `togos00+` prefix records that the owner is responsible for the commit.
+
+For example, `Master Haiku <togos00+master.hiaku.opencode@gmail.com>`. The same agent running
+under CoPilot uses `togos00+master.hiaku.copilot@gmail.com`.

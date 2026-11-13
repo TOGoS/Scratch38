@@ -1,5 +1,8 @@
 package net.nuke24.togetl.test;
 
+import java.io.FilterReader;
+import java.io.IOException;
+import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
@@ -8,6 +11,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import net.nuke24.togetl.cli.ImportCommand;
 import net.nuke24.togetl.cli.VocabCommand;
@@ -18,6 +22,12 @@ import net.nuke24.togetl.etl.SourceDocument;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.mapping.MappingTable;
 import net.nuke24.togetl.mapping.MappingTEFDialect;
+import net.nuke24.togetl.org.OrgDocument;
+import net.nuke24.togetl.org.OrgParser;
+import net.nuke24.togetl.org.OrgHeading;
+import net.nuke24.togetl.org.OrgReader;
+import net.nuke24.togetl.org.OrgTable;
+import net.nuke24.togetl.org.OrgTableRow;
 import net.nuke24.togetl.rdf.BlankNode;
 import net.nuke24.togetl.rdf.IRI;
 import net.nuke24.togetl.rdf.Literal;
@@ -89,6 +99,14 @@ public final class TestMain {
 		run("namespaces mapping", TestMain::testNamespacesMapping);
 		run("vocabulary report", TestMain::testVocabularyReport);
 		run("vocab command", TestMain::testVocabCommand);
+		run("org reader", TestMain::testOrgReader);
+		run("org heading metadata", TestMain::testOrgHeadingMetadata);
+		run("org directives and tables", TestMain::testOrgDirectivesAndTables);
+		run("org recovery", TestMain::testOrgRecovery);
+		run("org line endings and cells", TestMain::testOrgLineEndingsAndCells);
+		run("org chunked input", TestMain::testOrgChunkedInput);
+		run("org keywords and duplicates", TestMain::testOrgKeywordsAndDuplicates);
+		run("org table separator and input rules", TestMain::testOrgTableSeparatorAndInputRules);
 		run("import command", TestMain::testImportCommand);
 		
 		System.out.println();
@@ -708,6 +726,262 @@ public final class TestMain {
 		List<String> lines = Files.readAllLines(report, StandardCharsets.UTF_8);
 		assertEquals("term\tstatus\tusedBy\tdefinedBy\tnote", lines.get(0), "vocab report header");
 		check(lines.size() > 1, "vocab report has rows");
+	}
+	
+	private static void testOrgReader() {
+		String org = ""
+				+ "* TODO [#A] Root heading :root:test:\n"
+				+ ":PROPERTIES:\n"
+				+ ":CUSTOM_ID: root-id\n"
+				+ ":slicer_xy_compensation: -0.15\n"
+				+ ":END:\n"
+				+ "SCHEDULED: <2026-11-12 Thu>\n"
+				+ "[2026-11-13 Fri] body note\n"
+				+ "- [X] done item\n"
+				+ "See [[https://example.com/][Example]]\n"
+				+ "#+begin_src org\n"
+				+ "* Not a heading\n"
+				+ "[[https://example.com/fake][Fake]]\n"
+				+ "- [ ] not a checkbox\n"
+				+ "#+end_src\n"
+				+ "** Child heading\n"
+				+ "- [ ] open item\n";
+		OrgDocument document = OrgReader.read(org.getBytes(StandardCharsets.UTF_8));
+		assertEquals(2, document.getHeadings().size(), "heading count");
+		
+		OrgHeading root = document.getHeadings().get(0);
+		assertEquals(1, root.getLevel(), "root level");
+		assertEquals("Root heading", root.getTitle(), "root title");
+		assertEquals("TODO", root.getTodoKeyword(), "root TODO keyword");
+		assertEquals("A", root.getPriority(), "root priority");
+		assertEquals(2, root.getTags().size(), "root tag count");
+		assertEquals("root", root.getTags().get(0), "first root tag");
+		assertEquals("test", root.getTags().get(1), "second root tag");
+		assertEquals("root-id", root.getCustomId(), "CUSTOM_ID parsed");
+		assertEquals(2, root.getProperties().size(), "property count");
+		assertEquals("-0.15", root.getProperty("slicer_xy_compensation"), "custom property");
+		assertEquals(1, root.getPlanning().size(), "planning count");
+		assertEquals("SCHEDULED", root.getPlanning().get(0).getKeyword(), "planning keyword");
+		assertEquals("<2026-11-12 Thu>", root.getPlanning().get(0).getTimestamp().getText(),
+				"planning timestamp");
+		assertEquals(1, root.getTimestamps().size(), "body timestamp count");
+		assertEquals("[2026-11-13 Fri]", root.getTimestamps().get(0).getText(), "body timestamp text");
+		assertEquals(1, root.getCheckboxes().size(), "root checkbox count");
+		assertEquals("checked", root.getCheckboxes().get(0).getState(), "root checkbox state");
+		assertEquals(1, root.getLinks().size(), "root link count");
+		assertEquals("https://example.com/", root.getLinks().get(0).getTarget(), "link target");
+		
+		OrgHeading child = document.getHeadings().get(1);
+		assertEquals(2, child.getLevel(), "child level");
+		assertEquals(1, child.getCheckboxes().size(), "child checkbox count");
+		assertEquals("unchecked", child.getCheckboxes().get(0).getState(), "child checkbox state");
+	}
+	
+	private static void testOrgHeadingMetadata() {
+		String org = ""
+				+ "#+TODO: TODO STARTED | DONE CANCELLED\n"
+				+ "* STARTED [#B] Configured keyword :project:\n"
+				+ "DEADLINE: <2026-12-01 Tue> CLOSED: [2026-11-30 Mon]\n"
+				+ "* LEGO-compatible bricks\n"
+				+ "* [2026-11-14 Sat] Date heading\n";
+		OrgDocument document = OrgReader.read(org.getBytes(StandardCharsets.UTF_8));
+		assertEquals(3, document.getHeadings().size(), "heading count");
+		
+		OrgHeading configured = document.getHeadings().get(0);
+		assertEquals("STARTED", configured.getTodoKeyword(), "configured TODO keyword");
+		assertEquals("B", configured.getPriority(), "configured priority");
+		assertEquals("Configured keyword", configured.getTitle(), "configured title");
+		assertEquals(1, configured.getTags().size(), "configured tag count");
+		assertEquals("project", configured.getTags().get(0), "configured tag");
+		assertEquals(2, configured.getPlanning().size(), "planning entry count");
+		assertEquals("DEADLINE", configured.getPlanning().get(0).getKeyword(), "deadline keyword");
+		assertEquals("CLOSED", configured.getPlanning().get(1).getKeyword(), "closed keyword");
+		
+		OrgHeading plain = document.getHeadings().get(1);
+		assertEquals("LEGO-compatible bricks", plain.getTitle(), "uppercase title is not a TODO keyword");
+		assertEquals(null, plain.getTodoKeyword(), "plain heading has no TODO keyword");
+		
+		OrgHeading dated = document.getHeadings().get(2);
+		assertEquals("[2026-11-14 Sat] Date heading", dated.getTitle(), "date remains in heading title");
+		assertEquals(1, dated.getTimestamps().size(), "heading-line timestamp parsed");
+	}
+	
+	private static void testOrgDirectivesAndTables() {
+		String org = ""
+				+ "#+TITLE: Example\n"
+				+ "#+NAME: item_0\n"
+				+ "#+CAPTION: Items\n"
+				+ "| Desc          | STL |\n"
+				+ "|---------------+-----|\n"
+				+ "| cup           | p1  |\n"
+				+ "| [[#custom-id]] |     |\n"
+				+ "\n"
+				+ "* Heading\n"
+				+ "#+NAME: printer_1\n"
+				+ "| Printer | Item       |\n"
+				+ "|---------+------------|\n"
+				+ "| KM      | WSITEM-6013 |\n"
+				+ "#+TBLFM: $2=upper($1)\n";
+		OrgDocument document = OrgReader.read(org.getBytes(StandardCharsets.UTF_8));
+		assertEquals(1, document.getHeadings().size(), "heading count");
+		assertEquals(5, document.getDirectives().size(), "directive count");
+		assertEquals(2, document.getTables().size(), "table count");
+		
+		OrgTable first = document.getTables().get(0);
+		assertEquals("item_0", first.getName(), "first table name");
+		assertEquals("Items", first.getCaption(), "first table caption");
+		assertEquals(-1, first.getHeadingIndex(), "document-level table");
+		assertEquals(4, first.getRows().size(), "first table row count");
+		assertEquals(2, first.getWidth(), "first table width");
+		OrgTableRow header = first.getRows().get(0);
+		assertEquals(false, header.isSeparator(), "header is not a separator");
+		assertEquals("Desc", header.getCell(0), "first header cell");
+		assertEquals("STL", header.getCell(1), "second header cell");
+		check(first.getRows().get(1).isSeparator(), "separator row detected");
+		assertEquals("cup", first.getRows().get(2).getCell(0), "data cell");
+		assertEquals("[[#custom-id]]", first.getRows().get(3).getCell(0), "link cell preserved");
+		assertEquals("", first.getRows().get(3).getCell(1), "empty cell preserved");
+		
+		OrgTable second = document.getTables().get(1);
+		assertEquals("printer_1", second.getName(), "second table name");
+		assertEquals(0, second.getHeadingIndex(), "heading-level table");
+		assertEquals("WSITEM-6013", second.getRows().get(2).getCell(1), "second table data cell");
+		
+		assertEquals("Example", document.getDirectives().get(0).getValue(), "first directive value");
+		assertEquals("TBLFM", document.getDirectives().get(4).getName(), "last directive name");
+		assertEquals(0, document.getDirectives().get(4).getHeadingIndex(), "directive heading index");
+	}
+	
+	private static void testOrgRecovery() {
+		OrgDocument blocked = OrgReader.read(
+				"\uFEFF* A\n#+begin_src\n* B\n* C\n".getBytes(StandardCharsets.UTF_8));
+		check(blocked.hasBom(), "byte order mark detected");
+		assertEquals(1, blocked.getHeadings().size(), "headings inside unclosed block are ignored");
+		assertEquals(1, blocked.getDiagnostics().size(), "unclosed block diagnostic count");
+		assertEquals(2, blocked.getDiagnostics().get(0).getLine(), "unclosed block diagnostic line");
+		
+		OrgDocument drawer = OrgReader.read(
+				"* A\n:PROPERTIES:\n:CUSTOM_ID: a\n* B\n".getBytes(StandardCharsets.UTF_8));
+		assertEquals(2, drawer.getHeadings().size(), "heading after unclosed drawer");
+		assertEquals(1, drawer.getDiagnostics().size(), "unclosed drawer diagnostic count");
+		assertEquals(2, drawer.getDiagnostics().get(0).getLine(), "unclosed drawer diagnostic line");
+		
+		OrgDocument tables = OrgReader.read(
+				"* T\n|-|-|\n| a | b |\n|---+---|\n".getBytes(StandardCharsets.UTF_8));
+		OrgTable table = tables.getTables().get(0);
+		assertEquals(3, table.getRows().size(), "table row count");
+		check(table.getRows().get(0).isSeparator(), "|-|-| is a separator");
+		check(!table.getRows().get(1).isSeparator(), "data row is not a separator");
+		check(table.getRows().get(2).isSeparator(), "|---+---| is a separator");
+		assertEquals(0, tables.getDiagnostics().size(), "well-formed document has no diagnostics");
+	}
+	
+	private static void testOrgLineEndingsAndCells() {
+		OrgDocument crlf = OrgReader.read(
+				"* A\r\n:PROPERTIES:\r\n:CUSTOM_ID: a\r\n:END:\r\n* B\r\n".getBytes(StandardCharsets.UTF_8));
+		assertEquals(2, crlf.getHeadings().size(), "CRLF heading count");
+		assertEquals("a", crlf.getHeadings().get(0).getProperty("CUSTOM_ID"), "CRLF property value");
+		assertEquals(5, crlf.getHeadings().get(1).getLine(), "CRLF heading line number");
+		assertEquals("B", crlf.getHeadings().get(1).getTitle(), "CRLF heading title has no CR");
+		
+		OrgDocument loneCr = OrgReader.read("* A\rstill A\n* B\n".getBytes(StandardCharsets.UTF_8));
+		assertEquals(2, loneCr.getHeadings().size(), "lone CR does not end a line");
+		assertEquals(2, loneCr.getHeadings().get(1).getLine(), "lone CR does not add a line");
+		
+		OrgDocument cells = OrgReader.read(
+				"* T\n| a \\| b | c |\n|-foo|\n".getBytes(StandardCharsets.UTF_8));
+		OrgTable table = cells.getTables().get(0);
+		assertEquals(2, table.getRows().size(), "table row count");
+		OrgTableRow row = table.getRows().get(0);
+		assertEquals(3, row.getCellCount(), "a bare pipe always separates cells, as in Org");
+		assertEquals("a \\", row.getCell(0), "cell before the pipe keeps its backslash");
+		assertEquals("b", row.getCell(1), "cell after the pipe");
+		check(table.getRows().get(1).isSeparator(), "line starting with |- is a horizontal rule");
+		
+		OrgDocument notes = OrgReader.read(
+				"* T\n| a | b | free note\n| c | d | e |\n".getBytes(StandardCharsets.UTF_8));
+		OrgTable noteTable = notes.getTables().get(0);
+		assertEquals(2, noteTable.getRows().size(), "row without trailing pipe is still a row");
+		OrgTableRow noteRow = noteTable.getRows().get(0);
+		assertEquals(3, noteRow.getCellCount(), "unterminated last cell is a cell");
+		assertEquals("free note", noteRow.getCell(2), "free-form last cell text");
+		assertEquals(3, noteTable.getRows().get(1).getCellCount(), "terminated row unchanged");
+		
+		OrgDocument unterminated = OrgReader.read("* A\n* B".getBytes(StandardCharsets.UTF_8));
+		assertEquals(2, unterminated.getHeadings().size(), "unterminated last line is parsed");
+		
+		try {
+			new OrgParser().document();
+			check(false, "document() before end of input must fail");
+		} catch (IllegalStateException expected) {
+			check(true, "document() before end of input fails");
+		}
+	}
+	
+	private static void testOrgChunkedInput() throws Exception {
+		String org = "\uFEFF* A\r\n:PROPERTIES:\r\n:CUSTOM_ID: a\r\n:END:\r\n* B\r\n";
+		Reader oneChar = new FilterReader(new StringReader(org)) {
+			@Override
+			public int read(char[] buffer, int offset, int length) throws IOException {
+				return super.read(buffer, offset, Math.min(1, length));
+			}
+		};
+		OrgDocument document = OrgReader.read(oneChar);
+		check(document.hasBom(), "chunked input detects byte order mark");
+		assertEquals(2, document.getHeadings().size(), "chunked heading count");
+		assertEquals("a", document.getHeadings().get(0).getProperty("CUSTOM_ID"),
+				"chunked property value");
+		assertEquals(5, document.getHeadings().get(1).getLine(), "chunked line number");
+	}
+	
+	private static void testOrgKeywordsAndDuplicates() throws Exception {
+		OrgDocument bare = OrgReader.read("* TODO\n* WAIT thing\n".getBytes(StandardCharsets.UTF_8));
+		OrgHeading bareTodo = bare.getHeadings().get(0);
+		assertEquals("TODO", bareTodo.getTodoKeyword(), "bare keyword is a keyword");
+		assertEquals("", bareTodo.getTitle(), "bare keyword has an empty title");
+		assertEquals("WAIT", bare.getHeadings().get(1).getTodoKeyword(),
+				"default keywords apply when no directive is present");
+		
+		OrgDocument custom = OrgReader.read((
+				"* SHIP it\n"
+				+ "* WAIT thing\n"
+				+ "#+TODO: SHIP | DONE\n"
+				+ "* SHIP [#A] task\n"
+				+ "* TODO task\n").getBytes(StandardCharsets.UTF_8));
+		assertEquals("SHIP", custom.getHeadings().get(0).getTodoKeyword(),
+				"directive keywords apply to headings before it");
+		assertEquals(null, custom.getHeadings().get(1).getTodoKeyword(),
+				"defaults are replaced when a directive is present");
+		assertEquals("WAIT thing", custom.getHeadings().get(1).getTitle(),
+				"non-keyword word stays in the title");
+		assertEquals("SHIP", custom.getHeadings().get(2).getTodoKeyword(), "keyword before priority");
+		assertEquals("A", custom.getHeadings().get(2).getPriority(), "priority after keyword");
+		assertEquals("task", custom.getHeadings().get(2).getTitle(), "title after priority");
+		assertEquals(null, custom.getHeadings().get(3).getTodoKeyword(),
+				"TODO is not a keyword once a directive replaces the defaults");
+		assertEquals("TODO task", custom.getHeadings().get(3).getTitle(),
+				"TODO stays in the title");
+		
+		OrgDocument duplicates = OrgReader.read((
+				"* A\n:PROPERTIES:\n:CUSTOM_ID: x\n:END:\n"
+				+ "* B\n:PROPERTIES:\n:CUSTOM_ID: x\n:END:\n").getBytes(StandardCharsets.UTF_8));
+		assertEquals(1, duplicates.getDiagnostics().size(), "duplicate CUSTOM_ID diagnostic count");
+		assertEquals(7, duplicates.getDiagnostics().get(0).getLine(), "duplicate CUSTOM_ID line");
+	}
+	
+	private static void testOrgTableSeparatorAndInputRules() throws Exception {
+		OrgDocument degrees = OrgReader.read("* T\n|-5 degrees|\n".getBytes(StandardCharsets.UTF_8));
+		OrgTable table = degrees.getTables().get(0);
+		assertEquals(1, table.getRows().size(), "|-5 degrees| is one row");
+		check(table.getRows().get(0).isSeparator(),
+				"any line starting with |- is a horizontal rule, even with text in it");
+		
+		try {
+			new OrgParser().accept(Optional.of("embedded\nnewline"));
+			check(false, "a line containing LF must be rejected");
+		} catch (IllegalArgumentException expected) {
+			check(true, "a line containing LF is rejected");
+		}
 	}
 	
 	private static void testImportCommand() throws Exception {
