@@ -149,7 +149,7 @@ Specific cases found:
 Fix this by finishing the rename and removing the compatibility aliases once the codebase has been migrated. Any remaining bridge code should be explicit, well-scoped, and documented, not a half-finished back-compat layer.
 
 =task S36CR-009
-status: pending
+status: done
 priority: high
 kind: setup
 scope: devcontainer; web browser; PHP toolchain
@@ -159,7 +159,7 @@ acceptance: The devcontainer can run `php -v` and `php -m | grep -i sqlite`, and
 notes: Use the repo's environment-variable conventions. The devcontainer should keep Java discovery via `JAVA_HOME`, and the PHP path should come from the system install rather than a project-local vendored copy.
 
 =task S36CR-010
-status: pending
+status: done
 priority: high
 kind: setup
 scope: Debian/bootdev environment; web browser; PHP toolchain
@@ -167,3 +167,11 @@ title: Install PHP in the Debian bootdev environment
 request: Enable the repository's PHP browser in the Debian-based bootdev environment by installing the equivalent system PHP runtime and SQLite extension for that distro.
 acceptance: The Debian environment can run `php -v` and `php -m | grep -i sqlite`, and the project web browser works with `TOGETL_DB=out/togetl.sqlite3 php -S localhost:8080 web/router.php` (or some other port)
 notes: This is the parallel equivalent of the Alpine devcontainer setup. It is not a project vendoring solution; it is a distro-specific system install path that should work alongside the alpine container setup.
+
+=task S36CR-011
+status: pending
+
+Try to compact PLAN.  It gets overly-specific in some cases
+and talks about implementation details that would be better
+left to the Java source code to tell.  A note has been
+added to AGENTS.md only after a lot of gunk went in there.

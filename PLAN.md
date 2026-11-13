@@ -123,13 +123,16 @@ Our writer:
 Instances and vocabulary terms are both **tag URIs** under the `nuke24.net` authority and the fixed date `2026-11`, but they live in different namespaces:
 
 ```
+# TOGETL Types
 tag:nuke24.net,2026-11:togetl:Document
-tag:nuke24.net,2026-11:togetl:Part
 tag:nuke24.net,2026-11:togetl:tef:Entry
-tag:nuke24.net,2026-11:3dparts:part:p1310
-tag:nuke24.net,2026-11:3dparts:rendering:<hash>
-tag:nuke24.net,2026-11:3dparts:stl-file:<hash>
+# TOGETL Instances
 tag:nuke24.net,2026-11:togetl:document:<sha256-16>
+
+# Domain types
+tag:nuke24.net,2026-11:3dparts:Part
+# Domain Instances
+tag:nuke24.net,2026-11:3dparts:part:p1310
 ```
 
 Rules:
@@ -140,6 +143,9 @@ Rules:
 - Key segments are percent-encoded outside `A-Za-z0-9-._~:`.
 - Documents are identified by a hash of their source URL, not by the URL itself, so a
   moved document keeps its identity. `togetl:sourceUrl` records the URL.
+  - Editor's note: we'll want to talk about documents-as-entities (in which case we'll need to make up a name)
+    and document snapshots.  For the latter we should use bitprint URNs,
+    since that's the common blob reference format used throughout these projects.
 - TEF syntax terms live under `tag:nuke24.net,2026-11:togetl:tef:`.
 
 Identifier interpretation is deliberately provisional. Some source IDs are shorthand for
@@ -618,8 +624,9 @@ re-parsing.
 
 ## 17. Notes and open questions
 
-- The exact OID bases for `WSITEM-*` and `p*` IDs are not yet fixed; current mappings use
-  tag URIs and can be changed centrally.
+- The exact OID bases for `WSITEM-*` and `p*` IDs are not yet fixed (or rather, the WSITEM one is,
+  TOGoS just hasn't bothered to go look it up yet);
+  current mappings use tag URIs and can be changed centrally.
 - Org table column names are noisy and will need a per-table mapping review.
 - Which `CUSTOM_ID` forms count as global is not yet decided. The list of recognized
   forms should be written here once it has been sampled from the real corpus
@@ -627,5 +634,7 @@ re-parsing.
 - Conflict policy for functional headers is per-property; the first pass will treat
   `name`, `description`, and `obsoleted-by` as functional and everything else as
   multi-valued.
+  - Editor's note: This is a little bit overly-specific for how hand-wavily
+    we actually did the first implementation.  We can probably leave this out of PLAN.
 - The PHP browser requires the PDO SQLite extension at deployment time. It is not needed
   to build or test the Java side.
