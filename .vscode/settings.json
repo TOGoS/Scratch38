@@ -1,4 +1,17 @@
 {
+	// If VS Code says something like "This setting cannot be applied in this workspace. It will be applied when you open the containing workspace folder directly."
+	// Try copying these to your XYZ.code-workspace (should be a JSONC file)'s config setting.
+	"java.configuration.runtimes": [
+		/* { // Listing this one at all seems to give the RedHat Java extension fits.
+			"name": "JavaSE-1.8",
+			"path": "/usr/lib/jvm/java-1.8-openjdk"
+		}, */
+		{
+			"name": "JavaSE-25",
+			"path": "/usr/lib/jvm/java-25-openjdk",
+			"default": true
+		}
+	],
 	"java.project.sourcePaths": ["src/main/java", "src/test/java"],
 	"java.project.outputPath": "out/classes",
 	"java.project.referencedLibraries": ["lib/**/*.jar"]
