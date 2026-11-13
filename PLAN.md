@@ -48,9 +48,15 @@ the SQLite loader knows nothing about TEF or Org.
 
 **Streaming.** Readers and dialects should consume input incrementally and emit
 statements as they go, so large documents don't have to be held in memory as text.
+
+Design direction: stages are push-based. A source pushes chunks into a stage; a stage
+never pulls from upstream. A line-splitting stage sits between byte/char input and the
+parsers, and pushes complete lines as `String`s to the next stage.
+
 Current state:
 
-- `OrgReader` reads through a `Reader` one line at a time. Its output is a whole
+- The Org pipeline is push-based: a source pushes text chunks into `OrgLineSplitter`,
+  which pushes complete lines into `OrgParser.accept(String)`. Its output is a whole
   document model, which is intentional for now: the Org analyzer needs outline context
   (for example, `CUSTOM_ID` resolution across the document).
 - `TEFReader` reads the whole file into a byte array.

@@ -1,5 +1,8 @@
 package net.nuke24.togetl.test;
 
+import java.io.FilterReader;
+import java.io.IOException;
+import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
@@ -99,6 +102,7 @@ public final class TestMain {
 		run("org directives and tables", TestMain::testOrgDirectivesAndTables);
 		run("org recovery", TestMain::testOrgRecovery);
 		run("org line endings and cells", TestMain::testOrgLineEndingsAndCells);
+		run("org chunked input", TestMain::testOrgChunkedInput);
 		run("import command", TestMain::testImportCommand);
 		
 		System.out.println();
@@ -898,6 +902,22 @@ public final class TestMain {
 		assertEquals(3, noteRow.getCellCount(), "unterminated last cell is a cell");
 		assertEquals("free note", noteRow.getCell(2), "free-form last cell text");
 		assertEquals(3, noteTable.getRows().get(1).getCellCount(), "terminated row unchanged");
+	}
+	
+	private static void testOrgChunkedInput() throws Exception {
+		String org = "\uFEFF* A\r\n:PROPERTIES:\r\n:CUSTOM_ID: a\r\n:END:\r\n* B\r\n";
+		Reader oneChar = new FilterReader(new StringReader(org)) {
+			@Override
+			public int read(char[] buffer, int offset, int length) throws IOException {
+				return super.read(buffer, offset, Math.min(1, length));
+			}
+		};
+		OrgDocument document = OrgReader.read(oneChar);
+		check(document.hasBom(), "chunked input detects byte order mark");
+		assertEquals(2, document.getHeadings().size(), "chunked heading count");
+		assertEquals("a", document.getHeadings().get(0).getProperty("CUSTOM_ID"),
+				"chunked property value");
+		assertEquals(5, document.getHeadings().get(1).getLine(), "chunked line number");
 	}
 	
 	private static void testImportCommand() throws Exception {
