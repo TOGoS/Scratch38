@@ -322,7 +322,9 @@ Table cells are kept as raw text. The reader does not extract links, timestamps,
 checkboxes from cells; the analyzer may scan cell text if it needs them. A bare `|`
 always separates cells, and Org has no backslash escape for it. Org's way to put a
 literal bar in a cell is `\vert` (or `abc\vert{}def`), so the analyzer decodes that. A
-line starting with `|-` is a horizontal rule.
+line starting with `|-` is a horizontal rule. The final `|` of a row is optional: the
+author uses rows like `| a | b | free-form notes`, so the last cell holds the rest of the
+line. This is a deliberate extension of Org syntax, since the notes column is useful.
 
 Only LF ends a line. A CR immediately before the LF is dropped; any other CR is ordinary
 text, as in Org. Line numbers therefore count LFs.
