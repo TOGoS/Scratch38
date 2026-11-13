@@ -10,18 +10,16 @@ See [TODO.tef](TODO.tef) for a queue of additional change requests.
 ## Build
 
 ```sh
-./scripts/get-jdk.sh          # only if no JDK 8 on PATH
+./scripts/install-deps.sh --distro debian   # or --distro alpine; see SETUP.md
+./scripts/get-jdk.sh          # only if no JDK 8 on PATH or in JAVA_HOME
 ./scripts/get-sqlite-jdbc.sh
 ./scripts/fetch-fixtures.sh   # optional upstream sample documents
 ./build.sh
 ./test/run-tests.sh
 ```
 
-`build.sh` and `test/run-tests.sh` use this Java selection order:
-1. `$JAVAC`/`$JAVA` (environment variables), if set.
-2. `$JAVA_HOME/bin/javac` and `$JAVA_HOME/bin/java`, if `$JAVA_HOME` is set.
-3. `.toolchain/jdk8`, if present.
-4. `javac`/`java` on `$PATH`.
+See [SETUP.md](SETUP.md) for required packages, the Java selection order, and
+distro-specific notes.
 
 The build targets Java 8 and does not require Maven.
 

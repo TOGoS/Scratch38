@@ -8,7 +8,7 @@
 		"JAVA_HOME": "/usr/lib/jvm/java-1.8-openjdk",
 		"PHP_BIN": "/usr/bin/php"
 	},
-	"postCreateCommand": "sudo apk add --no-cache openjdk8-jdk php php-pdo_sqlite"
+	"postCreateCommand": "./scripts/install-deps.sh --distro alpine"
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
