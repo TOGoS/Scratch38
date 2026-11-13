@@ -90,12 +90,9 @@ public final class ImportCommand {
 				input = value != null ? value : next(args, ++i, key);
 			} else if ("--output".equals(key) || "-o".equals(key)) {
 				output = value != null ? value : next(args, ++i, key);
-			} else if ("--source-url".equals(key) || "--source-uri".equals(key)) {
-				// TODO: Tell the clankers to remove '--source-url' when they're back online
-				// and can sort out all the repercussions.
+			} else if ("--source-uri".equals(key)) {
 				sourceUri = value != null ? value : next(args, ++i, key);
-			} else if ("--derive-source-url".equals(key) || "--derive-source-uri".equals(key)) {
-				// TODO: For this, too.
+			} else if ("--derive-source-uri".equals(key)) {
 				deriveKind = value != null ? value : next(args, ++i, key);
 			} else if ("--dialect".equals(key)) {
 				dialect = value != null ? value : next(args, ++i, key);
@@ -112,15 +109,15 @@ public final class ImportCommand {
 			throw new UsageException("--output must not be empty");
 		}
 		if (sourceUri == null && deriveKind == null) {
-			throw new UsageException("--source-url or --derive-source-url is required");
+			throw new UsageException("--source-uri or --derive-source-uri is required");
 		}
 		if (sourceUri != null && deriveKind != null) {
-			throw new UsageException("--source-url and --derive-source-url are mutually exclusive");
+			throw new UsageException("--source-uri and --derive-source-uri are mutually exclusive");
 		}
 		// Note: If ever there is more than just 'bitprint', we might consider
 		// centralizing information about digests somewhere.
 		if (deriveKind != null && !"bitprint".equals(deriveKind)) {
-			throw new UsageException("Unknown --derive-source-url kind: " + deriveKind);
+			throw new UsageException("Unknown --derive-source-uri kind: " + deriveKind);
 		}
 	}
 	
@@ -271,8 +268,8 @@ public final class ImportCommand {
 		err.println();
 		err.println("  --input <file|->       Source document (required)");
 		err.println("  --output <file|->      TOGETLTSV output (default: -)");
-		err.println("  --source-url <url>     Canonical source URL");
-		err.println("  --derive-source-url <kind>  Derive source URL (e.g. bitprint)");
+		err.println("  --source-uri <uri>     Source URI of the document");
+		err.println("  --derive-source-uri <kind>  Derive the source URI from the content (bitprint)");
 		err.println("  --dialect <name>       " + Dialects.names() + " (default: generic)");
 		err.println("  --report <file>        Write the unmapped-construct report as TSV");
 	}

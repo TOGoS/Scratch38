@@ -52,7 +52,7 @@ public final class Vocab {
 	
 	// Document metadata.
 	public static final IRI TOGETL_SOURCE_DOCUMENT = togetl("sourceDocument");
-	public static final IRI TOGETL_SOURCE_URL = togetl("sourceUrl");
+	public static final IRI TOGETL_SOURCE_URI = togetl("sourceUri");
 	public static final IRI TOGETL_SHA256 = general("sha256");
 	public static final IRI TOGETL_BYTE_LENGTH = general("byteLength");
 	public static final IRI TOGETL_FORMAT = togetl("format");

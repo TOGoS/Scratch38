@@ -739,19 +739,19 @@ public final class TestMain {
 	}
 	
 	private static void testIdentifiers() throws Exception {
-		String url = "https://example.com/a b.tef";
-		String documentIri = Identifiers.documentIri(url);
+		String uri = "https://example.com/a b.tef";
+		String documentIri = Identifiers.documentIri(uri);
 		String documentImportIri = Identifiers.documentImportIri(documentIri, "test/1");
-		assertEquals(url, documentIri, "document IRI is the source URL");
-		assertEquals(documentIri, Identifiers.documentIri(url), "document IRI is deterministic");
+		assertEquals(uri, documentIri, "document IRI is the source URI");
+		assertEquals(documentIri, Identifiers.documentIri(uri), "document IRI is deterministic");
 		assertEquals(documentImportIri, Identifiers.documentImportIri(documentIri, "test/1"),
 				"document import IRI is deterministic");
 		check(!documentImportIri.equals(Identifiers.documentImportIri(documentIri, "test/2")),
 				"parser versions produce different document imports");
-		check(!documentIri.equals(Identifiers.documentIri(url + "x")), "different URLs differ");
+		check(!documentIri.equals(Identifiers.documentIri(uri + "x")), "different URIs differ");
 		
 		String entryIri = Identifiers.tefEntryIri(documentIri, 7);
-		check(entryIri.startsWith(url + "#tef-entry-"), "entry IRI prefix");
+		check(entryIri.startsWith(uri + "#tef-entry-"), "entry IRI prefix");
 		check(entryIri.endsWith("7"), "entry ordinal suffix");
 		
 		assertEquals(
@@ -776,8 +776,8 @@ public final class TestMain {
 				+ "\n"
 				+ "content\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-		String sourceUrl = "https://example.com/data.tef";
-		SourceDocument source = SourceDocument.of(sourceUrl, "tef", "test/1");
+		String sourceUri = "https://example.com/data.tef";
+		SourceDocument source = SourceDocument.of(sourceUri, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		
 		List<Statement> statements = collect(new GenericTEFDialect(), bytes, source, report);
@@ -822,8 +822,8 @@ public final class TestMain {
 	private static void testGenericDialectRoundTrip() throws Exception {
 		String text = "=part p1\nname: Widget\ntag: a\ntag: b\n\ncontent\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-		String sourceUrl = "https://example.com/data.tef";
-		SourceDocument source = SourceDocument.of(sourceUrl, "tef", "test/1");
+		String sourceUri = "https://example.com/data.tef";
+		SourceDocument source = SourceDocument.of(sourceUri, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		
 		List<Statement> statements = collect(new GenericTEFDialect(), bytes, source, report);
@@ -853,8 +853,8 @@ public final class TestMain {
 				+ "\n"
 				+ "A part.\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-		String sourceUrl = "https://example.com/data.tef";
-		SourceDocument source = SourceDocument.of(sourceUrl, "tef", "test/1");
+		String sourceUri = "https://example.com/data.tef";
+		SourceDocument source = SourceDocument.of(sourceUri, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		MappingTEFDialect dialect = new MappingTEFDialect(
 				"parts", MappingTable.load("parts"));
@@ -909,8 +909,8 @@ public final class TestMain {
 				+ "=part p2\n"
 				+ "short-description: same\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-		String sourceUrl = "https://example.com/conflicts.tef";
-		SourceDocument source = SourceDocument.of(sourceUrl, "tef", "test/1");
+		String sourceUri = "https://example.com/conflicts.tef";
+		SourceDocument source = SourceDocument.of(sourceUri, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		MappingTEFDialect dialect = new MappingTEFDialect(
 				"parts", MappingTable.load("parts"));
@@ -946,8 +946,8 @@ public final class TestMain {
 				+ "=projbase urn:oid:1.2.3\n"
 				+ "title: Project\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-		String sourceUrl = "https://example.com/namespaces.tef";
-		SourceDocument source = SourceDocument.of(sourceUrl, "tef", "test/1");
+		String sourceUri = "https://example.com/namespaces.tef";
+		SourceDocument source = SourceDocument.of(sourceUri, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		MappingTEFDialect dialect = new MappingTEFDialect(
 				"namespaces", MappingTable.load("namespaces"));
@@ -1292,13 +1292,13 @@ public final class TestMain {
 				"--input", input.toString(),
 				"--output", first.toString(),
 				"--report", report.toString(),
-				"--source-url", "file:///data.tef"
+				"--source-uri", "file:///data.tef"
 		}), "first import exit code");
 		
 		assertEquals(0, ImportCommand.run(new String[] {
 				"--input", input.toString(),
 				"--output", second.toString(),
-				"--source-url", "file:///data.tef"
+				"--source-uri", "file:///data.tef"
 		}), "second import exit code");
 		
 		byte[] firstBytes = Files.readAllBytes(first);
@@ -1356,7 +1356,7 @@ public final class TestMain {
 		
 		assertEquals(0, ImportCommand.run(new String[] {
 				"--input", input.toString(), "--output", output.toString(),
-				"--source-url", "file:///data.tef"
+				"--source-uri", "file:///data.tef"
 		}), "import exit code");
 		String written = new String(Files.readAllBytes(output), StandardCharsets.UTF_8);
 		check(written.contains(Identifiers.sha256(bytes)), "output should record the input's SHA-256");
@@ -1373,7 +1373,7 @@ public final class TestMain {
 		
 		assertEquals(0, ImportCommand.run(new String[] {
 				"--input", input.toString(), "--output", fromFile.toString(),
-				"--source-url", "file:///data.tef"
+				"--source-uri", "file:///data.tef"
 		}), "file import exit code");
 		
 		InputStream originalIn = System.in;
@@ -1381,7 +1381,7 @@ public final class TestMain {
 		try {
 			assertEquals(0, ImportCommand.run(new String[] {
 					"--input", "-", "--output", fromStdin.toString(),
-					"--source-url", "file:///data.tef"
+					"--source-uri", "file:///data.tef"
 			}), "stdin import exit code");
 		} finally {
 			System.setIn(originalIn);
@@ -1403,7 +1403,7 @@ public final class TestMain {
 		
 		assertEquals(0, ImportCommand.run(new String[] {
 				"--input", input.toString(), "--output", output.toString(),
-				"--derive-source-url", "bitprint"
+				"--derive-source-uri", "bitprint"
 		}), "derived import exit code");
 		String written = new String(Files.readAllBytes(output), StandardCharsets.UTF_8);
 		check(written.contains(expected), "output should use the derived bitprint as source: " + expected);
@@ -1417,7 +1417,7 @@ public final class TestMain {
 		
 		assertEquals(1, ImportCommand.run(new String[] {
 				"--input", input.toString(), "--output", output.toString(),
-				"--source-url", "urn:bitprint:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+				"--source-uri", "urn:bitprint:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
 		}), "mismatched bitprint exit code");
 		check(!Files.exists(output), "no output should be written for a mismatched bitprint");
 	}
@@ -1430,11 +1430,11 @@ public final class TestMain {
 		
 		assertEquals(1, ImportCommand.run(new String[] {
 				"--input", input.toString(), "--output", output.toString(),
-				"--derive-source-url", "sha1"
+				"--derive-source-uri", "sha1"
 		}), "unknown derive kind exit code");
 		assertEquals(1, ImportCommand.run(new String[] {
 				"--input", input.toString(), "--output", output.toString(),
-				"--source-url", "file:///data.tef", "--derive-source-url", "bitprint"
+				"--source-uri", "file:///data.tef", "--derive-source-uri", "bitprint"
 		}), "both source options exit code");
 		assertEquals(1, ImportCommand.run(new String[] {
 				"--input", input.toString(), "--output", output.toString()
@@ -1463,7 +1463,7 @@ public final class TestMain {
 				"-cp", System.getProperty("java.class.path"),
 				"net.nuke24.togetl.cli.Main", "import",
 				"--dialect", "generic",
-				"--source-url", "file:///large.tef",
+				"--source-uri", "file:///large.tef",
 				"--input", input.toString(),
 				"--output", "-")
 				.redirectError(dir.resolve("stderr.txt").toFile())
@@ -1537,7 +1537,7 @@ public final class TestMain {
 		assertEquals(1L, queryLong(connection, "SELECT COUNT(*) FROM document"), "document count");
 		assertEquals(DB_DOC, queryString(connection, "SELECT iri FROM document"), "document IRI");
 		assertEquals("https://example.com/data.tef",
-				queryString(connection, "SELECT source_url FROM document"), "document source URL");
+				queryString(connection, "SELECT source_uri FROM document"), "document source URI");
 		assertEquals("abc", queryString(connection, "SELECT sha256 FROM document"), "document hash");
 		assertEquals(123L, queryLong(connection, "SELECT byte_length FROM document"),
 				"document byte length");
@@ -1671,7 +1671,7 @@ public final class TestMain {
 				+ "\n"
 				+ DB_IMPORT + " - " + DB_DOC + " rdf:type togetl:Document\n"
 				+ DB_IMPORT + " - " + DB_DOC
-				+ " togetl:sourceUrl data:,https%3A%2F%2Fexample.com%2Fdata.tef\n"
+				+ " togetl:sourceUri data:,https%3A%2F%2Fexample.com%2Fdata.tef\n"
 				+ DB_IMPORT + " - " + DB_DOC + " general:sha256 data:,abc\n"
 				+ DB_IMPORT + " - " + DB_DOC + " general:byteLength data:,123|xsd:integer\n"
 				+ DB_IMPORT + " - " + DB_IMPORT + " rdf:type togetl:DocumentImport\n"

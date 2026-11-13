@@ -96,7 +96,7 @@ public final class DialectSupport {
 		IRI documentImport = IRI.of(source.getDocumentImportIri());
 		Location none = Location.none();
 		emit(source, out, none, doc, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT);
-		emit(source, out, none, doc, Vocab.TOGETL_SOURCE_URL, Literal.of(source.getSourceIri()));
+		emit(source, out, none, doc, Vocab.TOGETL_SOURCE_URI, Literal.of(source.getSourceIri()));
 		emit(source, out, none, doc, Vocab.TOGETL_SHA256, Literal.of(provenance.getSha256()));
 		emit(source, out, none, doc, Vocab.TOGETL_BYTE_LENGTH,
 				Literal.of(Long.toString(provenance.getByteLength()), Vocab.XSD_INTEGER));

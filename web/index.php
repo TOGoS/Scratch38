@@ -118,11 +118,11 @@ function page_home()
     if (count($documents) === 0) {
         echo '<p class="muted">No documents have been loaded.</p>';
     } else {
-        echo '<table><tr><th>Document</th><th>Source URL</th><th>Format</th>'
+        echo '<table><tr><th>Document</th><th>Source URI</th><th>Format</th>'
             . '<th>Bytes</th></tr>';
         foreach ($documents as $document) {
             echo '<tr><td>' . resource_link($document['iri']) . '</td>'
-                . '<td>' . h($document['source_url']) . '</td>'
+                . '<td>' . h($document['source_uri']) . '</td>'
                 . '<td>' . h($document['detected_format']) . '</td>'
                 . '<td>' . h($document['byte_length']) . '</td></tr>';
         }

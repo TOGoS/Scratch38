@@ -45,15 +45,14 @@ public final class Identifiers {
 	}
 	
 	/**
-	 * The document IRI is derived from the source URL, not from its content, so
-	 * that a moved document keeps its identity. The content hash is recorded
-	 * separately as {@code togetl:sha256}.
+	 * The document IRI is the source URI itself, so a document's identity is its
+	 * source URI: the bitprint of its content when that is derived, or the URI
+	 * given explicitly. The content hash is also recorded as {@code togetl:sha256}.
 	 */
 	public static String documentIri(String source) {
 		if (source == null || source.isEmpty()) {
 			throw new IllegalArgumentException("source must not be empty");
 		}
-		// TODO: document entity ID
 		return source;
 	}
 	
@@ -69,7 +68,7 @@ public final class Identifiers {
 				"document-import",
 				shortSha256((documentIri + "\n" + parserVersion).getBytes(StandardCharsets.UTF_8)));
 	}
-
+	
 	/** A generic TEF entry resource within a document. */
 	public static String tefEntryIri(String documentIri, int ordinal) {
 		if (ordinal < 0) {

@@ -39,8 +39,8 @@ public final class VocabularyLoader {
 	
 	public static void loadInto(Vocabulary vocabulary, Path path) throws IOException, TEFReadException {
 		byte[] bytes = Files.readAllBytes(path);
-		String sourceUrl = path.toAbsolutePath().normalize().toUri().toString();
-		TEFDocument document = TEFReader.read(sourceUrl, bytes);
+		String sourceUri = path.toAbsolutePath().normalize().toUri().toString();
+		TEFDocument document = TEFReader.read(sourceUri, bytes);
 		String sourceName = path.getFileName().toString();
 		for (TEFEntry entry : document.getEntries()) {
 			String kind = kindOf(entry.getType());
