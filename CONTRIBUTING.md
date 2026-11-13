@@ -13,9 +13,7 @@ The main conventions are here so that generated agents and humans follow the sam
 
 ## Project notes and agent handoff
 
-- Design decisions belong in [PLAN.md](./PLAN.md).
-- Change requests and execution backlog belong in [TODO.tef](./TODO.tef).
-- Keep the backlog concise and acceptance-oriented.
+- Keep changes consistent with the architecture described in README.md.
 - [AGENTS.md](./AGENTS.md) provides a reasonable primer for Clankers who
   are asked to contribute.
 

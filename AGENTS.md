@@ -8,10 +8,7 @@ TOGETL converts source documents (mostly TEF today) into TOGETLTSV statement str
 
 Primary references:
 - [README.md](./README.md) for usage/build
-- [PLAN.md](./PLAN.md) for design/modeling rules
 - [CONTRIBUTING.md](./CONTRIBUTING.md) for conventions
-- [TODO.tef](./TODO.tef) for queued change requests, which should take priority
-  over the PLAN, as the requested changes may affect the plan.
 
 ## Local terms (project-specific)
 

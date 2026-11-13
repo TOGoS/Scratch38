@@ -3,10 +3,27 @@
 Tools for converting TEF, Org, and music source documents into TOGETLTSV 202601
 statement streams, loading them into SQLite, and browsing the result read-only.
 
-See [PLAN.md](PLAN.md) for the design.
+## Architecture
 
-See [TODO.tef](TODO.tef) for a queue of additional change requests.
+Source documents (TEF, Org, music) are parsed into TOGETLTSV 202601 statement
+streams (a line-oriented RDF-like format: `source location subject predicate object`),
+which are then loaded into a SQLite database and browsed read-only via a PHP viewer.
 
+## Current status
+
+Implemented:
+- TEF reader and generic TEF dialect (source metadata, entries, headers, comments, directives, parse issues)
+- Declarative mapping dialects (`parts`, `namespaces`) driven by TSV tables under `mappings/`
+- TOGETLTSV 202601 writer and reader, with alias handling and round-trip tests
+- SQLite loader (`togetl load`) with source-agnostic schema, deterministic batch/loading IRIs
+- Read-only PHP browser in `web/`
+- Vocabulary reporting (`togetl vocab`)
+
+Not yet implemented:
+- Org importer
+- Music importer
+- Batch ontology formalization
+- Streaming input (readers currently load whole files)
 ## Build
 
 ```sh
