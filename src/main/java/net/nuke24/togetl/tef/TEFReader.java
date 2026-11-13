@@ -11,7 +11,6 @@ import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import net.nuke24.togetl.ducer.DucerChunk;
@@ -25,11 +24,11 @@ import net.nuke24.togetl.tef.LLChunks.HeaderValuePiece;
 import net.nuke24.togetl.tef.LLChunks.NewEntryLine;
 
 /**
- * Reads a TEF document into entries, comments, and directives.
+ * Reads a TEF document, pushing its structure to a {@link TEFSink} as it goes.
  *
- * <p>Input is consumed incrementally: each block goes through UTF-8 checking,
- * the lexer, the chunk merger, and the entry assembler before the next block
- * is read. Only the assembled entries are held in memory.</p>
+ * <p>Input is consumed in blocks: each block goes through UTF-8 checking, the
+ * lexer, the chunk merger, and entry assembly before the next block is read.
+ * Nothing is retained after it has been handed to the sink.</p>
  *
  * <p>Syntax errors are fatal. The read stops at the first one, and the
  * resulting {@link TEFReadException} names its location.</p>
@@ -42,15 +41,27 @@ public final class TEFReader {
 	private TEFReader() {
 	}
 	
+	/** Reads a whole document into memory. Prefer the streaming overload for large input. */
 	public static TEFDocument read(String sourceIri, byte[] input)
 			throws IOException, TEFReadException {
+		if (sourceIri == null || sourceIri.isEmpty()) {
+			throw new IllegalArgumentException("sourceIri must not be empty");
+		}
 		if (input == null) {
 			throw new IllegalArgumentException("input must not be null");
 		}
-		return read(sourceIri, new ByteArrayInputStream(input));
+		Collector collector = new Collector();
+		read(sourceIri, new ByteArrayInputStream(input), collector);
+		return new TEFDocument(
+				sourceIri,
+				input.length,
+				hasUtf8Bom(input),
+				collector.comments,
+				collector.directives,
+				collector.entries);
 	}
 	
-	public static TEFDocument read(String sourceIri, InputStream in)
+	public static void read(String sourceIri, InputStream in, TEFSink sink)
 			throws IOException, TEFReadException {
 		if (sourceIri == null || sourceIri.isEmpty()) {
 			throw new IllegalArgumentException("sourceIri must not be empty");
@@ -58,13 +69,14 @@ public final class TEFReader {
 		if (in == null) {
 			throw new IllegalArgumentException("input must not be null");
 		}
+		if (sink == null) {
+			throw new IllegalArgumentException("sink must not be null");
+		}
 		
-		Pipeline pipeline = new Pipeline(sourceIri);
+		Pipeline pipeline = new Pipeline(sourceIri, sink);
 		byte[] block = new byte[FEED_BLOCK_SIZE];
 		int filled = fill(in, block);
-		long byteLength = filled;
-		boolean bom = startsWithBom(block, filled);
-		int offset = bom ? UTF8_BOM.length : 0;
+		int offset = startsWithBom(block, filled) ? UTF8_BOM.length : 0;
 		boolean last = filled < block.length;
 		while (true) {
 			pipeline.feed(Arrays.copyOfRange(block, offset, filled));
@@ -72,11 +84,10 @@ public final class TEFReader {
 				break;
 			}
 			filled = fill(in, block);
-			byteLength += filled;
 			last = filled < block.length;
 			offset = 0;
 		}
-		return pipeline.finish(byteLength, bom);
+		pipeline.finish();
 	}
 	
 	/** Reads until the buffer is full or the stream ends. */
@@ -99,6 +110,13 @@ public final class TEFReader {
 				&& block[2] == UTF8_BOM[2];
 	}
 	
+	private static boolean hasUtf8Bom(byte[] input) {
+		return input.length >= UTF8_BOM.length
+				&& input[0] == UTF8_BOM[0]
+				&& input[1] == UTF8_BOM[1]
+				&& input[2] == UTF8_BOM[2];
+	}
+	
 	/** The streaming stages, carried from one block to the next. */
 	private static final class Pipeline {
 		private final String sourceIri;
@@ -107,21 +125,21 @@ public final class TEFReader {
 		private DucerState2<byte[], Chunk[]> lexer = TEFParser.INIT;
 		private DucerState2<Chunk[], Chunk[]> merger = LLChunkMerger.FULL;
 		
-		Pipeline(String sourceIri) {
+		Pipeline(String sourceIri, TEFSink sink) {
 			this.sourceIri = sourceIri;
-			this.assembler = new Assembler(sourceIri);
+			this.assembler = new Assembler(sink);
 		}
 		
-		void feed(byte[] bytes) throws TEFReadException {
+		void feed(byte[] bytes) throws IOException, TEFReadException {
 			step(bytes, false);
 		}
 		
-		TEFDocument finish(long byteLength, boolean bom) throws TEFReadException {
+		void finish() throws IOException, TEFReadException {
 			step(new byte[0], true);
-			return assembler.build(byteLength, bom);
+			assembler.finish();
 		}
 		
-		private void step(byte[] bytes, boolean end) throws TEFReadException {
+		private void step(byte[] bytes, boolean end) throws IOException, TEFReadException {
 			try {
 				utf8.check(bytes, end);
 				lexer = lexer.process(new DucerChunk<byte[]>(bytes, end));
@@ -155,7 +173,7 @@ public final class TEFReader {
 		private int line = 1;
 		private int column = 1;
 		
-		void check(byte[] bytes, boolean end) throws TEFReadException {
+		void check(byte[] bytes, boolean end) throws TEFSyntaxException {
 			byte[] buf = new byte[carry.length + bytes.length];
 			System.arraycopy(carry, 0, buf, 0, carry.length);
 			System.arraycopy(bytes, 0, buf, carry.length, bytes.length);
@@ -198,23 +216,18 @@ public final class TEFReader {
 		}
 	}
 	
-	/** Turns merged chunks into entries, comments, and directives. */
+	/** Turns merged chunks into entries, comments, and directives for the sink. */
 	private static final class Assembler {
-		private final String sourceIri;
-		private final List<TEFEntry> entries = new ArrayList<TEFEntry>();
-		private final List<TEFComment> documentComments = new ArrayList<TEFComment>();
-		private final List<TEFDirective> documentDirectives = new ArrayList<TEFDirective>();
+		private final TEFSink sink;
 		private EntryBuilder current;
 		
-		Assembler(String sourceIri) {
-			this.sourceIri = sourceIri;
+		Assembler(TEFSink sink) {
+			this.sink = sink;
 		}
 		
-		void accept(Chunk chunk) {
+		void accept(Chunk chunk) throws IOException {
 			if (chunk instanceof NewEntryLine) {
-				if (current != null) {
-					entries.add(current.build());
-				}
+				emitCurrent();
 				NewEntryLine line = (NewEntryLine) chunk;
 				current = new EntryBuilder(line.typeString, line.idString, line.getSpan());
 			} else if (chunk instanceof Header) {
@@ -234,7 +247,7 @@ public final class TEFReader {
 				Comment comment = (Comment) chunk;
 				TEFComment value = new TEFComment(comment.text, comment.getSpan());
 				if (current == null) {
-					documentComments.add(value);
+					sink.documentComment(value);
 				} else {
 					current.addComment(value);
 				}
@@ -242,7 +255,7 @@ public final class TEFReader {
 				Directive directive = (Directive) chunk;
 				TEFDirective value = new TEFDirective(
 						directive.name, directive.value, directive.raw, directive.getSpan());
-				documentDirectives.add(value);
+				sink.documentDirective(value);
 				if (current != null) {
 					current.addDirective(value);
 				}
@@ -252,23 +265,41 @@ public final class TEFReader {
 			}
 		}
 		
-		TEFDocument build(long byteLength, boolean bom) {
+		void finish() throws IOException {
+			emitCurrent();
+		}
+		
+		private void emitCurrent() throws IOException {
 			if (current != null) {
-				entries.add(current.build());
+				sink.entry(current.build());
 				current = null;
 			}
-			return new TEFDocument(
-					sourceIri,
-					byteLength,
-					bom,
-					documentComments,
-					documentDirectives,
-					entries,
-					Collections.<TEFIssue>emptyList());
 		}
 		
 		private static EntryBuilder startImplicitEntry(TEFSpan span) {
 			return new EntryBuilder("", "", span);
+		}
+	}
+	
+	/** Collects everything into a TEFDocument for callers that want it whole. */
+	private static final class Collector implements TEFSink {
+		final List<TEFComment> comments = new ArrayList<TEFComment>();
+		final List<TEFDirective> directives = new ArrayList<TEFDirective>();
+		final List<TEFEntry> entries = new ArrayList<TEFEntry>();
+		
+		@Override
+		public void documentComment(TEFComment comment) {
+			comments.add(comment);
+		}
+		
+		@Override
+		public void documentDirective(TEFDirective directive) {
+			directives.add(directive);
+		}
+		
+		@Override
+		public void entry(TEFEntry entry) {
+			entries.add(entry);
 		}
 	}
 	

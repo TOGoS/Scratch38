@@ -14,10 +14,9 @@ import net.nuke24.togetl.rdf.Statement;
 import net.nuke24.togetl.rdf.StatementConsumer;
 import net.nuke24.togetl.tef.TEFComment;
 import net.nuke24.togetl.tef.TEFDirective;
-import net.nuke24.togetl.tef.TEFDocument;
 import net.nuke24.togetl.tef.TEFEntry;
 import net.nuke24.togetl.tef.TEFHeader;
-import net.nuke24.togetl.tef.TEFIssue;
+import net.nuke24.togetl.tef.TEFSink;
 import net.nuke24.togetl.tef.TEFSpan;
 import net.nuke24.togetl.vocab.Vocab;
 
@@ -26,6 +25,52 @@ import net.nuke24.togetl.vocab.Vocab;
  */
 public final class DialectSupport {
 	private DialectSupport() {
+	}
+	
+	/**
+	 * Handles the document-level parts of one import: metadata first, then
+	 * comments and directives as they are read, then one call per entry.
+	 * Subclasses supply the per-entry mapping.
+	 */
+	public abstract static class DocumentSession implements TEFSink {
+		protected final SourceDocument source;
+		protected final StatementConsumer out;
+		protected final ImportReport report;
+		private final String scope;
+		private int commentCount;
+		private int directiveCount;
+		private int entryCount;
+		
+		protected DocumentSession(
+				SourceDocument source,
+				boolean bom,
+				StatementConsumer out,
+				ImportReport report
+		) throws IOException {
+			this.source = source;
+			this.out = out;
+			this.report = report;
+			this.scope = Identifiers.documentHash(source.getDocumentIri());
+			emitDocumentMetadata(source, bom, out);
+		}
+		
+		@Override
+		public final void documentComment(TEFComment comment) throws IOException {
+			emitDocumentComment(source, out, scope, commentCount++, comment);
+		}
+		
+		@Override
+		public final void documentDirective(TEFDirective directive) throws IOException {
+			emitDocumentDirective(source, out, scope, directiveCount++, directive, report);
+		}
+		
+		@Override
+		public final void entry(TEFEntry entry) throws IOException {
+			mapEntry(entry, entryCount++);
+		}
+		
+		/** Maps one entry; {@code entryIndex} counts entries in document order from zero. */
+		protected abstract void mapEntry(TEFEntry entry, int entryIndex) throws IOException;
 	}
 	
 	public static void emit(
@@ -44,8 +89,8 @@ public final class DialectSupport {
 	}
 	
 	public static void emitDocumentMetadata(
-			TEFDocument document,
 			SourceDocument source,
+			boolean bom,
 			StatementConsumer out
 	) throws IOException {
 		IRI doc = IRI.of(source.getDocumentIri());
@@ -62,71 +107,50 @@ public final class DialectSupport {
 		emit(source, out, none, documentImport, Vocab.TOGETL_PARSER_VERSION,
 				Literal.of(source.getParserVersion()));
 		emit(source, out, none, documentImport, Vocab.TOGETL_HAS_BOM,
-				Literal.of(document.hasBom() ? "true" : "false", Vocab.XSD_BOOLEAN));
+				Literal.of(bom ? "true" : "false", Vocab.XSD_BOOLEAN));
 	}
 	
-	public static void emitDocumentAnnotations(
-			TEFDocument document,
+	public static void emitDocumentComment(
 			SourceDocument source,
 			StatementConsumer out,
-			ImportReport report
+			String scope,
+			int index,
+			TEFComment comment
 	) throws IOException {
-		String scope = Identifiers.documentHash(source.getDocumentIri());
 		IRI doc = IRI.of(source.getDocumentIri());
-		
-		for (int i = 0; i < document.getComments().size(); i++) {
-			TEFComment comment = document.getComments().get(i);
-			Location location = locationOf(comment.getSpan());
-			BlankNode node = BlankNode.of("tef-doc-comment-" + scope + "-" + i);
-			emit(source, out, location, doc, Vocab.TEF_COMMENT_LINK, node);
-			emit(source, out, location, node, Vocab.RDF_TYPE, Vocab.TEF_COMMENT);
-			emit(source, out, location, node, Vocab.TEF_TEXT, Literal.of(comment.getText()));
-		}
-		
-		for (int i = 0; i < document.getDirectives().size(); i++) {
-			TEFDirective directive = document.getDirectives().get(i);
-			Location location = locationOf(directive.getSpan());
-			BlankNode node = BlankNode.of("tef-doc-directive-" + scope + "-" + i);
-			emit(source, out, location, doc, Vocab.TEF_DIRECTIVE_LINK, node);
-			emit(source, out, location, node, Vocab.RDF_TYPE, Vocab.TEF_DIRECTIVE);
-			emit(source, out, location, node, Vocab.TEF_NAME, Literal.of(directive.getName()));
-			emit(source, out, location, node, Vocab.TEF_VALUE, Literal.of(directive.getValue()));
-			emit(source, out, location, node, Vocab.TEF_RAW, Literal.of(directive.getRaw()));
-			if (!"format".equals(directive.getName()) && !"alias".equals(directive.getName())) {
-				report.unmappedDirective(directive.getName(), location);
-			}
-		}
+		Location location = locationOf(comment.getSpan());
+		BlankNode node = BlankNode.of("tef-doc-comment-" + scope + "-" + index);
+		emit(source, out, location, doc, Vocab.TEF_COMMENT_LINK, node);
+		emit(source, out, location, node, Vocab.RDF_TYPE, Vocab.TEF_COMMENT);
+		emit(source, out, location, node, Vocab.TEF_TEXT, Literal.of(comment.getText()));
 	}
 	
-	public static void emitIssues(
-			TEFDocument document,
+	public static void emitDocumentDirective(
 			SourceDocument source,
-			StatementConsumer out
+			StatementConsumer out,
+			String scope,
+			int index,
+			TEFDirective directive,
+			ImportReport report
 	) throws IOException {
-		String scope = Identifiers.documentHash(source.getDocumentIri());
-		IRI documentImport = IRI.of(source.getDocumentImportIri());
-		for (int i = 0; i < document.getIssues().size(); i++) {
-			TEFIssue issue = document.getIssues().get(i);
-			Location location = locationOf(issue.getSpan());
-			BlankNode node = BlankNode.of("tef-issue-" + scope + "-" + i);
-			emit(source, out, location, documentImport, Vocab.TOGETL_PARSE_ISSUE_LINK, node);
-			emit(source, out, location, node, Vocab.RDF_TYPE, Vocab.TOGETL_PARSE_ISSUE);
-			emit(source, out, location, node, Vocab.TOGETL_SEVERITY,
-					Literal.of(issue.getSeverity().name().toLowerCase(java.util.Locale.ROOT)));
-			emit(source, out, location, node, Vocab.TOGETL_CODE, Literal.of(issue.getCode()));
-			emit(source, out, location, node, Vocab.TOGETL_MESSAGE, Literal.of(issue.getMessage()));
-			if (issue.getRaw() != null) {
-				emit(source, out, location, node, Vocab.TOGETL_RAW, Literal.of(issue.getRaw()));
-			}
+		IRI doc = IRI.of(source.getDocumentIri());
+		Location location = locationOf(directive.getSpan());
+		BlankNode node = BlankNode.of("tef-doc-directive-" + scope + "-" + index);
+		emit(source, out, location, doc, Vocab.TEF_DIRECTIVE_LINK, node);
+		emit(source, out, location, node, Vocab.RDF_TYPE, Vocab.TEF_DIRECTIVE);
+		emit(source, out, location, node, Vocab.TEF_NAME, Literal.of(directive.getName()));
+		emit(source, out, location, node, Vocab.TEF_VALUE, Literal.of(directive.getValue()));
+		emit(source, out, location, node, Vocab.TEF_RAW, Literal.of(directive.getRaw()));
+		if (!"format".equals(directive.getName()) && !"alias".equals(directive.getName())) {
+			report.unmappedDirective(directive.getName(), location);
 		}
 	}
 	
 	public static IRI emitGenericEntry(
-			TEFDocument document,
 			SourceDocument source,
+			StatementConsumer out,
 			TEFEntry entry,
 			int entryIndex,
-			StatementConsumer out,
 			ImportReport report
 	) throws IOException {
 		String scope = Identifiers.documentHash(source.getDocumentIri());

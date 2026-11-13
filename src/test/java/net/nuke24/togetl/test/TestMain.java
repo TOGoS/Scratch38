@@ -1,5 +1,6 @@
 package net.nuke24.togetl.test;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FilterReader;
 import java.io.InputStream;
@@ -43,12 +44,14 @@ import net.nuke24.togetl.rdf.Literal;
 import net.nuke24.togetl.rdf.Location;
 import net.nuke24.togetl.rdf.Statement;
 import net.nuke24.togetl.rdf.StatementConsumer;
+import net.nuke24.togetl.tef.TEFComment;
+import net.nuke24.togetl.tef.TEFDirective;
 import net.nuke24.togetl.tef.TEFDocument;
 import net.nuke24.togetl.tef.TEFEntry;
 import net.nuke24.togetl.tef.TEFHeader;
-import net.nuke24.togetl.tef.TEFIssue;
 import net.nuke24.togetl.tef.TEFReadException;
 import net.nuke24.togetl.tef.TEFReader;
+import net.nuke24.togetl.tef.TEFSink;
 import net.nuke24.togetl.togetltsv.AliasTable;
 import net.nuke24.togetl.togetltsv.TOGETLTSVReader;
 import net.nuke24.togetl.togetltsv.TOGETLTSVWriter;
@@ -253,7 +256,6 @@ public final class TestMain {
 	
 	private static void testTefBasicEntry() throws Exception {
 		TEFDocument document = readTef("=part p1310\nname: Widget\n\nSome content\n");
-		assertEquals(0, document.getIssues().size(), "issue count");
 		assertEquals(1, document.getEntries().size(), "entry count");
 		
 		TEFEntry entry = document.getEntries().get(0);
@@ -279,7 +281,6 @@ public final class TestMain {
 				+ "\t";
 				
 		TEFDocument document = readTef(text);
-		assertEquals(0, document.getIssues().size(), "issue count");
 		assertEquals(1, document.getEntries().size(), "entry count");
 		
 		TEFEntry entry = document.getEntries().get(0);
@@ -303,7 +304,6 @@ public final class TestMain {
 	
 	private static void testTefContentBoundaries() throws Exception {
 		TEFDocument document = readTef("=foo bar\n\nhello\n=foo baz\n\nworld");
-		assertEquals(0, document.getIssues().size(), "issue count");
 		assertEquals(2, document.getEntries().size(), "entry count");
 		assertEquals("hello", document.getEntries().get(0).getContent(), "first content");
 		assertEquals("world", document.getEntries().get(1).getContent(), "second content");
@@ -311,14 +311,12 @@ public final class TestMain {
 	
 	private static void testTefEqualsEscape() throws Exception {
 		TEFDocument document = readTef("=foo bar\n\nhello\n==\n");
-		assertEquals(0, document.getIssues().size(), "issue count");
 		assertEquals(1, document.getEntries().size(), "entry count");
 		assertEquals("hello\n=\n", document.getEntries().get(0).getContent(), "escaped equals");
 	}
 	
 	private static void testTefEscapedHeaderEquals() throws Exception {
 		TEFDocument document = readTef("=foo bar\n==note: value\n\ncontent");
-		assertEquals(0, document.getIssues().size(), "issue count");
 		assertEquals(1, document.getEntries().size(), "entry count");
 		
 		TEFEntry entry = document.getEntries().get(0);
@@ -338,7 +336,6 @@ public final class TestMain {
 				+ "content";
 				
 		TEFDocument document = readTef(text);
-		assertEquals(0, document.getIssues().size(), "issue count");
 		assertEquals(1, document.getDirectives().size(), "document directive count");
 		assertEquals("format", document.getDirectives().get(0).getName(), "directive name");
 		assertEquals("x", document.getDirectives().get(0).getValue(), "directive value");
@@ -429,11 +426,24 @@ public final class TestMain {
 				return 1;
 			}
 		};
-		TEFDocument streamed = TEFReader.read(DOC, oneByteAtATime);
-		check(streamed.hasBom(), "BOM should be detected across reads");
-		assertEquals((long) bytes.length, streamed.getByteLength(), "byte length");
-		assertEquals(expected.getEntries().size(), streamed.getEntries().size(), "entry count");
-		TEFEntry entry = streamed.getEntries().get(0);
+		final List<TEFEntry> entries = new ArrayList<TEFEntry>();
+		TEFReader.read(DOC, oneByteAtATime, new TEFSink() {
+			@Override
+			public void documentComment(TEFComment comment) {
+			}
+			
+			@Override
+			public void documentDirective(TEFDirective directive) {
+			}
+			
+			@Override
+			public void entry(TEFEntry entry) {
+				entries.add(entry);
+			}
+		});
+		assertEquals(expected.getEntries().size(), entries.size(), "entry count");
+		TEFEntry entry = entries.get(0);
+		assertEquals("part", entry.getType(), "entry type survives BOM stripping");
 		assertEquals("Bob", entry.getHeaders().get(0).getValue(), "header value");
 		assertEquals(expected.getEntries().get(0).getContent(), entry.getContent(), "content");
 		check(entry.getContent().contains("caf\u00e9 line 19999"), "content should reach the last line");
@@ -456,7 +466,6 @@ public final class TestMain {
 	
 	private static void testTefCrLf() throws Exception {
 		TEFDocument document = readTef("=part p1\r\nname: Bob\r\n\r\ncontent\r\n");
-		assertEquals(0, document.getIssues().size(), "issue count");
 		assertEquals(1, document.getEntries().size(), "entry count");
 		
 		TEFEntry entry = document.getEntries().get(0);
@@ -508,11 +517,10 @@ public final class TestMain {
 				+ "content\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
 		String sourceUrl = "https://example.com/data.tef";
-		TEFDocument document = TEFReader.read(sourceUrl, bytes);
 		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		
-		List<Statement> statements = collect(new GenericTEFDialect(), document, source, report);
+		List<Statement> statements = collect(new GenericTEFDialect(), bytes, source, report);
 		String doc = source.getDocumentIri();
 		String documentImport = source.getDocumentImportIri();
 		String entry = Identifiers.tefEntryIri(doc, 0);
@@ -555,11 +563,10 @@ public final class TestMain {
 		String text = "=part p1\nname: Widget\ntag: a\ntag: b\n\ncontent\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
 		String sourceUrl = "https://example.com/data.tef";
-		TEFDocument document = TEFReader.read(sourceUrl, bytes);
 		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		
-		List<Statement> statements = collect(new GenericTEFDialect(), document, source, report);
+		List<Statement> statements = collect(new GenericTEFDialect(), bytes, source, report);
 		StringWriter out = new StringWriter();
 		TOGETLTSVWriter writer = new TOGETLTSVWriter(out, AliasTable.withDefaults());
 		try {
@@ -587,13 +594,12 @@ public final class TestMain {
 				+ "A part.\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
 		String sourceUrl = "https://example.com/data.tef";
-		TEFDocument document = TEFReader.read(sourceUrl, bytes);
 		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		MappingTEFDialect dialect = new MappingTEFDialect(
 				"parts", MappingTable.load("parts"));
 				
-		List<Statement> statements = collect(dialect, document, source, report);
+		List<Statement> statements = collect(dialect, bytes, source, report);
 		String part = Identifiers.mintData("part", "p1");
 		
 		check(has(statements, part, Vocab.RDF_TYPE, Vocab.TOGETL_PART.toString()),
@@ -644,13 +650,12 @@ public final class TestMain {
 				+ "short-description: same\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
 		String sourceUrl = "https://example.com/conflicts.tef";
-		TEFDocument document = TEFReader.read(sourceUrl, bytes);
 		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		MappingTEFDialect dialect = new MappingTEFDialect(
 				"parts", MappingTable.load("parts"));
 				
-		List<Statement> statements = collect(dialect, document, source, report);
+		List<Statement> statements = collect(dialect, bytes, source, report);
 		
 		assertEquals(1, countObject(statements, Vocab.TOGETL_SHORT_DESCRIPTION,
 				Literal.of("first").toString()), "first value kept");
@@ -682,13 +687,12 @@ public final class TestMain {
 				+ "title: Project\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
 		String sourceUrl = "https://example.com/namespaces.tef";
-		TEFDocument document = TEFReader.read(sourceUrl, bytes);
 		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		MappingTEFDialect dialect = new MappingTEFDialect(
 				"namespaces", MappingTable.load("namespaces"));
 				
-		List<Statement> statements = collect(dialect, document, source, report);
+		List<Statement> statements = collect(dialect, bytes, source, report);
 		
 		check(has(statements, "http://example.com/ns/", Vocab.RDF_TYPE,
 				Vocab.TOGETL_NAMESPACE.toString()), "namespace type and trimmed subject");
@@ -1338,7 +1342,7 @@ public final class TestMain {
 	
 	private static List<Statement> collect(
 			TEFDialect dialect,
-			TEFDocument document,
+			byte[] bytes,
 			SourceDocument source,
 			ImportReport report
 	) throws Exception {
@@ -1349,8 +1353,16 @@ public final class TestMain {
 				statements.add(statement);
 			}
 		};
-		dialect.map(document, source, consumer, report);
+		TEFSink sink = dialect.begin(source, hasBom(bytes), consumer, report);
+		TEFReader.read(source.getSourceIri(), new ByteArrayInputStream(bytes), sink);
 		return statements;
+	}
+	
+	private static boolean hasBom(byte[] bytes) {
+		return bytes.length >= 3
+				&& (bytes[0] & 0xFF) == 0xEF
+				&& (bytes[1] & 0xFF) == 0xBB
+				&& (bytes[2] & 0xFF) == 0xBF;
 	}
 	
 	private static boolean has(List<Statement> statements, String subject, IRI predicate, String object) {

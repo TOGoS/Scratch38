@@ -6,12 +6,13 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.security.DigestInputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 import net.nuke24.togetl.Version;
 import net.nuke24.togetl.dialect.Dialects;
@@ -21,9 +22,12 @@ import net.nuke24.togetl.etl.SourceDocument;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.rdf.Statement;
 import net.nuke24.togetl.rdf.StatementConsumer;
-import net.nuke24.togetl.tef.TEFDocument;
+import net.nuke24.togetl.tef.TEFComment;
+import net.nuke24.togetl.tef.TEFDirective;
+import net.nuke24.togetl.tef.TEFEntry;
 import net.nuke24.togetl.tef.TEFReadException;
 import net.nuke24.togetl.tef.TEFReader;
+import net.nuke24.togetl.tef.TEFSink;
 import net.nuke24.togetl.togetltsv.AliasTable;
 import net.nuke24.togetl.togetltsv.TOGETLTSVWriter;
 
@@ -110,33 +114,37 @@ public final class ImportCommand {
 	private void execute() throws IOException, TEFReadException {
 		TEFDialect selectedDialect = Dialects.byName(dialect);
 		
-		String effectiveSourceUrl = sourceUrl != null ? sourceUrl : defaultSourceUrl(input);
-		MessageDigest digest = sha256();
-		TEFDocument document;
-		InputStream in = openInput(input);
-		try {
-			document = TEFReader.read(effectiveSourceUrl, new DigestInputStream(in, digest));
-		} finally {
-			if (!"-".equals(input)) {
-				in.close();
+		if ("-".equals(input)) {
+			Path spool = Files.createTempFile("togetl-import-", ".tef");
+			try {
+				Files.copy(System.in, spool, StandardCopyOption.REPLACE_EXISTING);
+				executeFile(selectedDialect, spool);
+			} finally {
+				Files.deleteIfExists(spool);
 			}
+		} else {
+			executeFile(selectedDialect, Paths.get(input));
 		}
+	}
+	
+	private void executeFile(TEFDialect selectedDialect, Path file) throws IOException, TEFReadException {
+		String effectiveSourceUrl = sourceUrl != null ? sourceUrl : defaultSourceUrl(input);
+		Provenance provenance = Provenance.scan(file);
 		SourceDocument source = SourceDocument.of(
 				effectiveSourceUrl,
-				Identifiers.hex(digest.digest()),
-				document.getByteLength(),
+				provenance.sha256,
+				provenance.byteLength,
 				"tef",
 				Version.TEF_PARSER_VERSION);
 		
 		ImportReport report = new ImportReport();
-		long statementCount = 0;
-		Writer outputWriter = null;
-		boolean closeOutput = false;
+		CountingSink sink = new CountingSink();
+		CountingConsumer counter = new CountingConsumer();
+		boolean fileOutput = !"-".equals(output);
+		boolean complete = false;
+		Writer outputWriter = openOutput(output);
 		try {
-			outputWriter = openOutput(output);
-			closeOutput = !"-".equals(output);
 			final TOGETLTSVWriter tsv = new TOGETLTSVWriter(outputWriter, AliasTable.withDefaults());
-			final CountingConsumer counter = new CountingConsumer();
 			StatementConsumer consumer = new StatementConsumer() {
 				@Override
 				public void accept(Statement statement) throws IOException {
@@ -144,16 +152,23 @@ public final class ImportCommand {
 					counter.accept(statement);
 				}
 			};
-			selectedDialect.map(document, source, consumer, report);
+			sink.delegate = selectedDialect.begin(source, provenance.bom, consumer, report);
+			InputStream in = Files.newInputStream(file);
+			try {
+				TEFReader.read(effectiveSourceUrl, in, sink);
+			} finally {
+				in.close();
+			}
 			tsv.flush();
-			statementCount = counter.count;
+			complete = true;
 		} finally {
-			if (outputWriter != null) {
-				if (closeOutput) {
-					outputWriter.close();
-				} else {
-					outputWriter.flush();
+			if (fileOutput) {
+				outputWriter.close();
+				if (!complete) {
+					Files.deleteIfExists(Paths.get(output));
 				}
+			} else {
+				outputWriter.flush();
 			}
 		}
 		
@@ -164,26 +179,9 @@ public final class ImportCommand {
 		System.err.println("Imported " + effectiveSourceUrl);
 		System.err.println("  document " + source.getDocumentIri());
 		System.err.println("  document-import " + source.getDocumentImportIri());
-		System.err.println("  entries " + document.getEntries().size()
-				+ ", statements " + statementCount
-				+ ", issues " + document.getIssues().size());
+		System.err.println("  entries " + sink.entryCount + ", statements " + counter.count);
 		System.err.println("  unmapped " + report.getOccurrenceCount()
 				+ " occurrence(s) in " + report.getRowCount() + " row(s)");
-	}
-	
-	private static InputStream openInput(String path) throws IOException {
-		if ("-".equals(path)) {
-			return System.in;
-		}
-		return Files.newInputStream(Paths.get(path));
-	}
-	
-	private static MessageDigest sha256() {
-		try {
-			return MessageDigest.getInstance("SHA-256");
-		} catch (NoSuchAlgorithmException e) {
-			throw new IllegalStateException("SHA-256 is unavailable", e);
-		}
 	}
 	
 	private static String defaultSourceUrl(String input) throws IOException {
@@ -230,6 +228,68 @@ public final class ImportCommand {
 		err.println("  --source-url <url>     Canonical source URL (default: file: URI)");
 		err.println("  --dialect <name>       " + Dialects.names() + " (default: generic)");
 		err.println("  --report <file>        Write the unmapped-construct report as TSV");
+	}
+	
+	/** Digest, length, and BOM of the input, found in one pass so metadata can come first. */
+	private static final class Provenance {
+		final String sha256;
+		final long byteLength;
+		final boolean bom;
+		
+		private Provenance(String sha256, long byteLength, boolean bom) {
+			this.sha256 = sha256;
+			this.byteLength = byteLength;
+			this.bom = bom;
+		}
+		
+		static Provenance scan(Path file) throws IOException {
+			MessageDigest digest;
+			try {
+				digest = MessageDigest.getInstance("SHA-256");
+			} catch (NoSuchAlgorithmException e) {
+				throw new IllegalStateException("SHA-256 is unavailable", e);
+			}
+			byte[] head = new byte[3];
+			int headLength = 0;
+			long length = 0;
+			byte[] buffer = new byte[65536];
+			InputStream in = new DigestInputStream(Files.newInputStream(file), digest);
+			try {
+				int n;
+				while ((n = in.read(buffer)) >= 0) {
+					for (int i = 0; i < n && headLength < head.length; i++) {
+						head[headLength++] = buffer[i];
+					}
+					length += n;
+				}
+			} finally {
+				in.close();
+			}
+			boolean bom = headLength == 3
+					&& head[0] == (byte) 0xEF && head[1] == (byte) 0xBB && head[2] == (byte) 0xBF;
+			return new Provenance(Identifiers.hex(digest.digest()), length, bom);
+		}
+	}
+	
+	private static final class CountingSink implements TEFSink {
+		TEFSink delegate;
+		long entryCount;
+		
+		@Override
+		public void documentComment(TEFComment comment) throws IOException {
+			delegate.documentComment(comment);
+		}
+		
+		@Override
+		public void documentDirective(TEFDirective directive) throws IOException {
+			delegate.documentDirective(directive);
+		}
+		
+		@Override
+		public void entry(TEFEntry entry) throws IOException {
+			entryCount++;
+			delegate.entry(entry);
+		}
 	}
 	
 	private static final class CountingConsumer implements StatementConsumer {
