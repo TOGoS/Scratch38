@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -13,11 +14,11 @@ import java.util.regex.Pattern;
 /**
  * Parses Org lines as they are pushed in, one at a time.
  *
- * <p>Feed each line with {@link #accept(String)}, then call {@link #finish()}
- * to get the document. Lines must not contain their terminators; see
- * {@link OrgLineSplitter}.</p>
+ * <p>Push each line as {@code Optional.of(line)}, without its terminator (see
+ * {@link OrgLineSplitter}). Push {@code Optional.empty()} once, after the last
+ * line; then {@link #document()} returns the parsed document.</p>
  */
-public final class OrgParser implements Consumer<String> {
+public final class OrgParser implements Consumer<Optional<String>> {
 	private static final Pattern HEADING =
 			Pattern.compile("^(\\*+)[ \t]+(.*)$", Pattern.UNIX_LINES);
 	private static final Pattern TAGS =
@@ -73,13 +74,30 @@ public final class OrgParser implements Consumer<String> {
 	private boolean inDrawer;
 	private String drawerName;
 	private int drawerLine;
+	private OrgDocument document;
+	
+	@Override
+	public void accept(Optional<String> item) {
+		if (item.isPresent()) {
+			acceptLine(item.get());
+		} else {
+			finish();
+		}
+	}
+	
+	/** The parsed document. Available only after {@code Optional.empty()} has been pushed. */
+	public OrgDocument document() {
+		if (document == null) {
+			throw new IllegalStateException("Org input has not been finished");
+		}
+		return document;
+	}
 	
 	/**
 	 * Handles one line. A leading UTF-8 byte order mark (decoded as U+FEFF)
 	 * on the first line is recorded and removed.
 	 */
-	@Override
-	public void accept(String text) {
+	private void acceptLine(String text) {
 		lineNumber++;
 		String line = text;
 		if (lineNumber == 1 && line.startsWith("\uFEFF")) {
@@ -221,8 +239,7 @@ public final class OrgParser implements Consumer<String> {
 		parseMarkers(currentHeading, line, lineNumber);
 	}
 	
-	/** Ends the input and returns the parsed document. Call once, after the last line. */
-	public OrgDocument finish() {
+	private void finish() {
 		if (inBlock) {
 			diagnostics.add(new OrgDiagnostic(blockLine,
 					"unclosed block #+begin_" + blockName + "; following lines are ignored"));
@@ -230,7 +247,7 @@ public final class OrgParser implements Consumer<String> {
 		if (inDrawer) {
 			diagnostics.add(unclosedDrawer(drawerName, drawerLine));
 		}
-		return new OrgDocument(bom, headings, directives, tables, diagnostics);
+		document = new OrgDocument(bom, headings, directives, tables, diagnostics);
 	}
 	
 	private static OrgDiagnostic unclosedDrawer(String drawerName, int line) {

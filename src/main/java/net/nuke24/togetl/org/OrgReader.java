@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 /**
  * Entry points for reading Org documents.
@@ -34,9 +35,9 @@ public final class OrgReader {
 		char[] chunk = new char[CHUNK_SIZE];
 		int count;
 		while ((count = reader.read(chunk)) >= 0) {
-			splitter.feed(new String(chunk, 0, count));
+			splitter.accept(Optional.of(new String(chunk, 0, count)));
 		}
-		splitter.finish();
-		return parser.finish();
+		splitter.accept(Optional.empty());
+		return parser.document();
 	}
 }

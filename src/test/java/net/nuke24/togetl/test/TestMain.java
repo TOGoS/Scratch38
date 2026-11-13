@@ -22,6 +22,7 @@ import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.mapping.MappingTable;
 import net.nuke24.togetl.mapping.MappingTEFDialect;
 import net.nuke24.togetl.org.OrgDocument;
+import net.nuke24.togetl.org.OrgParser;
 import net.nuke24.togetl.org.OrgHeading;
 import net.nuke24.togetl.org.OrgReader;
 import net.nuke24.togetl.org.OrgTable;
@@ -902,6 +903,16 @@ public final class TestMain {
 		assertEquals(3, noteRow.getCellCount(), "unterminated last cell is a cell");
 		assertEquals("free note", noteRow.getCell(2), "free-form last cell text");
 		assertEquals(3, noteTable.getRows().get(1).getCellCount(), "terminated row unchanged");
+		
+		OrgDocument unterminated = OrgReader.read("* A\n* B".getBytes(StandardCharsets.UTF_8));
+		assertEquals(2, unterminated.getHeadings().size(), "unterminated last line is parsed");
+		
+		try {
+			new OrgParser().document();
+			check(false, "document() before end of input must fail");
+		} catch (IllegalStateException expected) {
+			check(true, "document() before end of input fails");
+		}
 	}
 	
 	private static void testOrgChunkedInput() throws Exception {
