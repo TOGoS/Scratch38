@@ -1,20 +1,27 @@
 package net.nuke24.togetl.test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FilterReader;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
 import net.nuke24.togetl.cli.ImportCommand;
+import net.nuke24.togetl.cli.LoadCommand;
 import net.nuke24.togetl.cli.VocabCommand;
+import net.nuke24.togetl.db.SQLiteDatabase;
 import net.nuke24.togetl.dialect.GenericTEFDialect;
 import net.nuke24.togetl.dialect.TEFDialect;
 import net.nuke24.togetl.etl.ImportReport;
@@ -23,8 +30,8 @@ import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.mapping.MappingTable;
 import net.nuke24.togetl.mapping.MappingTEFDialect;
 import net.nuke24.togetl.org.OrgDocument;
-import net.nuke24.togetl.org.OrgParser;
 import net.nuke24.togetl.org.OrgHeading;
+import net.nuke24.togetl.org.OrgParser;
 import net.nuke24.togetl.org.OrgReader;
 import net.nuke24.togetl.org.OrgTable;
 import net.nuke24.togetl.org.OrgTableRow;
@@ -57,9 +64,17 @@ public final class TestMain {
 	private static final String DOC = "tag:nuke24.net,2026-11:togetl:document:abc";
 	private static final String PART = "tag:nuke24.net,2026-11:togetl:part:p1310";
 	private static final String TOGETL = "tag:nuke24.net,2026-11:togetl:";
+	private static final String GENERAL = "tag:nuke24.net,2026-11:general:";
+	private static final String PARTS3D = "tag:nuke24.net,2026-11:3dparts:";
 	private static final String RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 	private static final String XSD = "http://www.w3.org/2001/XMLSchema#";
 	
+	private static final String DB_DOC = TOGETL + "document:testdoc";
+	private static final String DB_IMPORT = TOGETL + "document-import:testimport";
+	private static final String DB_PART = PARTS3D + "part:p1";
+	private static final String DB_STL_FILE =
+			"http://wherever-files.nuke24.net/uri-res/raw/urn:bitprint:ABC/p1.stl";
+			
 	private static int failures = 0;
 	private static int passed = 0;
 	
@@ -108,6 +123,8 @@ public final class TestMain {
 		run("org keywords and duplicates", TestMain::testOrgKeywordsAndDuplicates);
 		run("org table separator and input rules", TestMain::testOrgTableSeparatorAndInputRules);
 		run("import command", TestMain::testImportCommand);
+		run("database load", TestMain::testDatabaseLoad);
+		run("database simple provenance", TestMain::testDatabaseSimpleProvenance);
 		
 		System.out.println();
 		if (failures > 0) {
@@ -1024,6 +1041,291 @@ public final class TestMain {
 				reportLines.get(0),
 				"report header");
 		check(reportLines.size() > 1, "report has rows");
+	}
+	
+	private static void testDatabaseLoad() throws Exception {
+		Path dir = Files.createTempDirectory("togetl-db-test");
+		Path db = dir.resolve("togetl.sqlite3");
+		Path stream = dir.resolve("data.togetltsv");
+		Path report = dir.resolve("report.tsv");
+		dir.toFile().deleteOnExit();
+		db.toFile().deleteOnExit();
+		stream.toFile().deleteOnExit();
+		report.toFile().deleteOnExit();
+		
+		Files.write(stream, databaseStream().getBytes(StandardCharsets.UTF_8));
+		Files.write(report, (
+				"kind\tentryType\tfield\tcount\tfirstLocation\n"
+				+ "conflict\tpart\tshort-description\t2\tL3C1\n"
+		).getBytes(StandardCharsets.UTF_8));
+		
+		String firstOutput = runLoad(db, stream, report, false);
+		check(firstOutput.contains("Loaded 1 document(s), 20 statement(s)"),
+				"first load summary: " + firstOutput);
+		check(!firstOutput.contains("(replaced)"), "first load is not a replacement");
+		
+		Connection connection = SQLiteDatabase.open(db);
+		try {
+			assertDatabaseContents(connection);
+		} finally {
+			connection.close();
+		}
+		
+		String secondOutput = runLoad(db, stream, report, false);
+		check(secondOutput.contains("(replaced)"),
+				"second load replaces the batch: " + secondOutput);
+				
+		connection = SQLiteDatabase.open(db);
+		try {
+			assertEquals(1L, queryLong(connection, "SELECT COUNT(*) FROM document"),
+					"document count after replacement");
+			assertEquals(1L, queryLong(connection, "SELECT COUNT(*) FROM batch"),
+					"batch count after replacement");
+			assertEquals(1L, queryLong(connection, "SELECT COUNT(*) FROM loading"),
+					"loading count after replacement");
+			assertEquals(20L, queryLong(connection, "SELECT COUNT(*) FROM statement"),
+					"statement count after replacement");
+			assertEquals(1L, queryLong(connection, "SELECT COUNT(*) FROM parse_issue"),
+					"parse issue count after replacement");
+			assertEquals(1L, queryLong(connection, "SELECT COUNT(*) FROM import_report_row"),
+					"report row count after replacement");
+		} finally {
+			connection.close();
+		}
+	}
+	
+	private static void assertDatabaseContents(Connection connection) throws Exception {
+		assertEquals(1L, queryLong(connection, "SELECT COUNT(*) FROM document"), "document count");
+		assertEquals(DB_DOC, queryString(connection, "SELECT iri FROM document"), "document IRI");
+		assertEquals("https://example.com/data.tef",
+				queryString(connection, "SELECT source_url FROM document"), "document source URL");
+		assertEquals("abc", queryString(connection, "SELECT sha256 FROM document"), "document hash");
+		assertEquals(123L, queryLong(connection, "SELECT byte_length FROM document"),
+				"document byte length");
+		assertEquals("tef", queryString(connection, "SELECT detected_format FROM document"),
+				"document format");
+		assertEquals("test/1", queryString(connection, "SELECT parser_version FROM document"),
+				"parser version");
+				
+		assertEquals(1L, queryLong(connection, "SELECT COUNT(*) FROM batch"), "batch count");
+		String batchIri = queryString(connection, "SELECT iri FROM batch");
+		check(batchIri.startsWith(TOGETL + "batch:"), "batch IRI: " + batchIri);
+		assertEquals(1L, queryLong(connection, "SELECT COUNT(*) FROM loading"), "loading count");
+		String loadingIri = queryString(connection, "SELECT iri FROM loading");
+		check(loadingIri.startsWith(TOGETL + "loading:"), "loading IRI: " + loadingIri);
+		assertEquals(batchIri, queryString(connection, "SELECT batch_iri FROM loading"),
+				"loading batch");
+		assertEquals(DB_DOC, queryString(connection, "SELECT document_iri FROM loading"),
+				"loading document");
+				
+		assertEquals(20L, queryLong(connection, "SELECT COUNT(*) FROM statement"), "statement count");
+		assertEquals(20L, queryLong(connection,
+				"SELECT COUNT(*) FROM statement WHERE batch_iri = ? AND loading_iri = ?",
+				batchIri, loadingIri), "statements carry batch and loading provenance");
+				
+		assertEquals("literal", queryString(connection,
+				"SELECT object_kind FROM statement WHERE subject = ? AND predicate = ?",
+				DB_DOC, GENERAL + "sha256"), "literal object kind");
+		assertEquals(XSD + "integer", queryString(connection,
+				"SELECT datatype FROM statement WHERE subject = ? AND predicate = ?",
+				DB_DOC, GENERAL + "byteLength"), "literal datatype");
+		assertEquals("iri", queryString(connection,
+				"SELECT object_kind FROM statement WHERE subject = ? AND predicate = ?",
+				DB_PART, PARTS3D + "stlFile"), "IRI object kind");
+		assertEquals("blank", queryString(connection,
+				"SELECT object_kind FROM statement WHERE subject = ? AND predicate = ?",
+				DB_IMPORT, TOGETL + "parseIssue"), "blank node object kind");
+				
+		assertEquals(1L, queryLong(connection, "SELECT COUNT(*) FROM parse_issue"),
+				"parse issue count");
+		assertEquals(DB_DOC, queryString(connection,
+				"SELECT document_iri FROM parse_issue"), "issue document");
+		assertEquals("warning", queryString(connection,
+				"SELECT severity FROM parse_issue"), "issue severity");
+		assertEquals("header-without-colon", queryString(connection,
+				"SELECT code FROM parse_issue"), "issue code");
+		assertEquals("Header line has no colon", queryString(connection,
+				"SELECT message FROM parse_issue"), "issue message");
+		assertEquals("name: Bob", queryString(connection,
+				"SELECT raw FROM parse_issue"), "issue raw");
+		assertEquals(batchIri, queryString(connection,
+				"SELECT batch_iri FROM parse_issue"), "issue batch");
+		assertEquals(loadingIri, queryString(connection,
+				"SELECT loading_iri FROM parse_issue"), "issue loading");
+				
+		assertEquals(1L, queryLong(connection, "SELECT COUNT(*) FROM import_report_row"),
+				"report row count");
+		assertEquals(1L, queryLong(connection, "SELECT COUNT(*) FROM conflict"), "conflict count");
+		assertEquals(DB_DOC, queryString(connection,
+				"SELECT document_iri FROM import_report_row"), "report row document");
+		assertEquals("part", queryString(connection,
+				"SELECT entry_type FROM import_report_row"), "report entry type");
+		assertEquals("short-description", queryString(connection,
+				"SELECT field FROM import_report_row"), "report field");
+				
+		assertEquals(1L, queryLong(connection,
+				"SELECT COUNT(*) FROM vocab_term WHERE iri = ?", GENERAL + "name"),
+				"vocabulary term is loaded");
+				
+		assertEquals("Widget", queryString(connection,
+				"SELECT name FROM part WHERE iri = ?", DB_PART), "part view name");
+		assertEquals("A widget", queryString(connection,
+				"SELECT short_description FROM part WHERE iri = ?", DB_PART),
+				"part view description");
+		assertEquals(PARTS3D + "stlFile", queryString(connection,
+				"SELECT relation FROM part_file WHERE part_iri = ?", DB_PART),
+				"part file relation");
+		assertEquals(DB_STL_FILE, queryString(connection,
+				"SELECT file_iri FROM part_file WHERE part_iri = ?", DB_PART),
+				"part file IRI");
+		assertEquals(null, queryString(connection,
+				"SELECT filename FROM part_file WHERE part_iri = ?", DB_PART),
+				"canonical file URL has no separate filename");
+		assertEquals("p1-alias", queryString(connection,
+				"SELECT alias FROM part_alias WHERE part_iri = ?", DB_PART),
+				"part alias");
+	}
+	
+	private static void testDatabaseSimpleProvenance() throws Exception {
+		Path dir = Files.createTempDirectory("togetl-db-simple-test");
+		Path db = dir.resolve("togetl.sqlite3");
+		Path stream = dir.resolve("data.togetltsv");
+		dir.toFile().deleteOnExit();
+		db.toFile().deleteOnExit();
+		stream.toFile().deleteOnExit();
+		Files.write(stream, databaseStream().getBytes(StandardCharsets.UTF_8));
+		
+		String output = runLoad(db, stream, null, true);
+		check(output.contains("provenance: document only"),
+				"simple provenance summary: " + output);
+				
+		Connection connection = SQLiteDatabase.open(db);
+		try {
+			assertEquals(1L, queryLong(connection, "SELECT COUNT(*) FROM document"),
+					"document count");
+			assertEquals(0L, queryLong(connection, "SELECT COUNT(*) FROM batch"), "batch count");
+			assertEquals(0L, queryLong(connection, "SELECT COUNT(*) FROM loading"), "loading count");
+			assertEquals(20L, queryLong(connection, "SELECT COUNT(*) FROM statement"),
+					"statement count");
+			assertEquals(20L, queryLong(connection,
+					"SELECT COUNT(*) FROM statement"
+					+ " WHERE batch_iri IS NULL AND loading_iri IS NULL"),
+					"statements have no batch or loading");
+			assertEquals(1L, queryLong(connection,
+					"SELECT COUNT(*) FROM parse_issue"
+					+ " WHERE document_iri = ? AND batch_iri IS NULL AND loading_iri IS NULL",
+					DB_DOC), "parse issue has document-only provenance");
+			assertEquals("Widget", queryString(connection,
+					"SELECT name FROM part WHERE iri = ?", DB_PART), "part view name");
+		} finally {
+			connection.close();
+		}
+	}
+	
+	private static String databaseStream() {
+		return "#format urn:uuid:b783bac7-58e9-4340-93ef-7973914732d5\n"
+				+ "#alias rdf: " + RDF + "\n"
+				+ "#alias xsd: " + XSD + "\n"
+				+ "#alias togetl: " + TOGETL + "\n"
+				+ "#alias general: " + GENERAL + "\n"
+				+ "#alias 3dparts: " + PARTS3D + "\n"
+				+ "\n"
+				+ DB_IMPORT + " - " + DB_DOC + " rdf:type togetl:Document\n"
+				+ DB_IMPORT + " - " + DB_DOC
+				+ " togetl:sourceUrl data:,https%3A%2F%2Fexample.com%2Fdata.tef\n"
+				+ DB_IMPORT + " - " + DB_DOC + " general:sha256 data:,abc\n"
+				+ DB_IMPORT + " - " + DB_DOC + " general:byteLength data:,123|xsd:integer\n"
+				+ DB_IMPORT + " - " + DB_IMPORT + " rdf:type togetl:DocumentImport\n"
+				+ DB_IMPORT + " - " + DB_IMPORT + " togetl:sourceDocument " + DB_DOC + "\n"
+				+ DB_IMPORT + " - " + DB_IMPORT + " togetl:format data:,tef\n"
+				+ DB_IMPORT + " - " + DB_IMPORT + " togetl:parserVersion data:,test/1\n"
+				+ DB_IMPORT + " L1C1...L1C9 " + DB_PART + " rdf:type 3dparts:Part\n"
+				+ DB_IMPORT + " L2C1...L2C13 " + DB_PART + " general:name data:,Widget\n"
+				+ DB_IMPORT + " L3C1...L3C28 " + DB_PART
+				+ " general:shortDescription data:,A%20widget\n"
+				+ DB_IMPORT + " L4C1...L4C11 " + DB_PART + " general:tag data:,a\n"
+				+ DB_IMPORT + " L5C1...L5C11 " + DB_PART + " general:alias data:,p1-alias\n"
+				+ DB_IMPORT + " L6C1...L6C34 " + DB_PART + " 3dparts:stlFile " + DB_STL_FILE + "\n"
+				+ DB_IMPORT + " L7C1...L7C2 " + DB_IMPORT + " togetl:parseIssue _:issue1\n"
+				+ DB_IMPORT + " L7C1...L7C2 _:issue1 rdf:type togetl:ParseIssue\n"
+				+ DB_IMPORT + " L7C1...L7C2 _:issue1 togetl:severity data:,warning\n"
+				+ DB_IMPORT + " L7C1...L7C2 _:issue1 togetl:code data:,header-without-colon\n"
+				+ DB_IMPORT + " L7C1...L7C2 _:issue1"
+				+ " togetl:message data:,Header%20line%20has%20no%20colon\n"
+				+ DB_IMPORT + " L7C1...L7C2 _:issue1 togetl:raw data:,name%3A%20Bob\n";
+	}
+	
+	private static String runLoad(
+			Path db,
+			Path stream,
+			Path report,
+			boolean simpleProvenance
+	) throws Exception {
+		List<String> args = new ArrayList<String>();
+		args.add("--db");
+		args.add(db.toString());
+		args.add("--input");
+		args.add(stream.toString());
+		if (report != null) {
+			args.add("--report");
+			args.add(report.toString());
+		}
+		if (simpleProvenance) {
+			args.add("--simple-provenance");
+		}
+		
+		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+		PrintStream original = System.out;
+		int exit;
+		try {
+			System.setOut(new PrintStream(bytes, true, "UTF-8"));
+			exit = LoadCommand.run(args.toArray(new String[args.size()]));
+		} finally {
+			System.setOut(original);
+		}
+		String output = new String(bytes.toByteArray(), StandardCharsets.UTF_8);
+		assertEquals(0, exit, "load exit code: " + output);
+		return output;
+	}
+	
+	private static long queryLong(Connection connection, String sql, Object... params)
+			throws Exception {
+		PreparedStatement statement = connection.prepareStatement(sql);
+		try {
+			bind(statement, params);
+			ResultSet results = statement.executeQuery();
+			try {
+				check(results.next(), "query returned no rows: " + sql);
+				return results.getLong(1);
+			} finally {
+				results.close();
+			}
+		} finally {
+			statement.close();
+		}
+	}
+	
+	private static String queryString(Connection connection, String sql, Object... params)
+			throws Exception {
+		PreparedStatement statement = connection.prepareStatement(sql);
+		try {
+			bind(statement, params);
+			ResultSet results = statement.executeQuery();
+			try {
+				check(results.next(), "query returned no rows: " + sql);
+				return results.getString(1);
+			} finally {
+				results.close();
+			}
+		} finally {
+			statement.close();
+		}
+	}
+	
+	private static void bind(PreparedStatement statement, Object... params) throws Exception {
+		for (int i = 0; i < params.length; i++) {
+			statement.setObject(i + 1, params[i]);
+		}
 	}
 	
 	private static List<Statement> collect(
