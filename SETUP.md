@@ -10,12 +10,20 @@ What TOGETL needs, and how to get it on Debian or Alpine.
 | SQLite JDBC jar | `togetl load`, database tests | `scripts/get-sqlite-jdbc.sh` | same |
 | curl, ca-certificates | fetch scripts | apt | apk |
 | PHP CLI + PDO SQLite | read-only browser in `web/` | `php-cli php-sqlite3` | `php php-pdo_sqlite` |
-| uv | `scripts/format-java-indent.py` | not in apt; see <https://docs.astral.sh/uv/> | see uv docs |
+| uv | `scripts/format-java-indent.py` | not in apt; Astral's installer (below) | same installer |
 | Upstream fixtures | manual checks only (optional) | `scripts/fetch-fixtures.sh` | same |
 
 `scripts/install-deps.sh --distro debian|alpine` installs the apt/apk rows.
 It does not install JDK 8 on Debian, the SQLite JDBC jar, or uv.
 Use `--dry-run` to print the commands without running them.
+
+To install uv (not from apt; this is Astral's standalone installer, run as `curl | bash`):
+
+```sh
+curl -fsSL https://docs.astral.sh/uv/install.sh | bash
+exec $SHELL                        # refresh PATH
+uv --version
+```
 
 ## Java selection
 
