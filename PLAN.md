@@ -319,7 +319,13 @@ The Org importer has two parts that don't share a data model:
    live in code rather than in a mapping table.
 
 Table cells are kept as raw text. The reader does not extract links, timestamps, or
-checkboxes from cells; the analyzer may scan cell text if it needs them.
+checkboxes from cells; the analyzer may scan cell text if it needs them. A bare `|`
+always separates cells, and Org has no backslash escape for it. Org's way to put a
+literal bar in a cell is `\vert` (or `abc\vert{}def`), so the analyzer decodes that. A
+line starting with `|-` is a horizontal rule.
+
+Only LF ends a line. A CR immediately before the LF is dropped; any other CR is ordinary
+text, as in Org. Line numbers therefore count LFs.
 
 **Identity.** A `CUSTOM_ID` is not automatically a global identifier. The analyzer
 decides per ID form:
