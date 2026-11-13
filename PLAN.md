@@ -3,6 +3,13 @@
 Status: MVP implementation starting. This document records the intended shape of the
 system so that generated code has something to be consistent with.
 
+> **Disclaimer.** Much of this plan was drafted by an LLM from hand-wavy guidance,
+> and large parts of it are speculative scaffolding rather than settled design.
+> Treat the details with a grain of salt: the Java source is the canonical source of
+> truth for what the code actually does. What *does* matter here is the overall
+> architecture (source documents → TOGETLTSV → SQLite → viewers) and keeping the
+> implementation relatively simple. Everything else in this document is up for
+> reconsideration.
 ## 1. Purpose
 
 Convert heterogeneous source documents into **TOGETLTSV 202601** statement streams,
