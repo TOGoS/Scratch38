@@ -8,10 +8,7 @@ TOGETL converts source documents (mostly TEF today) into TOGETLTSV statement str
 
 Primary references:
 - [README.md](./README.md) for usage/build
-- [PLAN.md](./PLAN.md) for design/modeling rules
 - [CONTRIBUTING.md](./CONTRIBUTING.md) for conventions
-- [TODO.tef](./TODO.tef) for queued change requests, which should take priority
-  over the PLAN, as the requested changes may affect the plan.
 
 ## Local terms (project-specific)
 
@@ -72,6 +69,10 @@ The Visual Studio Code 'devcontainer' runs on alpine and should have
 `JAVA_HOME` set to `/usr/lib/jvm/java-1.8-openjdk`, as specified by `devcontainer.json`.
 Sometimes VS Code agents find that it is not set correctly,
 in which case it can be worked-around with an `export JAVA_HOME=/usr/lib/jvm/java-1.8-openjdk` before the command.
+
+## Documentation and design principles
+
+See CONTRIBUTING.md for documentation conventions and design principles.
 
 ## Commit attribution
 
