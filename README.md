@@ -36,34 +36,12 @@ Not yet implemented:
 ./test/run-tests.sh
 ```
 
+(we should streamline this at some point; maybe use Make)
+
 See [SETUP.md](SETUP.md) for required packages, the Java selection order, and
 distro-specific notes.
 
 The build targets Java 8 and does not require Maven.
-
-## Status
-
-- TOGETLTSV 202601 writer and reader, with alias handling and round-trip tests.
-- TEF reader: BOM handling, strict UTF-8 validation, source spans, comments,
-  directives, tolerance levels, and recovery for orphan continuations.
-- Generic TEF dialect: emits source-document metadata, entries, headers, comments,
-  directives, and parse issues; reports unmapped entry types and fields.
-  Functional fields report conflicts instead of silently choosing a value;
-  identical duplicates are deduplicated and multi-valued fields keep all
-  values.
-- Declarative mapping dialects driven by TSV tables under `mappings/`:
-  - `parts` for `3DPrintingData.tef`
-  - `namespaces` for `namespaces.tef` and `vocab/*.tef`
-- Vocabulary reporting: `togetl vocab` compares terms used by mappings and
-  streams against `vocab/*.tef`.
-- Import command: `togetl import` writes deterministic, self-contained streams.
-- SQLite loader: `togetl load` reads TOGETLTSV streams into a source-agnostic
-  schema with document, batch, loading, statement, parse-issue, report, and
-  vocabulary tables. Batch and loading IRIs are deterministic, and re-running
-  the same load replaces that batch instead of duplicating statements.
-- Read-only PHP browser in `web/` with overview, subject, predicate, document,
-  vocabulary, issue, and part pages.
-- Org and music importers are added in later milestones.
 
 ## Usage
 
