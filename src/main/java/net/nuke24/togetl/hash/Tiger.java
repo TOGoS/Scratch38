@@ -78,7 +78,7 @@ public final class Tiger extends MessageDigest implements Cloneable {
 	 */
 	public Object clone() throws CloneNotSupportedException {
 		Tiger that = (Tiger)super.clone();
-		that.pad = (byte[])this.pad.clone();
+		that.pad = this.pad.clone();
 		return that;
 	}
 	
@@ -240,6 +240,7 @@ public final class Tiger extends MessageDigest implements Cloneable {
 	 *             length.
 	 * @return  the length of the digest stored in the output buffer.
 	 */
+	@SuppressWarnings("fallthrough")
 	public int engineDigest(byte[] hashvalue, int offset, int len)
 			throws DigestException {
 		if (len >= HASH_LENGTH) {
