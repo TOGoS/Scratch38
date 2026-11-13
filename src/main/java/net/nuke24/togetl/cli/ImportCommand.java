@@ -5,10 +5,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -18,6 +21,7 @@ import net.nuke24.togetl.dialect.TEFDialect;
 import net.nuke24.togetl.dialect.TEFDocumentSink;
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
+import net.nuke24.togetl.hash.BitprintScheme;
 import net.nuke24.togetl.etl.SourceProvenance;
 import net.nuke24.togetl.rdf.Statement;
 import net.nuke24.togetl.rdf.StatementConsumer;
@@ -29,8 +33,6 @@ import net.nuke24.togetl.tef.TEFReader;
 import net.nuke24.togetl.tef.TEFSink;
 import net.nuke24.togetl.togetltsv.AliasTable;
 import net.nuke24.togetl.togetltsv.TOGETLTSVWriter;
-import net.nuke24.togetl.util.MultiSink;
-import net.nuke24.togetl.util.Sink;
 
 /**
  * {@code togetl import}: read one source document and write a TOGETLTSV stream.
@@ -39,6 +41,7 @@ public final class ImportCommand {
 	private String input;
 	private String output = "-";
 	private String sourceUrl;
+	private String deriveSourceUrl;
 	private String dialect = "generic";
 	private String reportPath;
 	
@@ -89,6 +92,8 @@ public final class ImportCommand {
 				output = value != null ? value : next(args, ++i, key);
 			} else if ("--source-url".equals(key)) {
 				sourceUrl = value != null ? value : next(args, ++i, key);
+			} else if ("--derive-source-url".equals(key)) {
+				deriveSourceUrl = value != null ? value : next(args, ++i, key);
 			} else if ("--dialect".equals(key)) {
 				dialect = value != null ? value : next(args, ++i, key);
 			} else if ("--report".equals(key)) {
@@ -103,6 +108,15 @@ public final class ImportCommand {
 		if (output == null || output.isEmpty()) {
 			throw new UsageException("--output must not be empty");
 		}
+		if (sourceUrl == null && deriveSourceUrl == null) {
+			throw new UsageException("--source-url or --derive-source-url is required");
+		}
+		if (sourceUrl != null && deriveSourceUrl != null) {
+			throw new UsageException("--source-url and --derive-source-url are mutually exclusive");
+		}
+		if (deriveSourceUrl != null && !"bitprint".equals(deriveSourceUrl)) {
+			throw new UsageException("Unknown --derive-source-url kind: " + deriveSourceUrl);
+		}
 	}
 	
 	private static String next(String[] args, int index, String option) throws UsageException {
@@ -114,12 +128,60 @@ public final class ImportCommand {
 	
 	private void execute() throws IOException, TEFReadException {
 		TEFDialect selectedDialect = Dialects.byName(dialect);
+		if (deriveSourceUrl != null) {
+			SourceProvenance.Digester digester = new SourceProvenance.Digester();
+			InputStream in = "-".equals(input) ? System.in : Files.newInputStream(Paths.get(input));
+			try {
+				byte[] block = new byte[65536];
+				int n;
+				while ((n = in.read(block)) >= 0) {
+					if (n > 0) {
+						digester.accept(Optional.of(Arrays.copyOf(block, n)));
+					}
+				}
+			} finally {
+				if (!"-".equals(input)) {
+					in.close();
+				}
+			}
+			digester.accept(Optional.<byte[]>empty());
+			sourceUrl = digester.bitprint();
+		}
 		String effectiveSourceUrl = sourceUrl != null ? sourceUrl : defaultSourceUrl(input);
+		
+		SourceProvenance.Digester digester = new SourceProvenance.Digester();
+		InputStream digestIn = "-".equals(input) ? System.in : Files.newInputStream(Paths.get(input));
+		try {
+			byte[] block = new byte[65536];
+			int n;
+			while ((n = digestIn.read(block)) >= 0) {
+				if (n > 0) {
+					digester.accept(Optional.of(Arrays.copyOf(block, n)));
+				}
+			}
+		} finally {
+			if (!"-".equals(input)) {
+				digestIn.close();
+			}
+		}
+		digester.accept(Optional.<byte[]>empty());
+		SourceProvenance provenance = digester.result();
+		
+		if (effectiveSourceUrl.startsWith("urn:bitprint:")) {
+			if (!digester.bitprint().equals(effectiveSourceUrl)) {
+				throw new TEFReadException("source URL bitprint does not match content: expected "
+						+ digester.bitprint() + " but got " + effectiveSourceUrl);
+			}
+		} else {
+			System.err.println("togetl import: warning: source URL is not a bitprint URN ("
+					+ effectiveSourceUrl + "); this may cause problems downstream");
+		}
+		
 		SourceDocument source = SourceDocument.of(
 				effectiveSourceUrl,
 				"tef",
 				Version.TEF_PARSER_VERSION);
-		
+				
 		ImportReport report = new ImportReport();
 		CountingConsumer counter = new CountingConsumer();
 		boolean fileOutput = !"-".equals(output);
@@ -136,11 +198,24 @@ public final class ImportCommand {
 			};
 			TEFDocumentSink document = selectedDialect.begin(source, consumer, report);
 			CountingSink entries = new CountingSink(document);
-			SourceProvenance.Digester digester = new SourceProvenance.Digester();
-			Sink<byte[]> input = new MultiSink<byte[]>(Arrays.<Sink<byte[]>>asList(
-					digester, TEFReader.parser(effectiveSourceUrl, entries)));
-			readInput(input);
-			document.finish(digester.result());
+			InputStream in;
+			Path spool = null;
+			if ("-".equals(input)) {
+				spool = Files.createTempFile("togetl-import-", ".tef");
+				Files.copy(System.in, spool, StandardCopyOption.REPLACE_EXISTING);
+				in = Files.newInputStream(spool);
+			} else {
+				in = Files.newInputStream(Paths.get(input));
+			}
+			try {
+				TEFReader.read(effectiveSourceUrl, in, entries);
+			} finally {
+				in.close();
+				if (spool != null) {
+					Files.deleteIfExists(spool);
+				}
+			}
+			document.finish(provenance);
 			tsv.flush();
 			complete = true;
 			
@@ -163,25 +238,6 @@ public final class ImportCommand {
 				outputWriter.flush();
 			}
 		}
-	}
-	
-	/** Reads the input once, in blocks, and pushes each block into the stage. */
-	private void readInput(Sink<byte[]> stage) throws IOException, TEFReadException {
-		InputStream in = "-".equals(input) ? System.in : Files.newInputStream(Paths.get(input));
-		try {
-			byte[] block = new byte[65536];
-			int n;
-			while ((n = in.read(block)) >= 0) {
-				if (n > 0) {
-					stage.accept(Optional.of(Arrays.copyOf(block, n)));
-				}
-			}
-		} finally {
-			if (!"-".equals(input)) {
-				in.close();
-			}
-		}
-		stage.accept(Optional.<byte[]>empty());
 	}
 	
 	private static String defaultSourceUrl(String input) throws IOException {
@@ -225,7 +281,8 @@ public final class ImportCommand {
 		err.println();
 		err.println("  --input <file|->       Source document (required)");
 		err.println("  --output <file|->      TOGETLTSV output (default: -)");
-		err.println("  --source-url <url>     Canonical source URL (default: file: URI)");
+		err.println("  --source-url <url>     Canonical source URL");
+		err.println("  --derive-source-url <kind>  Derive source URL (e.g. bitprint)");
 		err.println("  --dialect <name>       " + Dialects.names() + " (default: generic)");
 		err.println("  --report <file>        Write the unmapped-construct report as TSV");
 	}

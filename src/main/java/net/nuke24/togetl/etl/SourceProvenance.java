@@ -4,6 +4,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 
+import net.nuke24.togetl.hash.BitprintDigest;
+import net.nuke24.togetl.hash.BitprintScheme;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.util.Sink;
 
@@ -44,10 +46,12 @@ public final class SourceProvenance {
 	/** Computes provenance from blocks as they stream past. */
 	public static final class Digester implements Sink<byte[]> {
 		private final MessageDigest digest;
+		private final BitprintDigest bitprintDigest = new BitprintDigest();
 		private final byte[] head = new byte[3];
 		private int headLength;
 		private long byteLength;
 		private SourceProvenance result;
+		private String bitprint;
 		
 		public Digester() {
 			try {
@@ -63,10 +67,12 @@ public final class SourceProvenance {
 				boolean bom = headLength == 3
 						&& head[0] == (byte) 0xEF && head[1] == (byte) 0xBB && head[2] == (byte) 0xBF;
 				result = new SourceProvenance(Identifiers.hex(digest.digest()), byteLength, bom);
+				bitprint = BitprintScheme.hashToUrn(bitprintDigest.digest());
 				return;
 			}
 			byte[] block = item.get();
 			digest.update(block);
+			bitprintDigest.update(block);
 			for (int i = 0; i < block.length && headLength < head.length; i++) {
 				head[headLength++] = block[i];
 			}
@@ -79,6 +85,14 @@ public final class SourceProvenance {
 				throw new IllegalStateException("input has not ended");
 			}
 			return result;
+		}
+		
+		/** Available once the end of input has been accepted. */
+		public String bitprint() {
+			if (bitprint == null) {
+				throw new IllegalStateException("input has not ended");
+			}
+			return bitprint;
 		}
 	}
 }

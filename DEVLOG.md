@@ -30,3 +30,9 @@ it had been rebased into master).
 
 Noting here on the off chance there's any value in remembering
 that alternate history.
+
+## 2026-11-13 - Document identity is the bitprint of its content - Master Beam
+
+Documents are now identified by the bitprint of their content rather than a hash
+of their source URL. The source URL is still recorded as togetl:sourceUrl.
+A document entity ID is still undefined; see the TODO in Identifiers.

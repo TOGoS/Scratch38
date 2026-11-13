@@ -69,9 +69,6 @@ function resource_url($iri)
     if (strpos($iri, 'tag:nuke24.net,2026-11:3dparts:part:') === 0) {
         return part_url($iri);
     }
-    if (strpos($iri, 'tag:nuke24.net,2026-11:togetl:document:') === 0) {
-        return document_url($iri);
-    }
     return subject_url($iri);
 }
 

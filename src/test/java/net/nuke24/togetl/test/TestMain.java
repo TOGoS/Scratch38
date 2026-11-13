@@ -692,12 +692,7 @@ public final class TestMain {
 		String url = "https://example.com/a b.tef";
 		String documentIri = Identifiers.documentIri(url);
 		String documentImportIri = Identifiers.documentImportIri(documentIri, "test/1");
-		String prefix = Identifiers.TAG_PREFIX + "document:";
-		String importPrefix = Identifiers.TAG_PREFIX + "document-import:";
-		check(documentIri.startsWith(prefix), "document IRI prefix: " + documentIri);
-		check(documentImportIri.startsWith(importPrefix), "document import IRI prefix: " + documentImportIri);
-		assertEquals(prefix.length() + 16, documentIri.length(), "document hash length");
-		assertEquals(importPrefix.length() + 16, documentImportIri.length(), "document import hash length");
+		assertEquals(url, documentIri, "document IRI is the source URL");
 		assertEquals(documentIri, Identifiers.documentIri(url), "document IRI is deterministic");
 		assertEquals(documentImportIri, Identifiers.documentImportIri(documentIri, "test/1"),
 				"document import IRI is deterministic");
@@ -706,8 +701,8 @@ public final class TestMain {
 		check(!documentIri.equals(Identifiers.documentIri(url + "x")), "different URLs differ");
 		
 		String entryIri = Identifiers.tefEntryIri(documentIri, 7);
-		check(entryIri.startsWith(Identifiers.TAG_PREFIX + "tef-entry:"), "entry IRI prefix");
-		check(entryIri.endsWith(":7"), "entry ordinal suffix");
+		check(entryIri.startsWith(url + "#tef-entry-"), "entry IRI prefix");
+		check(entryIri.endsWith("7"), "entry ordinal suffix");
 		
 		assertEquals(
 				"tag:nuke24.net,2026-11:togetl:part:a%2fb",
@@ -1246,12 +1241,14 @@ public final class TestMain {
 		assertEquals(0, ImportCommand.run(new String[] {
 				"--input", input.toString(),
 				"--output", first.toString(),
-				"--report", report.toString()
+				"--report", report.toString(),
+				"--source-url", "file:///data.tef"
 		}), "first import exit code");
 		
 		assertEquals(0, ImportCommand.run(new String[] {
 				"--input", input.toString(),
-				"--output", second.toString()
+				"--output", second.toString(),
+				"--source-url", "file:///data.tef"
 		}), "second import exit code");
 		
 		byte[] firstBytes = Files.readAllBytes(first);
@@ -1308,7 +1305,8 @@ public final class TestMain {
 		Files.write(input, bytes);
 		
 		assertEquals(0, ImportCommand.run(new String[] {
-				"--input", input.toString(), "--output", output.toString()
+				"--input", input.toString(), "--output", output.toString(),
+				"--source-url", "file:///data.tef"
 		}), "import exit code");
 		String written = new String(Files.readAllBytes(output), StandardCharsets.UTF_8);
 		check(written.contains(Identifiers.sha256(bytes)), "output should record the input's SHA-256");
