@@ -169,9 +169,19 @@ acceptance: The Debian environment can run `php -v` and `php -m | grep -i sqlite
 notes: This is the parallel equivalent of the Alpine devcontainer setup. It is not a project vendoring solution; it is a distro-specific system install path that should work alongside the alpine container setup.
 
 =task S36CR-011
-status: pending
+status: done
 
 Try to compact PLAN.  It gets overly-specific in some cases
 and talks about implementation details that would be better
 left to the Java source code to tell.  A note has been
 added to AGENTS.md only after a lot of gunk went in there.
+
+-----
+
+# Commit series since 714f51d5086d72187dc30f07dcc9470c5b4cfbfa (Reviewer Beam)
+# - Trim PLAN.md/README.md; move Documentation guidance to CONTRIBUTING.md (doc-mc-cleany)
+# - Restore design-level content and behavioral guarantees per review
+# - Add disclaimer to PLAN.md
+# - Archive PLAN.md/TODO.tef to .archived-docs/20261113-*; update refs; add architecture + status to README
+
+— Reviewer Beam
