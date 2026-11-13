@@ -15,11 +15,13 @@ import net.nuke24.togetl.util.Sink;
  */
 public final class SourceProvenance {
 	private final String sha256;
+	private final String bitprintUrn;
 	private final long byteLength;
 	private final boolean bom;
 	
-	private SourceProvenance(String sha256, long byteLength, boolean bom) {
+	private SourceProvenance(String sha256, String bitprintUrn, long byteLength, boolean bom) {
 		this.sha256 = sha256;
+		this.bitprintUrn = bitprintUrn;
 		this.byteLength = byteLength;
 		this.bom = bom;
 	}
@@ -31,31 +33,23 @@ public final class SourceProvenance {
 		return digester.result();
 	}
 	
-	public String getSha256() {
-		return sha256;
-	}
-	
-	public long getByteLength() {
-		return byteLength;
-	}
-	
-	public boolean hasBom() {
-		return bom;
-	}
+	public String getSha256() { return sha256; }
+	public String getBitprintUri() { return bitprintUrn; }
+	public long getByteLength() { return byteLength; }
+	public boolean hasBom() { return bom; }
 	
 	/** Computes provenance from blocks as they stream past. */
 	public static final class Digester implements Sink<byte[]> {
-		private final MessageDigest digest;
-		private final BitprintDigest bitprintDigest = new BitprintDigest();
+		private final MessageDigest sha256Digest;
+		private final MessageDigest bitprintDigest = new BitprintDigest();
 		private final byte[] head = new byte[3];
 		private int headLength;
 		private long byteLength;
 		private SourceProvenance result;
-		private String bitprint;
 		
 		public Digester() {
 			try {
-				digest = MessageDigest.getInstance("SHA-256");
+				sha256Digest = MessageDigest.getInstance("SHA-256");
 			} catch (NoSuchAlgorithmException e) {
 				throw new IllegalStateException("SHA-256 is unavailable", e);
 			}
@@ -66,12 +60,15 @@ public final class SourceProvenance {
 			if (!item.isPresent()) {
 				boolean bom = headLength == 3
 						&& head[0] == (byte) 0xEF && head[1] == (byte) 0xBB && head[2] == (byte) 0xBF;
-				result = new SourceProvenance(Identifiers.hex(digest.digest()), byteLength, bom);
-				bitprint = BitprintScheme.hashToUrn(bitprintDigest.digest());
+				result = new SourceProvenance(
+					Identifiers.hex(sha256Digest.digest()),
+					BitprintScheme.instance.hashToUri(bitprintDigest.digest()),
+					byteLength, bom
+				);
 				return;
 			}
 			byte[] block = item.get();
-			digest.update(block);
+			sha256Digest.update(block);
 			bitprintDigest.update(block);
 			for (int i = 0; i < block.length && headLength < head.length; i++) {
 				head[headLength++] = block[i];
@@ -85,14 +82,6 @@ public final class SourceProvenance {
 				throw new IllegalStateException("input has not ended");
 			}
 			return result;
-		}
-		
-		/** Available once the end of input has been accepted. */
-		public String bitprint() {
-			if (bitprint == null) {
-				throw new IllegalStateException("input has not ended");
-			}
-			return bitprint;
 		}
 	}
 }

@@ -5,9 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Passes every item, and the end of input, to each of its targets in turn.
- */
+/** Passes every item to each of its targets in turn. */
 public final class MultiSink<T> implements Sink<T> {
 	private final List<Sink<T>> targets;
 	

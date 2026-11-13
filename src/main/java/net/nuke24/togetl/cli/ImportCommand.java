@@ -40,7 +40,7 @@ import net.nuke24.togetl.togetltsv.TOGETLTSVWriter;
 public final class ImportCommand {
 	private String input;
 	private String output = "-";
-	private String sourceUrl;
+	private String sourceUri;
 	private String deriveSourceUrl;
 	private String dialect = "generic";
 	private String reportPath;
@@ -90,9 +90,12 @@ public final class ImportCommand {
 				input = value != null ? value : next(args, ++i, key);
 			} else if ("--output".equals(key) || "-o".equals(key)) {
 				output = value != null ? value : next(args, ++i, key);
-			} else if ("--source-url".equals(key)) {
-				sourceUrl = value != null ? value : next(args, ++i, key);
-			} else if ("--derive-source-url".equals(key)) {
+			} else if ("--source-url".equals(key) || "--source-uri".equals(key)) {
+				// TODO: Tell the clankers to remove '--source-url' when they're back online
+				// and can sort out all the repercussions.
+				sourceUri = value != null ? value : next(args, ++i, key);
+			} else if ("--derive-source-url".equals(key) || "--derive-source-uri".equals(key)) {
+				// TODO: For this, too.
 				deriveSourceUrl = value != null ? value : next(args, ++i, key);
 			} else if ("--dialect".equals(key)) {
 				dialect = value != null ? value : next(args, ++i, key);
@@ -108,10 +111,10 @@ public final class ImportCommand {
 		if (output == null || output.isEmpty()) {
 			throw new UsageException("--output must not be empty");
 		}
-		if (sourceUrl == null && deriveSourceUrl == null) {
+		if (sourceUri == null && deriveSourceUrl == null) {
 			throw new UsageException("--source-url or --derive-source-url is required");
 		}
-		if (sourceUrl != null && deriveSourceUrl != null) {
+		if (sourceUri != null && deriveSourceUrl != null) {
 			throw new UsageException("--source-url and --derive-source-url are mutually exclusive");
 		}
 		if (deriveSourceUrl != null && !"bitprint".equals(deriveSourceUrl)) {
@@ -150,9 +153,9 @@ public final class ImportCommand {
 				}
 			}
 			digester.accept(Optional.<byte[]>empty());
-			sourceUrl = digester.bitprint();
+			sourceUri = digester.result().getBitprintUri();
 		}
-		String effectiveSourceUrl = sourceUrl != null ? sourceUrl : defaultSourceUrl(input);
+		String effectiveSourceUrl = sourceUri != null ? sourceUri : defaultSourceUrl(input);
 		
 		SourceProvenance.Digester digester = new SourceProvenance.Digester();
 		InputStream digestIn = "-".equals(input) ? System.in : Files.newInputStream(Paths.get(input));
@@ -173,9 +176,9 @@ public final class ImportCommand {
 		SourceProvenance provenance = digester.result();
 		
 		if (effectiveSourceUrl.startsWith("urn:bitprint:")) {
-			if (!digester.bitprint().equals(effectiveSourceUrl)) {
+			if (!digester.result().getBitprintUri().equals(effectiveSourceUrl)) {
 				throw new TEFReadException("source URL bitprint does not match content: expected "
-						+ digester.bitprint() + " but got " + effectiveSourceUrl);
+						+ digester.result().getBitprintUri() + " but got " + effectiveSourceUrl);
 			}
 		} else {
 			System.err.println("togetl import: warning: source URL is not a bitprint URN ("
