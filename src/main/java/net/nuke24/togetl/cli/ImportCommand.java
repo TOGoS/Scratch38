@@ -128,7 +128,12 @@ public final class ImportCommand {
 	
 	private void execute() throws IOException, TEFReadException {
 		TEFDialect selectedDialect = Dialects.byName(dialect);
+		// Note: If ever there is more than just 'bitprint', we might consider
+		// centralizing information about digests somewhere.
 		if (deriveSourceUrl != null) {
+			if (!"bitprint".equals(deriveSourceUrl)) {
+				throw new IllegalArgumentException("Unknown digest algorithm: " + deriveSourceUrl);
+			}
 			SourceProvenance.Digester digester = new SourceProvenance.Digester();
 			InputStream in = "-".equals(input) ? System.in : Files.newInputStream(Paths.get(input));
 			try {
