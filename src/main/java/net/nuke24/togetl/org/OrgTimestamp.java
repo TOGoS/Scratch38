@@ -18,6 +18,13 @@ public final class OrgTimestamp {
 		return text;
 	}
 	
+	/**
+	 * Active timestamps are written {@code <...>}; inactive ones {@code [...]}.
+	 */
+	public boolean isActive() {
+		return text.startsWith("<");
+	}
+	
 	public int getLine() {
 		return line;
 	}

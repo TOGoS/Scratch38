@@ -94,6 +94,7 @@ public final class TestMain {
 		run("vocabulary report", TestMain::testVocabularyReport);
 		run("vocab command", TestMain::testVocabCommand);
 		run("org reader", TestMain::testOrgReader);
+		run("org heading metadata", TestMain::testOrgHeadingMetadata);
 		run("import command", TestMain::testImportCommand);
 		run("import command org-structure", TestMain::testImportCommandOrgStructure);
 		
@@ -718,13 +719,20 @@ public final class TestMain {
 	
 	private static void testOrgReader() {
 		String org = ""
-				+ "* Root heading\n"
+				+ "* TODO [#A] Root heading :root:test:\n"
 				+ ":PROPERTIES:\n"
 				+ ":CUSTOM_ID: root-id\n"
+				+ ":slicer_xy_compensation: -0.15\n"
 				+ ":END:\n"
 				+ "SCHEDULED: <2026-11-12 Thu>\n"
+				+ "[2026-11-13 Fri] body note\n"
 				+ "- [X] done item\n"
 				+ "See [[https://example.com/][Example]]\n"
+				+ "#+begin_src org\n"
+				+ "* Not a heading\n"
+				+ "[[https://example.com/fake][Fake]]\n"
+				+ "- [ ] not a checkbox\n"
+				+ "#+end_src\n"
 				+ "** Child heading\n"
 				+ "- [ ] open item\n";
 		OrgDocument document = OrgReader.read(
@@ -735,9 +743,20 @@ public final class TestMain {
 		OrgHeading root = document.getHeadings().get(0);
 		assertEquals(1, root.getLevel(), "root level");
 		assertEquals("Root heading", root.getTitle(), "root title");
+		assertEquals("TODO", root.getTodoKeyword(), "root TODO keyword");
+		assertEquals("A", root.getPriority(), "root priority");
+		assertEquals(2, root.getTags().size(), "root tag count");
+		assertEquals("root", root.getTags().get(0), "first root tag");
+		assertEquals("test", root.getTags().get(1), "second root tag");
 		assertEquals("root-id", root.getCustomId(), "CUSTOM_ID parsed");
-		assertEquals(1, root.getTimestamps().size(), "timestamp count");
-		assertEquals("<2026-11-12 Thu>", root.getTimestamps().get(0).getText(), "timestamp text");
+		assertEquals(2, root.getProperties().size(), "property count");
+		assertEquals("-0.15", root.getProperty("slicer_xy_compensation"), "custom property");
+		assertEquals(1, root.getPlanning().size(), "planning count");
+		assertEquals("SCHEDULED", root.getPlanning().get(0).getKeyword(), "planning keyword");
+		assertEquals("<2026-11-12 Thu>", root.getPlanning().get(0).getTimestamp().getText(),
+				"planning timestamp");
+		assertEquals(1, root.getTimestamps().size(), "body timestamp count");
+		assertEquals("[2026-11-13 Fri]", root.getTimestamps().get(0).getText(), "body timestamp text");
 		assertEquals(1, root.getCheckboxes().size(), "root checkbox count");
 		assertEquals("checked", root.getCheckboxes().get(0).getState(), "root checkbox state");
 		assertEquals(1, root.getLinks().size(), "root link count");
@@ -747,6 +766,37 @@ public final class TestMain {
 		assertEquals(2, child.getLevel(), "child level");
 		assertEquals(1, child.getCheckboxes().size(), "child checkbox count");
 		assertEquals("unchecked", child.getCheckboxes().get(0).getState(), "child checkbox state");
+	}
+	
+	private static void testOrgHeadingMetadata() {
+		String org = ""
+				+ "#+TODO: TODO STARTED | DONE CANCELLED\n"
+				+ "* STARTED [#B] Configured keyword :project:\n"
+				+ "DEADLINE: <2026-12-01 Tue> CLOSED: [2026-11-30 Mon]\n"
+				+ "* LEGO-compatible bricks\n"
+				+ "* [2026-11-14 Sat] Date heading\n";
+		OrgDocument document = OrgReader.read(
+				"https://example.com/metadata.org",
+				org.getBytes(StandardCharsets.UTF_8));
+		assertEquals(3, document.getHeadings().size(), "heading count");
+		
+		OrgHeading configured = document.getHeadings().get(0);
+		assertEquals("STARTED", configured.getTodoKeyword(), "configured TODO keyword");
+		assertEquals("B", configured.getPriority(), "configured priority");
+		assertEquals("Configured keyword", configured.getTitle(), "configured title");
+		assertEquals(1, configured.getTags().size(), "configured tag count");
+		assertEquals("project", configured.getTags().get(0), "configured tag");
+		assertEquals(2, configured.getPlanning().size(), "planning entry count");
+		assertEquals("DEADLINE", configured.getPlanning().get(0).getKeyword(), "deadline keyword");
+		assertEquals("CLOSED", configured.getPlanning().get(1).getKeyword(), "closed keyword");
+		
+		OrgHeading plain = document.getHeadings().get(1);
+		assertEquals("LEGO-compatible bricks", plain.getTitle(), "uppercase title is not a TODO keyword");
+		assertEquals(null, plain.getTodoKeyword(), "plain heading has no TODO keyword");
+		
+		OrgHeading dated = document.getHeadings().get(2);
+		assertEquals("[2026-11-14 Sat] Date heading", dated.getTitle(), "date remains in heading title");
+		assertEquals(1, dated.getTimestamps().size(), "heading-line timestamp parsed");
 	}
 	
 	private static void testImportCommand() throws Exception {
@@ -800,9 +850,11 @@ public final class TestMain {
 		output.toFile().deleteOnExit();
 		
 		String text = ""
-				+ "* Root\n"
+				+ "#+TODO: TODO | DONE\n"
+				+ "* TODO [#A] Root :log:\n"
 				+ ":PROPERTIES:\n"
 				+ ":CUSTOM_ID: print-log\n"
+				+ ":slicer_xy_compensation: -0.15\n"
 				+ ":END:\n"
 				+ "SCHEDULED: <2026-11-12 Thu>\n"
 				+ "** Child\n"
@@ -840,6 +892,8 @@ public final class TestMain {
 		
 		boolean hasOutlineParent = false;
 		boolean hasUncheckedCheckbox = false;
+		String propertySubject = null;
+		String planningSubject = null;
 		for (Statement statement : read) {
 			if (statement.getPredicate().equals(outlineParentPredicate)
 					&& statement.getObject().toString().equals(rootSubject)) {
@@ -849,9 +903,33 @@ public final class TestMain {
 					&& "data:,unchecked".equals(statement.getObject().toString())) {
 				hasUncheckedCheckbox = true;
 			}
+			if (statement.getPredicate().equals(Vocab.TOGETL_ORG_PROPERTY_LINK)
+					&& statement.getSubject().toString().equals(rootSubject)) {
+				propertySubject = statement.getObject().toString();
+			}
+			if (statement.getPredicate().equals(Vocab.TOGETL_ORG_PLANNING_LINK)
+					&& statement.getSubject().toString().equals(rootSubject)) {
+				planningSubject = statement.getObject().toString();
+			}
 		}
 		check(hasOutlineParent, "child heading links to parent");
 		check(hasUncheckedCheckbox, "checkbox state emitted");
+		check(has(read, rootSubject, Vocab.TOGETL_ORG_TODO_KEYWORD, Literal.of("TODO").toString()),
+				"TODO keyword emitted");
+		check(has(read, rootSubject, Vocab.TOGETL_ORG_PRIORITY, Literal.of("A").toString()),
+				"priority emitted");
+		check(has(read, rootSubject, Vocab.TOGETL_TAG, Literal.of("log").toString()),
+				"heading tag emitted");
+		check(propertySubject != null, "property node emitted");
+		check(has(read, propertySubject, Vocab.TOGETL_ORG_PROPERTY_NAME,
+				Literal.of("slicer_xy_compensation").toString()), "property name emitted");
+		check(has(read, propertySubject, Vocab.TOGETL_ORG_PROPERTY_VALUE,
+				Literal.of("-0.15").toString()), "property value emitted");
+		check(planningSubject != null, "planning node emitted");
+		check(has(read, planningSubject, Vocab.TOGETL_ORG_PLANNING_KEYWORD,
+				Literal.of("SCHEDULED").toString()), "planning keyword emitted");
+		check(has(read, planningSubject, Vocab.TOGETL_ORG_TIMESTAMP,
+				Literal.of("<2026-11-12 Thu>").toString()), "planning timestamp emitted");
 	}
 	
 	private static List<Statement> collect(

@@ -44,6 +44,8 @@ public final class Vocab {
 	public static final IRI TOGETL_NARRATION = data("Narration");
 	public static final IRI TOGETL_NAMESPACE = togetl("Namespace");
 	public static final IRI TOGETL_ORG_HEADING = togetl("OrgHeading");
+	public static final IRI TOGETL_ORG_PROPERTY = togetl("OrgProperty");
+	public static final IRI TOGETL_ORG_PLANNING = togetl("OrgPlanning");
 	public static final IRI TOGETL_PROJECT_BASE = general("ProjectBase");
 	public static final IRI TOGETL_FORMAT_CLASS = general("Format");
 	public static final IRI TEF_ENTRY = tef("Entry");
@@ -123,7 +125,15 @@ public final class Vocab {
 	public static final IRI TOGETL_OUTLINE_LEVEL = togetl("outlineLevel");
 	public static final IRI TOGETL_OUTLINE_INDEX = togetl("outlineIndex");
 	public static final IRI TOGETL_CUSTOM_ID = togetl("customId");
+	public static final IRI TOGETL_ORG_TODO_KEYWORD = togetl("orgTodoKeyword");
+	public static final IRI TOGETL_ORG_PRIORITY = togetl("orgPriority");
+	public static final IRI TOGETL_ORG_PROPERTY_LINK = togetl("orgProperty");
+	public static final IRI TOGETL_ORG_PROPERTY_NAME = togetl("orgPropertyName");
+	public static final IRI TOGETL_ORG_PROPERTY_VALUE = togetl("orgPropertyValue");
+	public static final IRI TOGETL_ORG_PLANNING_LINK = togetl("orgPlanning");
+	public static final IRI TOGETL_ORG_PLANNING_KEYWORD = togetl("orgPlanningKeyword");
 	public static final IRI TOGETL_ORG_TIMESTAMP = togetl("orgTimestamp");
+	public static final IRI TOGETL_ORG_TIMESTAMP_ACTIVE = togetl("orgTimestampActive");
 	public static final IRI TOGETL_ORG_CHECKBOX_STATE = togetl("orgCheckboxState");
 	public static final IRI TOGETL_ORG_LINK = togetl("orgLink");
 	public static final IRI TOGETL_ORG_LINK_TARGET = togetl("orgLinkTarget");

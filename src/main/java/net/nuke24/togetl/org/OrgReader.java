@@ -2,7 +2,11 @@ package net.nuke24.togetl.org;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -11,15 +15,37 @@ import java.util.regex.Pattern;
  */
 public final class OrgReader {
 	private static final Pattern HEADING =
-			Pattern.compile("^(\\*+)\\s+(.*)$");
+			Pattern.compile("^(\\*+)[ \t]+(.*)$");
+	private static final Pattern TAGS =
+			Pattern.compile("(:[^\\s:]+(?::[^\\s:]+)*:)\\s*$");
+	private static final Pattern PRIORITY =
+			Pattern.compile("\\[#([A-Za-z0-9])\\]");
 	private static final Pattern PROPERTY =
-			Pattern.compile("^:([^:]+):\\s*(.*)$");
+			Pattern.compile("^\\s*:([^:\\s]+):[ \t]*(.*)$");
+	private static final Pattern DRAWER =
+			Pattern.compile("^\\s*:([A-Za-z0-9_@#%+-]+):[ \t]*$");
+	private static final Pattern DRAWER_END =
+			Pattern.compile("^\\s*:END:[ \t]*$");
+	private static final Pattern PLANNING_START =
+			Pattern.compile("^\\s*(SCHEDULED|DEADLINE|CLOSED):[ \t]*(.*)$");
+	private static final Pattern PLANNING =
+			Pattern.compile("(SCHEDULED|DEADLINE|CLOSED):[ \t]*(<\\d{4}-[^>\\n]*>|\\[\\d{4}-[^\\]\\n]*\\])");
+	private static final Pattern DIRECTIVE =
+			Pattern.compile("^\\s*#\\+([A-Za-z0-9_-]+):[ \t]*(.*)$");
+	private static final Pattern BLOCK_BEGIN =
+			Pattern.compile("^\\s*#\\+begin_([A-Za-z0-9_-]+)(?:[ \t]+(.*))?$", Pattern.CASE_INSENSITIVE);
+	private static final Pattern BLOCK_END =
+			Pattern.compile("^\\s*#\\+end_([A-Za-z0-9_-]+)[ \t]*$", Pattern.CASE_INSENSITIVE);
 	private static final Pattern LINK =
 			Pattern.compile("\\[\\[([^\\]]+)\\](?:\\[([^\\]]*)\\])?\\]");
 	private static final Pattern TIMESTAMP =
 			Pattern.compile("(<\\d{4}-[^>\\n]*>|\\[\\d{4}-[^\\]\\n]*\\])");
 	private static final Pattern CHECKBOX =
 			Pattern.compile("(^|\\s)\\[( |x|X|-)\\](?=\\s|$)");
+			
+	private static final List<String> DEFAULT_TODO_KEYWORDS = Arrays.asList(
+			"TODO", "DONE", "WAIT", "WAITING", "HOLD", "STARTED", "NEXT",
+			"CANCELLED", "CANCELED", "IDEA", "PROJ");
 			
 	private OrgReader() {
 	}
@@ -35,19 +61,65 @@ public final class OrgReader {
 		
 		String[] lines = text.split("\n", -1);
 		List<OrgHeading> headings = new ArrayList<OrgHeading>();
+		Set<String> todoKeywords = new HashSet<String>(DEFAULT_TODO_KEYWORDS);
 		OrgHeading currentHeading = null;
-		boolean inProperties = false;
+		boolean inBlock = false;
+		String blockName = null;
+		boolean inDrawer = false;
+		String drawerName = null;
 		for (int i = 0; i < lines.length; i++) {
 			int lineNumber = i + 1;
 			String line = stripTrailingCr(lines[i]);
 			
+			if (inBlock) {
+				Matcher blockEnd = BLOCK_END.matcher(line);
+				if (blockEnd.matches() && blockEnd.group(1).equalsIgnoreCase(blockName)) {
+					inBlock = false;
+					blockName = null;
+				}
+				continue;
+			}
+			Matcher blockBegin = BLOCK_BEGIN.matcher(line);
+			if (blockBegin.matches()) {
+				inBlock = true;
+				blockName = blockBegin.group(1);
+				continue;
+			}
+			
 			Matcher headingMatch = HEADING.matcher(line);
 			if (headingMatch.matches()) {
-				int level = headingMatch.group(1).length();
-				String title = headingMatch.group(2).trim();
-				currentHeading = new OrgHeading(level, title, lineNumber);
+				currentHeading = parseHeading(headingMatch, todoKeywords, lineNumber);
 				headings.add(currentHeading);
-				inProperties = false;
+				inDrawer = false;
+				drawerName = null;
+				continue;
+			}
+			
+			if (inDrawer) {
+				if (DRAWER_END.matcher(line).matches()) {
+					inDrawer = false;
+					drawerName = null;
+					continue;
+				}
+				if ("PROPERTIES".equalsIgnoreCase(drawerName)) {
+					Matcher propertyMatch = PROPERTY.matcher(line);
+					if (propertyMatch.matches()) {
+						String key = propertyMatch.group(1).trim();
+						String value = propertyMatch.group(2).trim();
+						currentHeading.addProperty(new OrgProperty(
+								key, value, lineNumber, propertyMatch.start(1) + 1));
+						if ("CUSTOM_ID".equalsIgnoreCase(key) && !value.isEmpty()) {
+							currentHeading.setCustomId(value);
+						}
+					}
+				}
+				continue;
+			}
+			
+			Matcher directiveMatch = DIRECTIVE.matcher(line);
+			if (directiveMatch.matches()) {
+				updateTodoKeywords(
+						directiveMatch.group(1), directiveMatch.group(2), todoKeywords);
 				continue;
 			}
 			
@@ -55,23 +127,28 @@ public final class OrgReader {
 				continue;
 			}
 			
-			if (":PROPERTIES:".equals(line)) {
-				inProperties = true;
+			if (isComment(line)) {
 				continue;
 			}
-			if (inProperties) {
-				if (":END:".equals(line)) {
-					inProperties = false;
-					continue;
+			
+			Matcher planningStart = PLANNING_START.matcher(line);
+			if (planningStart.matches()) {
+				Matcher planningMatch = PLANNING.matcher(line);
+				while (planningMatch.find()) {
+					currentHeading.addPlanning(new OrgPlanning(
+							planningMatch.group(1),
+							new OrgTimestamp(
+									planningMatch.group(2),
+									lineNumber,
+									planningMatch.start(2) + 1)));
 				}
-				Matcher propertyMatch = PROPERTY.matcher(line);
-				if (propertyMatch.matches()) {
-					String key = propertyMatch.group(1).trim();
-					String value = propertyMatch.group(2).trim();
-					if ("CUSTOM_ID".equalsIgnoreCase(key) && !value.isEmpty()) {
-						currentHeading.setCustomId(value);
-					}
-				}
+				continue;
+			}
+			
+			Matcher drawerMatch = DRAWER.matcher(line);
+			if (drawerMatch.matches()) {
+				inDrawer = true;
+				drawerName = drawerMatch.group(1);
 				continue;
 			}
 			
@@ -79,6 +156,94 @@ public final class OrgReader {
 		}
 		
 		return new OrgDocument(sourceIri, bytes.length, bom, headings);
+	}
+	
+	private static OrgHeading parseHeading(
+			Matcher headingMatch,
+			Set<String> todoKeywords,
+			int lineNumber
+	) {
+		int level = headingMatch.group(1).length();
+		String rest = headingMatch.group(2).trim();
+		List<String> tags = new ArrayList<String>();
+		
+		Matcher tagMatch = TAGS.matcher(rest);
+		if (tagMatch.find()
+				&& (tagMatch.start() == 0
+						|| Character.isWhitespace(rest.charAt(tagMatch.start() - 1)))) {
+			String tagGroup = tagMatch.group(1);
+			for (String tag : tagGroup.split(":")) {
+				if (!tag.isEmpty()) {
+					tags.add(tag);
+				}
+			}
+			rest = rest.substring(0, tagMatch.start()).trim();
+		}
+		
+		String todoKeyword = null;
+		int firstSpace = firstWhitespace(rest);
+		if (firstSpace > 0) {
+			String firstToken = rest.substring(0, firstSpace);
+			if (todoKeywords.contains(firstToken)) {
+				todoKeyword = firstToken;
+				rest = rest.substring(firstSpace).trim();
+			}
+		}
+		
+		String priority = null;
+		Matcher priorityMatch = PRIORITY.matcher(rest);
+		if (priorityMatch.lookingAt()
+				&& (priorityMatch.end() == rest.length()
+						|| Character.isWhitespace(rest.charAt(priorityMatch.end())))) {
+			priority = priorityMatch.group(1);
+			rest = rest.substring(priorityMatch.end()).trim();
+		}
+		
+		OrgHeading heading = new OrgHeading(level, rest, lineNumber);
+		heading.setTodoKeyword(todoKeyword);
+		heading.setPriority(priority);
+		for (String tag : tags) {
+			heading.addTag(tag);
+		}
+		parseMarkers(heading, rest, lineNumber);
+		return heading;
+	}
+	
+	private static int firstWhitespace(String text) {
+		for (int i = 0; i < text.length(); i++) {
+			if (Character.isWhitespace(text.charAt(i))) {
+				return i;
+			}
+		}
+		return -1;
+	}
+	
+	private static void updateTodoKeywords(
+			String directiveName,
+			String directiveValue,
+			Set<String> todoKeywords
+	) {
+		String name = directiveName.toUpperCase(Locale.ROOT);
+		if (!"TODO".equals(name) && !"SEQ_TODO".equals(name) && !"TYP_TODO".equals(name)) {
+			return;
+		}
+		for (String token : directiveValue.trim().split("\\s+")) {
+			if (token.isEmpty() || "|".equals(token)) {
+				continue;
+			}
+			int paren = token.indexOf('(');
+			if (paren > 0) {
+				token = token.substring(0, paren);
+			}
+			if (!token.isEmpty()) {
+				todoKeywords.add(token);
+			}
+		}
+	}
+	
+	private static boolean isComment(String line) {
+		String trimmed = line.trim();
+		return trimmed.startsWith("#") && !trimmed.startsWith("#+");
 	}
 	
 	private static void parseMarkers(OrgHeading heading, String line, int lineNumber) {

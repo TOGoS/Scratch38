@@ -11,6 +11,8 @@ import net.nuke24.togetl.org.OrgCheckbox;
 import net.nuke24.togetl.org.OrgDocument;
 import net.nuke24.togetl.org.OrgHeading;
 import net.nuke24.togetl.org.OrgLink;
+import net.nuke24.togetl.org.OrgPlanning;
+import net.nuke24.togetl.org.OrgProperty;
 import net.nuke24.togetl.org.OrgTimestamp;
 import net.nuke24.togetl.rdf.BlankNode;
 import net.nuke24.togetl.rdf.IRI;
@@ -33,6 +35,7 @@ public final class OrgStructureDialect {
 	) throws IOException {
 		emitDocumentMetadata(document, source, out);
 		
+		String scope = Identifiers.documentHash(source.getDocumentIri());
 		List<IRI> levelStack = new ArrayList<IRI>();
 		List<String> titleStack = new ArrayList<String>();
 		for (int i = 0; i < document.getHeadings().size(); i++) {
@@ -62,6 +65,19 @@ public final class OrgStructureDialect {
 				DialectSupport.emit(source, out, headingLocation, subject,
 						Vocab.TOGETL_CUSTOM_ID, Literal.of(heading.getCustomId()));
 			}
+			if (heading.getTodoKeyword() != null) {
+				DialectSupport.emit(source, out, headingLocation, subject,
+						Vocab.TOGETL_ORG_TODO_KEYWORD, Literal.of(heading.getTodoKeyword()));
+			}
+			if (heading.getPriority() != null) {
+				DialectSupport.emit(source, out, headingLocation, subject,
+						Vocab.TOGETL_ORG_PRIORITY, Literal.of(heading.getPriority()));
+			}
+			for (String tag : heading.getTags()) {
+				DialectSupport.emit(source, out, headingLocation, subject,
+						Vocab.TOGETL_TAG, Literal.of(tag));
+			}
+			emitHeadingDetails(source, out, scope, subject, i, heading);
 			
 			if (!levelStack.isEmpty()) {
 				DialectSupport.emit(source, out, headingLocation, subject,
@@ -121,6 +137,49 @@ public final class OrgStructureDialect {
 			out.append(titlePath.get(i));
 		}
 		return out.toString();
+	}
+	
+	private static void emitHeadingDetails(
+			SourceDocument source,
+			StatementConsumer out,
+			String scope,
+			IRI headingSubject,
+			int headingIndex,
+			OrgHeading heading
+	) throws IOException {
+		for (int i = 0; i < heading.getProperties().size(); i++) {
+			OrgProperty property = heading.getProperties().get(i);
+			Location location = Location.at(property.getLine(), property.getColumn());
+			BlankNode node = BlankNode.of(
+					"org-property-" + scope + "-" + headingIndex + "-" + i);
+			DialectSupport.emit(source, out, location, headingSubject,
+					Vocab.TOGETL_ORG_PROPERTY_LINK, node);
+			DialectSupport.emit(source, out, location, node,
+					Vocab.RDF_TYPE, Vocab.TOGETL_ORG_PROPERTY);
+			DialectSupport.emit(source, out, location, node,
+					Vocab.TOGETL_ORG_PROPERTY_NAME, Literal.of(property.getKey()));
+			DialectSupport.emit(source, out, location, node,
+					Vocab.TOGETL_ORG_PROPERTY_VALUE, Literal.of(property.getValue()));
+		}
+		
+		for (int i = 0; i < heading.getPlanning().size(); i++) {
+			OrgPlanning planning = heading.getPlanning().get(i);
+			OrgTimestamp timestamp = planning.getTimestamp();
+			Location location = Location.at(timestamp.getLine(), timestamp.getColumn());
+			BlankNode node = BlankNode.of(
+					"org-planning-" + scope + "-" + headingIndex + "-" + i);
+			DialectSupport.emit(source, out, location, headingSubject,
+					Vocab.TOGETL_ORG_PLANNING_LINK, node);
+			DialectSupport.emit(source, out, location, node,
+					Vocab.RDF_TYPE, Vocab.TOGETL_ORG_PLANNING);
+			DialectSupport.emit(source, out, location, node,
+					Vocab.TOGETL_ORG_PLANNING_KEYWORD, Literal.of(planning.getKeyword()));
+			DialectSupport.emit(source, out, location, node,
+					Vocab.TOGETL_ORG_TIMESTAMP, Literal.of(timestamp.getText()));
+			DialectSupport.emit(source, out, location, node,
+					Vocab.TOGETL_ORG_TIMESTAMP_ACTIVE,
+					Literal.of(timestamp.isActive() ? "true" : "false", Vocab.XSD_BOOLEAN));
+		}
 	}
 	
 	private static void emitHeadingMarkers(
