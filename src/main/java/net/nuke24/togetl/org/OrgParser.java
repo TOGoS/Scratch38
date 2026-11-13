@@ -62,7 +62,9 @@ public final class OrgParser implements Consumer<Optional<String>> {
 	private final List<OrgDirective> directives = new ArrayList<OrgDirective>();
 	private final List<OrgTable> tables = new ArrayList<OrgTable>();
 	private final List<OrgDiagnostic> diagnostics = new ArrayList<OrgDiagnostic>();
-	private final Set<String> todoKeywords = new HashSet<String>(DEFAULT_TODO_KEYWORDS);
+	private final Set<String> todoKeywords = new HashSet<String>();
+	private boolean todoDirectiveSeen;
+	private final Set<String> customIds = new HashSet<String>();
 	private OrgHeading currentHeading;
 	private int headingIndex = -1;
 	private OrgTable currentTable;
@@ -98,6 +100,9 @@ public final class OrgParser implements Consumer<Optional<String>> {
 	 * on the first line is recorded and removed.
 	 */
 	private void acceptLine(String text) {
+		if (text.indexOf('\n') >= 0) {
+			throw new IllegalArgumentException("Org line contains LF; push lines without terminators");
+		}
 		lineNumber++;
 		String line = text;
 		if (lineNumber == 1 && line.startsWith("\uFEFF")) {
@@ -129,7 +134,7 @@ public final class OrgParser implements Consumer<Optional<String>> {
 			if (inDrawer) {
 				diagnostics.add(unclosedDrawer(drawerName, drawerLine));
 			}
-			currentHeading = parseHeading(headingMatch, todoKeywords, lineNumber);
+			currentHeading = parseHeading(headingMatch, lineNumber);
 			headings.add(currentHeading);
 			headingIndex++;
 			inDrawer = false;
@@ -154,6 +159,9 @@ public final class OrgParser implements Consumer<Optional<String>> {
 					currentHeading.addProperty(new OrgProperty(
 							key, value, lineNumber, propertyMatch.start(1) + 1));
 					if ("CUSTOM_ID".equalsIgnoreCase(key) && !value.isEmpty()) {
+						if (!customIds.add(value)) {
+							diagnostics.add(new OrgDiagnostic(lineNumber, "duplicate CUSTOM_ID " + value));
+						}
 						currentHeading.setCustomId(value);
 					}
 				}
@@ -167,7 +175,9 @@ public final class OrgParser implements Consumer<Optional<String>> {
 			String value = directiveMatch.group(2).trim();
 			directives.add(new OrgDirective(
 					name, value, lineNumber, directiveMatch.start(1) + 1, headingIndex));
-			updateTodoKeywords(name, value, todoKeywords);
+			if (updateTodoKeywords(name, value, todoKeywords)) {
+				todoDirectiveSeen = true;
+			}
 			if ("NAME".equalsIgnoreCase(name)) {
 				pendingTableName = value;
 			} else if ("CAPTION".equalsIgnoreCase(name)) {
@@ -247,6 +257,12 @@ public final class OrgParser implements Consumer<Optional<String>> {
 		if (inDrawer) {
 			diagnostics.add(unclosedDrawer(drawerName, drawerLine));
 		}
+		Set<String> keywords = todoDirectiveSeen
+				? todoKeywords
+				: new HashSet<String>(DEFAULT_TODO_KEYWORDS);
+		for (OrgHeading heading : headings) {
+			resolveKeywords(heading, keywords);
+		}
 		document = new OrgDocument(bom, headings, directives, tables, diagnostics);
 	}
 	
@@ -254,11 +270,7 @@ public final class OrgParser implements Consumer<Optional<String>> {
 		return new OrgDiagnostic(line, "unclosed drawer :" + drawerName + ": has no :END:");
 	}
 	
-	private static OrgHeading parseHeading(
-			Matcher headingMatch,
-			Set<String> todoKeywords,
-			int lineNumber
-	) {
+	private static OrgHeading parseHeading(Matcher headingMatch, int lineNumber) {
 		int level = headingMatch.group(1).length();
 		String rest = headingMatch.group(2).trim();
 		List<String> tags = new ArrayList<String>();
@@ -276,28 +288,7 @@ public final class OrgParser implements Consumer<Optional<String>> {
 			rest = rest.substring(0, tagMatch.start()).trim();
 		}
 		
-		String todoKeyword = null;
-		int firstSpace = firstWhitespace(rest);
-		if (firstSpace > 0) {
-			String firstToken = rest.substring(0, firstSpace);
-			if (todoKeywords.contains(firstToken)) {
-				todoKeyword = firstToken;
-				rest = rest.substring(firstSpace).trim();
-			}
-		}
-		
-		String priority = null;
-		Matcher priorityMatch = PRIORITY.matcher(rest);
-		if (priorityMatch.lookingAt()
-				&& (priorityMatch.end() == rest.length()
-						|| Character.isWhitespace(rest.charAt(priorityMatch.end())))) {
-			priority = priorityMatch.group(1);
-			rest = rest.substring(priorityMatch.end()).trim();
-		}
-		
 		OrgHeading heading = new OrgHeading(level, rest, lineNumber);
-		heading.setTodoKeyword(todoKeyword);
-		heading.setPriority(priority);
 		for (String tag : tags) {
 			heading.addTag(tag);
 		}
@@ -314,14 +305,15 @@ public final class OrgParser implements Consumer<Optional<String>> {
 		return -1;
 	}
 	
-	private static void updateTodoKeywords(
+	/** Adds the keywords of a TODO-style directive; returns false for other directives. */
+	private static boolean updateTodoKeywords(
 			String directiveName,
 			String directiveValue,
 			Set<String> todoKeywords
 	) {
 		String name = directiveName.toUpperCase(Locale.ROOT);
 		if (!"TODO".equals(name) && !"SEQ_TODO".equals(name) && !"TYP_TODO".equals(name)) {
-			return;
+			return false;
 		}
 		for (String token : directiveValue.trim().split("\\s+")) {
 			if (token.isEmpty() || "|".equals(token)) {
@@ -335,6 +327,31 @@ public final class OrgParser implements Consumer<Optional<String>> {
 				todoKeywords.add(token);
 			}
 		}
+		return true;
+	}
+	
+	/**
+	 * Takes the TODO keyword and priority cookie from the start of a heading's
+	 * title. Done at end of input so that a file's keywords apply to the whole
+	 * file, not just the headings after the directive.
+	 */
+	private static void resolveKeywords(OrgHeading heading, Set<String> todoKeywords) {
+		String rest = heading.getTitle();
+		int firstSpace = firstWhitespace(rest);
+		String firstToken = firstSpace < 0 ? rest : rest.substring(0, firstSpace);
+		if (todoKeywords.contains(firstToken)) {
+			heading.setTodoKeyword(firstToken);
+			rest = firstSpace < 0 ? "" : rest.substring(firstSpace).trim();
+		}
+		
+		Matcher priorityMatch = PRIORITY.matcher(rest);
+		if (priorityMatch.lookingAt()
+				&& (priorityMatch.end() == rest.length()
+						|| Character.isWhitespace(rest.charAt(priorityMatch.end())))) {
+			heading.setPriority(priorityMatch.group(1));
+			rest = rest.substring(priorityMatch.end()).trim();
+		}
+		heading.setTitle(rest);
 	}
 	
 	private static boolean isComment(String line) {

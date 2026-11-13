@@ -62,7 +62,7 @@ own state and need no sentinel values.
 Current state:
 
 - The Org pipeline is push-based: a source pushes text chunks into `OrgLineSplitter`,
-  which pushes complete lines into `OrgParser.accept(String)`. Its output is a whole
+  which pushes complete lines into `OrgParser.accept(Optional<String>)`. Its output is a whole
   document model, which is intentional for now: the Org analyzer needs outline context
   (for example, `CUSTOM_ID` resolution across the document).
 - `TEFReader` reads the whole file into a byte array.
@@ -322,7 +322,10 @@ The Org importer has two parts that don't share a data model:
    planning lines, links, timestamps, checkbox states, `#+` directives, and tables
    with raw cell text. It emits no statements, and nothing it produces is persisted.
    Recovered problems are reported as `OrgDiagnostic`s on the document (for example,
-   an unclosed `#+begin_` block or drawer).
+   an unclosed `#+begin_` block or drawer). TODO keywords come from the file's
+   `#+TODO:`/`#+SEQ_TODO:`/`#+TYP_TODO:` directives when there are any, and from the
+   built-in defaults otherwise. They apply to the whole file, including headings before
+   the directive, so keywords are resolved at end of input.
 2. **Analyzer** (planned, ordinary Java) reads an `OrgDocument` and recognizes domain
    meaning: which headings are parts, prints, or slicings; which table columns are
    foreign keys; which identifiers are global. It emits TOGETLTSV through the same
@@ -354,7 +357,8 @@ decides per ID form:
 - A link such as `[[file::#id]]` resolves to a heading only when `file` is the current
   document. Links to other documents stay as literal targets until those documents are
   known.
-- Duplicate IDs within one document are reported through `ImportReport`, and their
+- The reader reports a duplicate `CUSTOM_ID` in one file as an `OrgDiagnostic` at the
+  line of the second occurrence. The analyzer reports it through `ImportReport`, and their
   statements are not merged.
 - Positional identifiers (heading index) are unstable under edits. Headings without a
   `CUSTOM_ID` should get identities that are not based on position alone, or be marked

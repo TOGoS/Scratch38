@@ -11,9 +11,9 @@ import java.util.Optional;
 /**
  * Entry points for reading Org documents.
  *
- * <p>Input is pulled from a source in chunks and pushed through a line
- * splitter into an {@link OrgParser}. Callers that already have text can drive
- * those stages directly.</p>
+ * <p>These methods pull text from a source in chunks and push it through
+ * {@link OrgLineSplitter} into an {@link OrgParser}. Code that already has
+ * lines can push them into an {@code OrgParser} directly, as described there.</p>
  */
 public final class OrgReader {
 	private static final int CHUNK_SIZE = 8192;
@@ -22,8 +22,9 @@ public final class OrgReader {
 	}
 	
 	public static OrgDocument read(byte[] bytes) {
-		try {
-			return read(new InputStreamReader(new ByteArrayInputStream(bytes), StandardCharsets.UTF_8));
+		try (Reader reader = new InputStreamReader(
+				new ByteArrayInputStream(bytes), StandardCharsets.UTF_8)) {
+			return read(reader);
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}

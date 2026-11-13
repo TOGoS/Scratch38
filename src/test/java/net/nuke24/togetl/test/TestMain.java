@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import net.nuke24.togetl.cli.ImportCommand;
 import net.nuke24.togetl.cli.VocabCommand;
@@ -104,6 +105,8 @@ public final class TestMain {
 		run("org recovery", TestMain::testOrgRecovery);
 		run("org line endings and cells", TestMain::testOrgLineEndingsAndCells);
 		run("org chunked input", TestMain::testOrgChunkedInput);
+		run("org keywords and duplicates", TestMain::testOrgKeywordsAndDuplicates);
+		run("org table separator and input rules", TestMain::testOrgTableSeparatorAndInputRules);
 		run("import command", TestMain::testImportCommand);
 		
 		System.out.println();
@@ -929,6 +932,56 @@ public final class TestMain {
 		assertEquals("a", document.getHeadings().get(0).getProperty("CUSTOM_ID"),
 				"chunked property value");
 		assertEquals(5, document.getHeadings().get(1).getLine(), "chunked line number");
+	}
+	
+	private static void testOrgKeywordsAndDuplicates() throws Exception {
+		OrgDocument bare = OrgReader.read("* TODO\n* WAIT thing\n".getBytes(StandardCharsets.UTF_8));
+		OrgHeading bareTodo = bare.getHeadings().get(0);
+		assertEquals("TODO", bareTodo.getTodoKeyword(), "bare keyword is a keyword");
+		assertEquals("", bareTodo.getTitle(), "bare keyword has an empty title");
+		assertEquals("WAIT", bare.getHeadings().get(1).getTodoKeyword(),
+				"default keywords apply when no directive is present");
+		
+		OrgDocument custom = OrgReader.read((
+				"* SHIP it\n"
+				+ "* WAIT thing\n"
+				+ "#+TODO: SHIP | DONE\n"
+				+ "* SHIP [#A] task\n"
+				+ "* TODO task\n").getBytes(StandardCharsets.UTF_8));
+		assertEquals("SHIP", custom.getHeadings().get(0).getTodoKeyword(),
+				"directive keywords apply to headings before it");
+		assertEquals(null, custom.getHeadings().get(1).getTodoKeyword(),
+				"defaults are replaced when a directive is present");
+		assertEquals("WAIT thing", custom.getHeadings().get(1).getTitle(),
+				"non-keyword word stays in the title");
+		assertEquals("SHIP", custom.getHeadings().get(2).getTodoKeyword(), "keyword before priority");
+		assertEquals("A", custom.getHeadings().get(2).getPriority(), "priority after keyword");
+		assertEquals("task", custom.getHeadings().get(2).getTitle(), "title after priority");
+		assertEquals(null, custom.getHeadings().get(3).getTodoKeyword(),
+				"TODO is not a keyword once a directive replaces the defaults");
+		assertEquals("TODO task", custom.getHeadings().get(3).getTitle(),
+				"TODO stays in the title");
+		
+		OrgDocument duplicates = OrgReader.read((
+				"* A\n:PROPERTIES:\n:CUSTOM_ID: x\n:END:\n"
+				+ "* B\n:PROPERTIES:\n:CUSTOM_ID: x\n:END:\n").getBytes(StandardCharsets.UTF_8));
+		assertEquals(1, duplicates.getDiagnostics().size(), "duplicate CUSTOM_ID diagnostic count");
+		assertEquals(7, duplicates.getDiagnostics().get(0).getLine(), "duplicate CUSTOM_ID line");
+	}
+	
+	private static void testOrgTableSeparatorAndInputRules() throws Exception {
+		OrgDocument degrees = OrgReader.read("* T\n|-5 degrees|\n".getBytes(StandardCharsets.UTF_8));
+		OrgTable table = degrees.getTables().get(0);
+		assertEquals(1, table.getRows().size(), "|-5 degrees| is one row");
+		check(table.getRows().get(0).isSeparator(),
+				"any line starting with |- is a horizontal rule, even with text in it");
+		
+		try {
+			new OrgParser().accept(Optional.of("embedded\nnewline"));
+			check(false, "a line containing LF must be rejected");
+		} catch (IllegalArgumentException expected) {
+			check(true, "a line containing LF is rejected");
+		}
 	}
 	
 	private static void testImportCommand() throws Exception {

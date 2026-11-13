@@ -9,7 +9,7 @@ import java.util.List;
  */
 public final class OrgHeading {
 	private final int level;
-	private final String title;
+	private String title;
 	private final int line;
 	private String todoKeyword;
 	private String priority;
@@ -33,6 +33,11 @@ public final class OrgHeading {
 	
 	public String getTitle() {
 		return title;
+	}
+	
+	/** Title text after any TODO keyword, priority cookie, and tags. */
+	public void setTitle(String title) {
+		this.title = title;
 	}
 	
 	public int getLine() {
