@@ -132,7 +132,7 @@ public final class OrgParser implements Consumer<Optional<String>> {
 		Matcher headingMatch = HEADING.matcher(line);
 		if (headingMatch.matches()) {
 			if (inDrawer) {
-				diagnostics.add(unclosedDrawer(drawerName, drawerLine));
+				throw unclosedDrawer(drawerName, drawerLine);
 			}
 			currentHeading = parseHeading(headingMatch, lineNumber);
 			headings.add(currentHeading);
@@ -251,11 +251,11 @@ public final class OrgParser implements Consumer<Optional<String>> {
 	
 	private void finish() {
 		if (inBlock) {
-			diagnostics.add(new OrgDiagnostic(blockLine,
-					"unclosed block #+begin_" + blockName + "; following lines are ignored"));
+			throw new OrgSyntaxException(blockLine,
+					"unclosed block #+begin_" + blockName + " has no #+end_" + blockName);
 		}
 		if (inDrawer) {
-			diagnostics.add(unclosedDrawer(drawerName, drawerLine));
+			throw unclosedDrawer(drawerName, drawerLine);
 		}
 		Set<String> keywords = todoDirectiveSeen
 				? todoKeywords
@@ -266,8 +266,8 @@ public final class OrgParser implements Consumer<Optional<String>> {
 		document = new OrgDocument(bom, headings, directives, tables, diagnostics);
 	}
 	
-	private static OrgDiagnostic unclosedDrawer(String drawerName, int line) {
-		return new OrgDiagnostic(line, "unclosed drawer :" + drawerName + ": has no :END:");
+	private static OrgSyntaxException unclosedDrawer(String drawerName, int line) {
+		return new OrgSyntaxException(line, "unclosed drawer :" + drawerName + ": has no :END:");
 	}
 	
 	private static OrgHeading parseHeading(Matcher headingMatch, int lineNumber) {

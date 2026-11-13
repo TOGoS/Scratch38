@@ -34,6 +34,7 @@ import net.nuke24.togetl.org.OrgDocument;
 import net.nuke24.togetl.org.OrgHeading;
 import net.nuke24.togetl.org.OrgParser;
 import net.nuke24.togetl.org.OrgReader;
+import net.nuke24.togetl.org.OrgSyntaxException;
 import net.nuke24.togetl.org.OrgTable;
 import net.nuke24.togetl.org.OrgTableRow;
 import net.nuke24.togetl.rdf.BlankNode;
@@ -870,19 +871,25 @@ public final class TestMain {
 		assertEquals(0, document.getDirectives().get(4).getHeadingIndex(), "directive heading index");
 	}
 	
+	private static void checkOrgError(String text, int line, String fragment) {
+		boolean threw = false;
+		try {
+			OrgReader.read(text.getBytes(StandardCharsets.UTF_8));
+		} catch (OrgSyntaxException expected) {
+			threw = true;
+			assertEquals(line, expected.getLine(), "org error line");
+			check(expected.getMessage().contains(fragment), "org error should mention " + fragment);
+		}
+		check(threw, "org syntax error should be fatal: " + fragment);
+	}
+	
 	private static void testOrgRecovery() {
-		OrgDocument blocked = OrgReader.read(
-				"\uFEFF* A\n#+begin_src\n* B\n* C\n".getBytes(StandardCharsets.UTF_8));
-		check(blocked.hasBom(), "byte order mark detected");
-		assertEquals(1, blocked.getHeadings().size(), "headings inside unclosed block are ignored");
-		assertEquals(1, blocked.getDiagnostics().size(), "unclosed block diagnostic count");
-		assertEquals(2, blocked.getDiagnostics().get(0).getLine(), "unclosed block diagnostic line");
+		OrgDocument bom = OrgReader.read("\uFEFF* A\n".getBytes(StandardCharsets.UTF_8));
+		check(bom.hasBom(), "byte order mark detected");
 		
-		OrgDocument drawer = OrgReader.read(
-				"* A\n:PROPERTIES:\n:CUSTOM_ID: a\n* B\n".getBytes(StandardCharsets.UTF_8));
-		assertEquals(2, drawer.getHeadings().size(), "heading after unclosed drawer");
-		assertEquals(1, drawer.getDiagnostics().size(), "unclosed drawer diagnostic count");
-		assertEquals(2, drawer.getDiagnostics().get(0).getLine(), "unclosed drawer diagnostic line");
+		checkOrgError("* A\n#+begin_src\n* B\n* C\n", 2, "unclosed block");
+		checkOrgError("* A\n:PROPERTIES:\n:CUSTOM_ID: a\n* B\n", 2, "unclosed drawer");
+		checkOrgError("* A\n:notes:\nno end here\n", 2, "unclosed drawer");
 		
 		OrgDocument tables = OrgReader.read(
 				"* T\n|-|-|\n| a | b |\n|---+---|\n".getBytes(StandardCharsets.UTF_8));
