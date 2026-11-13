@@ -48,41 +48,39 @@ The build targets Java 8 and does not require Maven.
 ./togetl version
 
 # Parts data with the domain mapping.
-./togetl import --dialect parts \
-    --derive-source-url bitprint \
-    --input fixtures/upstream/3DPrintingData.tef \
-    --output out/3dparts-data.togetltsv \
-    --report out/3dparts-data-report.tsv
+./togetl import --dialect=parts \
+    --derive-source-uri=bitprint \
+    --input=fixtures/upstream/3DPrintingData.tef \
+    --output=out/3dparts-data.togetltsv \
+    --report=out/3dparts-data-report.tsv
 
 # Shared namespace vocabulary.
-./togetl import --dialect namespaces \
-    --derive-source-url bitprint \
-    --input fixtures/upstream/namespaces.tef \
-    --output out/namespaces.togetltsv
+./togetl import --dialect=namespaces \
+    --derive-source-uri=bitprint \
+    --input=fixtures/upstream/namespaces.tef \
+    --output=out/namespaces.togetltsv
 
 # Check mapping terms against vocabulary definitions.
-./togetl vocab --report out/vocab-report.tsv
+./togetl vocab --report=out/vocab-report.tsv
 
 # Load the streams into SQLite.
-./togetl load --db out/togetl.sqlite3 \
-    --input out/3dparts-data.togetltsv \
-    --report out/3dparts-data-report.tsv \
-    --input out/namespaces.togetltsv
+./togetl load --db=out/togetl.sqlite3 \
+    --input=out/3dparts-data.togetltsv \
+    --report=out/3dparts-data-report.tsv \
+    --input=out/namespaces.togetltsv
 
 # Browse read-only.
 TOGETL_DB=out/togetl.sqlite3 php -S localhost:8080 web/router.php
 ```
 
-`import` defaults to the `generic` dialect. Every import needs a source
-identity, given as exactly one of:
+`import` defaults to the `generic` dialect. Every import needs a source URI,
+given as exactly one of:
 
-- `--derive-source-url bitprint`: the source URI is the bitprint of the content.
+- `--derive-source-uri=bitprint`: the source URI is the bitprint of the content.
   The input is digested before it is parsed.
-- `--source-url <uri>`: the source URI is given. If it is a `urn:bitprint:` URN,
+- `--source-uri=<uri>`: the source URI is given. If it is a `urn:bitprint:` URN,
   the importer checks it against the content and fails on a mismatch. Any other
   URI is accepted with a warning.
-
-A document is identified by its source URI.
 
 Mapping tables live in `mappings/*.tsv` and are selected by name. Each table has
 an `#entry` section mapping entry types to subject templates and RDF types, and a
