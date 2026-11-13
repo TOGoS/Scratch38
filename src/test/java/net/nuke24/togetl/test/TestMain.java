@@ -97,6 +97,7 @@ public final class TestMain {
 		run("org reader", TestMain::testOrgReader);
 		run("org heading metadata", TestMain::testOrgHeadingMetadata);
 		run("org directives and tables", TestMain::testOrgDirectivesAndTables);
+		run("org recovery", TestMain::testOrgRecovery);
 		run("import command", TestMain::testImportCommand);
 		
 		System.out.println();
@@ -736,9 +737,7 @@ public final class TestMain {
 				+ "#+end_src\n"
 				+ "** Child heading\n"
 				+ "- [ ] open item\n";
-		OrgDocument document = OrgReader.read(
-				"https://example.com/3DPrintingLog.org",
-				org.getBytes(StandardCharsets.UTF_8));
+		OrgDocument document = OrgReader.read(org.getBytes(StandardCharsets.UTF_8));
 		assertEquals(2, document.getHeadings().size(), "heading count");
 		
 		OrgHeading root = document.getHeadings().get(0);
@@ -776,9 +775,7 @@ public final class TestMain {
 				+ "DEADLINE: <2026-12-01 Tue> CLOSED: [2026-11-30 Mon]\n"
 				+ "* LEGO-compatible bricks\n"
 				+ "* [2026-11-14 Sat] Date heading\n";
-		OrgDocument document = OrgReader.read(
-				"https://example.com/metadata.org",
-				org.getBytes(StandardCharsets.UTF_8));
+		OrgDocument document = OrgReader.read(org.getBytes(StandardCharsets.UTF_8));
 		assertEquals(3, document.getHeadings().size(), "heading count");
 		
 		OrgHeading configured = document.getHeadings().get(0);
@@ -816,9 +813,7 @@ public final class TestMain {
 				+ "|---------+------------|\n"
 				+ "| KM      | WSITEM-6013 |\n"
 				+ "#+TBLFM: $2=upper($1)\n";
-		OrgDocument document = OrgReader.read(
-				"https://example.com/tables.org",
-				org.getBytes(StandardCharsets.UTF_8));
+		OrgDocument document = OrgReader.read(org.getBytes(StandardCharsets.UTF_8));
 		assertEquals(1, document.getHeadings().size(), "heading count");
 		assertEquals(5, document.getDirectives().size(), "directive count");
 		assertEquals(2, document.getTables().size(), "table count");
@@ -846,6 +841,30 @@ public final class TestMain {
 		assertEquals("Example", document.getDirectives().get(0).getValue(), "first directive value");
 		assertEquals("TBLFM", document.getDirectives().get(4).getName(), "last directive name");
 		assertEquals(0, document.getDirectives().get(4).getHeadingIndex(), "directive heading index");
+	}
+	
+	private static void testOrgRecovery() {
+		OrgDocument blocked = OrgReader.read(
+				"\uFEFF* A\n#+begin_src\n* B\n* C\n".getBytes(StandardCharsets.UTF_8));
+		check(blocked.hasBom(), "byte order mark detected");
+		assertEquals(1, blocked.getHeadings().size(), "headings inside unclosed block are ignored");
+		assertEquals(1, blocked.getDiagnostics().size(), "unclosed block diagnostic count");
+		assertEquals(2, blocked.getDiagnostics().get(0).getLine(), "unclosed block diagnostic line");
+		
+		OrgDocument drawer = OrgReader.read(
+				"* A\n:PROPERTIES:\n:CUSTOM_ID: a\n* B\n".getBytes(StandardCharsets.UTF_8));
+		assertEquals(2, drawer.getHeadings().size(), "heading after unclosed drawer");
+		assertEquals(1, drawer.getDiagnostics().size(), "unclosed drawer diagnostic count");
+		assertEquals(2, drawer.getDiagnostics().get(0).getLine(), "unclosed drawer diagnostic line");
+		
+		OrgDocument tables = OrgReader.read(
+				"* T\n|-|-|\n| a | b |\n|---+---|\n".getBytes(StandardCharsets.UTF_8));
+		OrgTable table = tables.getTables().get(0);
+		assertEquals(3, table.getRows().size(), "table row count");
+		check(table.getRows().get(0).isSeparator(), "|-|-| is a separator");
+		check(!table.getRows().get(1).isSeparator(), "data row is not a separator");
+		check(table.getRows().get(2).isSeparator(), "|---+---| is a separator");
+		assertEquals(0, tables.getDiagnostics().size(), "well-formed document has no diagnostics");
 	}
 	
 	private static void testImportCommand() throws Exception {

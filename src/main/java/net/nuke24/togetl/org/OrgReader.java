@@ -1,5 +1,11 @@
 package net.nuke24.togetl.org;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,7 +45,7 @@ public final class OrgReader {
 	private static final Pattern TABLE_ROW =
 			Pattern.compile("^\\s*\\|(.*)\\|\\s*$");
 	private static final Pattern TABLE_SEPARATOR =
-			Pattern.compile("^\\s*\\|[-+]+\\|\\s*$");
+			Pattern.compile("^\\s*\\|-[-+|]*\\s*$");
 	private static final Pattern LINK =
 			Pattern.compile("\\[\\[([^\\]]+)\\](?:\\[([^\\]]*)\\])?\\]");
 	private static final Pattern TIMESTAMP =
@@ -54,19 +60,27 @@ public final class OrgReader {
 	private OrgReader() {
 	}
 	
-	public static OrgDocument read(String sourceIri, byte[] bytes) {
-		boolean bom = hasUtf8Bom(bytes);
-		String text;
-		if (bom) {
-			text = new String(bytes, 3, bytes.length - 3, StandardCharsets.UTF_8);
-		} else {
-			text = new String(bytes, StandardCharsets.UTF_8);
+	public static OrgDocument read(byte[] bytes) {
+		try {
+			return read(new InputStreamReader(new ByteArrayInputStream(bytes), StandardCharsets.UTF_8));
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
 		}
-		
-		String[] lines = text.split("\n", -1);
+	}
+	
+	/**
+	 * Parses an Org document one line at a time. A leading UTF-8 byte order
+	 * mark (decoded as U+FEFF) is recorded and removed.
+	 */
+	public static OrgDocument read(Reader reader) throws IOException {
+		BufferedReader lines = reader instanceof BufferedReader
+				? (BufferedReader) reader
+				: new BufferedReader(reader);
+		boolean bom = false;
 		List<OrgHeading> headings = new ArrayList<OrgHeading>();
 		List<OrgDirective> directives = new ArrayList<OrgDirective>();
 		List<OrgTable> tables = new ArrayList<OrgTable>();
+		List<OrgDiagnostic> diagnostics = new ArrayList<OrgDiagnostic>();
 		Set<String> todoKeywords = new HashSet<String>(DEFAULT_TODO_KEYWORDS);
 		OrgHeading currentHeading = null;
 		int headingIndex = -1;
@@ -75,11 +89,19 @@ public final class OrgReader {
 		String pendingTableCaption = null;
 		boolean inBlock = false;
 		String blockName = null;
+		int blockLine = 0;
 		boolean inDrawer = false;
 		String drawerName = null;
-		for (int i = 0; i < lines.length; i++) {
-			int lineNumber = i + 1;
-			String line = stripTrailingCr(lines[i]);
+		int drawerLine = 0;
+		int lineNumber = 0;
+		String rawLine;
+		while ((rawLine = lines.readLine()) != null) {
+			lineNumber++;
+			String line = rawLine;
+			if (lineNumber == 1 && line.startsWith("\uFEFF")) {
+				bom = true;
+				line = line.substring(1);
+			}
 			
 			if (inBlock) {
 				Matcher blockEnd = BLOCK_END.matcher(line);
@@ -93,6 +115,7 @@ public final class OrgReader {
 			if (blockBegin.matches()) {
 				inBlock = true;
 				blockName = blockBegin.group(1);
+				blockLine = lineNumber;
 				currentTable = null;
 				pendingTableName = null;
 				pendingTableCaption = null;
@@ -101,6 +124,9 @@ public final class OrgReader {
 			
 			Matcher headingMatch = HEADING.matcher(line);
 			if (headingMatch.matches()) {
+				if (inDrawer) {
+					diagnostics.add(unclosedDrawer(drawerName, drawerLine));
+				}
 				currentHeading = parseHeading(headingMatch, todoKeywords, lineNumber);
 				headings.add(currentHeading);
 				headingIndex++;
@@ -204,13 +230,25 @@ public final class OrgReader {
 			if (drawerMatch.matches()) {
 				inDrawer = true;
 				drawerName = drawerMatch.group(1);
+				drawerLine = lineNumber;
 				continue;
 			}
 			
 			parseMarkers(currentHeading, line, lineNumber);
 		}
 		
-		return new OrgDocument(sourceIri, bytes.length, bom, headings, directives, tables);
+		if (inBlock) {
+			diagnostics.add(new OrgDiagnostic(blockLine,
+					"unclosed block #+begin_" + blockName + "; following lines are ignored"));
+		}
+		if (inDrawer) {
+			diagnostics.add(unclosedDrawer(drawerName, drawerLine));
+		}
+		return new OrgDocument(bom, headings, directives, tables, diagnostics);
+	}
+	
+	private static OrgDiagnostic unclosedDrawer(String drawerName, int line) {
+		return new OrgDiagnostic(line, "unclosed drawer :" + drawerName + ": has no :END:");
 	}
 	
 	private static OrgHeading parseHeading(
@@ -338,17 +376,4 @@ public final class OrgReader {
 		return "checked";
 	}
 	
-	private static String stripTrailingCr(String line) {
-		if (line.endsWith("\r")) {
-			return line.substring(0, line.length() - 1);
-		}
-		return line;
-	}
-	
-	private static boolean hasUtf8Bom(byte[] bytes) {
-		return bytes.length >= 3
-				&& (bytes[0] & 0xFF) == 0xEF
-				&& (bytes[1] & 0xFF) == 0xBB
-				&& (bytes[2] & 0xFF) == 0xBF;
-	}
 }

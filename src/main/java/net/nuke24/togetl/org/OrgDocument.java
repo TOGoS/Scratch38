@@ -8,35 +8,24 @@ import java.util.List;
  * Parsed Org document.
  */
 public final class OrgDocument {
-	private final String sourceIri;
-	private final long byteLength;
 	private final boolean bom;
 	private final List<OrgHeading> headings;
 	private final List<OrgDirective> directives;
 	private final List<OrgTable> tables;
+	private final List<OrgDiagnostic> diagnostics;
 	
 	public OrgDocument(
-			String sourceIri,
-			long byteLength,
 			boolean bom,
 			List<OrgHeading> headings,
 			List<OrgDirective> directives,
-			List<OrgTable> tables
+			List<OrgTable> tables,
+			List<OrgDiagnostic> diagnostics
 	) {
-		this.sourceIri = sourceIri;
-		this.byteLength = byteLength;
 		this.bom = bom;
 		this.headings = Collections.unmodifiableList(new ArrayList<OrgHeading>(headings));
 		this.directives = Collections.unmodifiableList(new ArrayList<OrgDirective>(directives));
 		this.tables = Collections.unmodifiableList(new ArrayList<OrgTable>(tables));
-	}
-	
-	public String getSourceIri() {
-		return sourceIri;
-	}
-	
-	public long getByteLength() {
-		return byteLength;
+		this.diagnostics = Collections.unmodifiableList(new ArrayList<OrgDiagnostic>(diagnostics));
 	}
 	
 	public boolean hasBom() {
@@ -53,5 +42,10 @@ public final class OrgDocument {
 	
 	public List<OrgTable> getTables() {
 		return tables;
+	}
+	
+	/** Structural problems the parser recovered from, in source order of discovery. */
+	public List<OrgDiagnostic> getDiagnostics() {
+		return diagnostics;
 	}
 }
