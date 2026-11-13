@@ -105,9 +105,10 @@ function scalar($sql, array $params = array())
 function short_iri($iri)
 {
     $prefixes = array(
+        'tag:nuke24.net,2026-11:togetl:tef:' => 'tef:',
         'tag:nuke24.net,2026-11:togetl:' => 'togetl:',
         'tag:nuke24.net,2026-11:3dparts:' => '3dparts:',
-        'tag:nuke24.net,2026-11:togetl:tef:' => 'tef:',
+        'tag:nuke24.net,2026-11:general:' => 'general:',
         'http://www.w3.org/1999/02/22-rdf-syntax-ns#' => 'rdf:',
         'http://www.w3.org/2000/01/rdf-schema#' => 'rdfs:',
         'http://www.w3.org/2001/XMLSchema#' => 'xsd:',

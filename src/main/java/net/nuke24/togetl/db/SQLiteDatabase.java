@@ -8,6 +8,8 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import net.nuke24.togetl.vocab.Vocab;
+
 /**
  * Opens and initializes the source-agnostic SQLite database.
  *
@@ -118,48 +120,52 @@ public final class SQLiteDatabase {
 		"CREATE VIEW part AS"
 			+ " SELECT p.subject AS iri,"
 			+ " (SELECT s.object FROM statement s WHERE s.subject = p.subject"
-			+ "  AND s.predicate = 'tag:nuke24.net,2026-11:togetl:name'"
+			+ "  AND s.predicate = " + sqlString(Vocab.TOGETL_NAME.toString())
 			+ "  AND s.object_kind = 'literal' ORDER BY s.id LIMIT 1) AS name,"
 			+ " (SELECT s.object FROM statement s WHERE s.subject = p.subject"
-			+ "  AND s.predicate = 'tag:nuke24.net,2026-11:togetl:shortDescription'"
+			+ "  AND s.predicate = " + sqlString(Vocab.TOGETL_SHORT_DESCRIPTION.toString())
 			+ "  AND s.object_kind = 'literal' ORDER BY s.id LIMIT 1) AS short_description,"
 			+ " (SELECT s.object FROM statement s WHERE s.subject = p.subject"
-			+ "  AND s.predicate = 'tag:nuke24.net,2026-11:togetl:created'"
+			+ "  AND s.predicate = " + sqlString(Vocab.TOGETL_CREATED.toString())
 			+ "  AND s.object_kind = 'literal' ORDER BY s.id LIMIT 1) AS created"
 			+ " FROM (SELECT DISTINCT subject FROM statement"
-			+ "  WHERE predicate = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'"
-			+ "  AND object = 'tag:nuke24.net,2026-11:togetl:Part') AS p",
+			+ "  WHERE predicate = " + sqlString(Vocab.RDF_TYPE.toString())
+			+ "  AND object = " + sqlString(Vocab.TOGETL_PART.toString()) + ") AS p",
 			
 		"DROP VIEW IF EXISTS part_file",
 		"CREATE VIEW part_file AS"
 			+ " SELECT s.subject AS part_iri, s.predicate AS relation,"
 			+ " s.object AS file_iri,"
 			+ " (SELECT f.object FROM statement f WHERE f.subject = s.object"
-			+ "  AND f.predicate = 'tag:nuke24.net,2026-11:togetl:filename'"
+			+ "  AND f.predicate = " + sqlString(Vocab.TOGETL_FILENAME.toString())
 			+ "  AND f.object_kind = 'literal' ORDER BY f.id LIMIT 1) AS filename"
 			+ " FROM statement s WHERE s.object_kind = 'iri' AND s.predicate IN ("
-			+ " 'tag:nuke24.net,2026-11:3dparts:stlFile',"
-			+ " 'tag:nuke24.net,2026-11:3dparts:csgFile',"
-			+ " 'tag:nuke24.net,2026-11:general:file',"
-			+ " 'tag:nuke24.net,2026-11:general:image',"
-			+ " 'tag:nuke24.net,2026-11:general:photo',"
-			+ " 'tag:nuke24.net,2026-11:general:isDocumentedBy',"
-			+ " 'tag:nuke24.net,2026-11:general:demo',"
-			+ " 'tag:nuke24.net,2026-11:3dparts:openscadRendering',"
-			+ " 'tag:nuke24.net,2026-11:3dparts:openscadDesign')"
+			+ sqlString(Vocab.TOGETL_STL_FILE.toString()) + ", "
+			+ sqlString(Vocab.TOGETL_CSG_FILE.toString()) + ", "
+			+ sqlString(Vocab.TOGETL_FILE_LINK.toString()) + ", "
+			+ sqlString(Vocab.TOGETL_IMAGE.toString()) + ", "
+			+ sqlString(Vocab.TOGETL_PHOTO.toString()) + ", "
+			+ sqlString(Vocab.TOGETL_IS_DOCUMENTED_BY.toString()) + ", "
+			+ sqlString(Vocab.TOGETL_DEMO.toString()) + ", "
+			+ sqlString(Vocab.TOGETL_OPENSCAD_RENDERING.toString()) + ", "
+			+ sqlString(Vocab.TOGETL_OPENSCAD_DESIGN.toString()) + ")"
 			+ " AND s.subject IN (SELECT subject FROM statement"
-			+ "  WHERE predicate = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'"
-			+ "  AND object = 'tag:nuke24.net,2026-11:togetl:Part')",
+			+ "  WHERE predicate = " + sqlString(Vocab.RDF_TYPE.toString())
+			+ "  AND object = " + sqlString(Vocab.TOGETL_PART.toString()) + ")",
 			
 		"DROP VIEW IF EXISTS part_alias",
 		"CREATE VIEW part_alias AS"
 			+ " SELECT subject AS part_iri, object AS alias"
-			+ " FROM statement WHERE predicate = 'tag:nuke24.net,2026-11:togetl:alias'"
+			+ " FROM statement WHERE predicate = " + sqlString(Vocab.TOGETL_ALIAS.toString())
 			+ " AND object_kind = 'literal'"
 			+ " AND subject IN (SELECT subject FROM statement"
-			+ "  WHERE predicate = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'"
-			+ "  AND object = 'tag:nuke24.net,2026-11:togetl:Part')"
+			+ "  WHERE predicate = " + sqlString(Vocab.RDF_TYPE.toString())
+			+ "  AND object = " + sqlString(Vocab.TOGETL_PART.toString()) + ")"
 	};
+	
+	private static String sqlString(String value) {
+		return "'" + value.replace("'", "''") + "'";
+	}
 	
 	private SQLiteDatabase() {
 	}

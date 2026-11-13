@@ -432,7 +432,7 @@ function page_part()
     render_part_links(
         'Tags',
         'SELECT object AS iri FROM statement WHERE subject = ?'
-        . " AND predicate = 'tag:nuke24.net,2026-11:togetl:tag'"
+        . " AND predicate = 'tag:nuke24.net,2026-11:general:tag'"
         . " AND object_kind = 'literal' ORDER BY object",
         $iri,
         false
@@ -440,7 +440,7 @@ function page_part()
     render_part_links(
         'Member of',
         'SELECT object AS iri FROM statement WHERE subject = ?'
-        . " AND predicate = 'tag:nuke24.net,2026-11:togetl:memberOf'"
+        . " AND predicate = 'tag:nuke24.net,2026-11:general:isMemberOf'"
         . " AND object_kind = 'iri' ORDER BY object",
         $iri,
         true
@@ -448,7 +448,7 @@ function page_part()
     render_part_links(
         'Members',
         'SELECT subject AS iri FROM statement WHERE object = ?'
-        . " AND predicate = 'tag:nuke24.net,2026-11:togetl:member'"
+        . " AND predicate = 'tag:nuke24.net,2026-11:general:member'"
         . " AND subject LIKE 'tag:nuke24.net,2026-11:3dparts:part:%' ORDER BY subject",
         $iri,
         true
@@ -456,7 +456,7 @@ function page_part()
     render_part_links(
         'See also',
         'SELECT object AS iri FROM statement WHERE subject = ?'
-        . " AND predicate = 'tag:nuke24.net,2026-11:togetl:seeAlso'"
+        . " AND predicate = 'tag:nuke24.net,2026-11:general:seeAlso'"
         . " AND object_kind = 'iri' ORDER BY object",
         $iri,
         true
@@ -464,7 +464,7 @@ function page_part()
     render_part_links(
         'Obsoleted by',
         'SELECT object AS iri FROM statement WHERE subject = ?'
-        . " AND predicate = 'tag:nuke24.net,2026-11:togetl:obsoletedBy'"
+        . " AND predicate = 'tag:nuke24.net,2026-11:general:obsoletedBy'"
         . " AND object_kind = 'iri' ORDER BY object",
         $iri,
         true
