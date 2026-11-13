@@ -53,6 +53,12 @@ Design direction: stages are push-based. A source pushes chunks into a stage; a 
 never pulls from upstream. A line-splitting stage sits between byte/char input and the
 parsers, and pushes complete lines as `String`s to the next stage.
 
+Stage convention: a stage is a `Consumer<Optional<T>>`. `Optional.of(x)` is an item;
+`Optional.empty()` is end of input and is pushed exactly once, after the last item. A
+stage that receives end of input finishes its work and forwards `Optional.empty()`
+downstream. The terminal stage exposes its result after end of input. Stages hold their
+own state and need no sentinel values.
+
 Current state:
 
 - The Org pipeline is push-based: a source pushes text chunks into `OrgLineSplitter`,
