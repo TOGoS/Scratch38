@@ -46,6 +46,7 @@ public final class Vocab {
 	public static final IRI TOGETL_ORG_HEADING = togetl("OrgHeading");
 	public static final IRI TOGETL_ORG_PROPERTY = togetl("OrgProperty");
 	public static final IRI TOGETL_ORG_PLANNING = togetl("OrgPlanning");
+	public static final IRI TOGETL_ORG_LINK_NODE = togetl("OrgLink");
 	public static final IRI TOGETL_ORG_DIRECTIVE = togetl("OrgDirective");
 	public static final IRI TOGETL_ORG_TABLE = togetl("OrgTable");
 	public static final IRI TOGETL_ORG_TABLE_ROW = togetl("OrgTableRow");

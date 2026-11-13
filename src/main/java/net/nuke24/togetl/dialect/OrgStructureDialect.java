@@ -2,7 +2,10 @@ package net.nuke24.togetl.dialect;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
@@ -30,6 +33,9 @@ import net.nuke24.togetl.vocab.Vocab;
 public final class OrgStructureDialect {
 	public static final String NAME = "org-structure";
 	
+	private static final Pattern ABSOLUTE_URI =
+			Pattern.compile("^[A-Za-z][A-Za-z0-9+.-]*:[^\\s]+$");
+			
 	public void map(
 			OrgDocument document,
 			SourceDocument source,
@@ -40,9 +46,17 @@ public final class OrgStructureDialect {
 		
 		String scope = Identifiers.documentHash(source.getDocumentIri());
 		List<IRI> headingIris = new ArrayList<IRI>();
+		Map<String, IRI> headingIrisByCustomId = new HashMap<String, IRI>();
 		for (int i = 0; i < document.getHeadings().size(); i++) {
 			OrgHeading heading = document.getHeadings().get(i);
-			headingIris.add(headingIri(source, i, heading.getCustomId()));
+			IRI headingSubject = headingIri(source, i, heading.getCustomId());
+			headingIris.add(headingSubject);
+			String customId = heading.getCustomId();
+			if (customId != null && !customId.isEmpty()) {
+				if (headingIrisByCustomId.put(customId, headingSubject) != null) {
+					report.conflict("org-heading", "CUSTOM_ID", Location.at(heading.getLine(), 1));
+				}
+			}
 		}
 		
 		List<IRI> levelStack = new ArrayList<IRI>();
@@ -98,7 +112,7 @@ public final class OrgStructureDialect {
 			DialectSupport.emit(source, out, headingLocation, subject,
 					Vocab.TOGETL_OUTLINE_PATH, Literal.of(joinPath(pathTitles)));
 					
-			emitHeadingMarkers(source, out, subject, i, heading);
+			emitHeadingMarkers(source, out, scope, subject, i, heading, headingIrisByCustomId);
 			
 			levelStack.add(subject);
 			titleStack.add(heading.getTitle());
@@ -226,13 +240,13 @@ public final class OrgStructureDialect {
 	}
 	
 	private static IRI headingIri(SourceDocument source, int headingIndex, String customId) {
-		String key = Identifiers.documentKey(source.getDocumentIri()) + ":";
 		if (customId != null && !customId.isEmpty()) {
-			key += customId;
-		} else {
-			key += headingIndex;
+			// CUSTOM_ID is the stable, document-independent identity of a heading,
+			// so that links such as [[#custom-id]] can resolve to it from anywhere.
+			return IRI.of(Identifiers.mint("org-heading", customId));
 		}
-		return IRI.of(Identifiers.mint("org-heading", key));
+		return IRI.of(Identifiers.mint("org-heading",
+				Identifiers.documentKey(source.getDocumentIri()) + ":" + headingIndex));
 	}
 	
 	private static String joinPath(List<String> titlePath) {
@@ -292,17 +306,19 @@ public final class OrgStructureDialect {
 	private static void emitHeadingMarkers(
 			SourceDocument source,
 			StatementConsumer out,
+			String scope,
 			IRI headingSubject,
 			int headingIndex,
-			OrgHeading heading
+			OrgHeading heading,
+			Map<String, IRI> headingIrisByCustomId
 	) throws IOException {
 		for (int i = 0; i < heading.getLinks().size(); i++) {
 			OrgLink link = heading.getLinks().get(i);
-			BlankNode node = BlankNode.of("org-link-" + headingIndex + "-" + i);
+			BlankNode node = BlankNode.of("org-link-" + scope + "-" + headingIndex + "-" + i);
 			Location location = Location.at(link.getLine(), link.getColumn());
 			DialectSupport.emit(source, out, location, headingSubject, Vocab.TOGETL_ORG_LINK, node);
-			DialectSupport.emit(source, out, location, node, Vocab.TOGETL_ORG_LINK_TARGET,
-					Literal.of(link.getTarget()));
+			DialectSupport.emit(source, out, location, node, Vocab.RDF_TYPE, Vocab.TOGETL_ORG_LINK_NODE);
+			emitLinkTarget(source, out, location, node, link.getTarget(), headingIrisByCustomId);
 			if (link.getLabel() != null && !link.getLabel().isEmpty()) {
 				DialectSupport.emit(source, out, location, node, Vocab.TOGETL_ORG_LINK_LABEL,
 						Literal.of(link.getLabel()));
@@ -324,5 +340,52 @@ public final class OrgStructureDialect {
 					Vocab.TOGETL_ORG_CHECKBOX_STATE,
 					Literal.of(checkbox.getState()));
 		}
+	}
+	
+	private static void emitLinkTarget(
+			SourceDocument source,
+			StatementConsumer out,
+			Location location,
+			BlankNode node,
+			String target,
+			Map<String, IRI> headingIrisByCustomId
+	) throws IOException {
+		String customId = linkCustomId(target);
+		if (customId != null) {
+			IRI heading = headingIrisByCustomId.get(customId);
+			if (heading != null) {
+				DialectSupport.emit(source, out, location, node,
+						Vocab.TOGETL_ORG_LINK_TARGET, heading);
+				return;
+			}
+		}
+		if (isAbsoluteUri(target)) {
+			DialectSupport.emit(source, out, location, node,
+					Vocab.TOGETL_ORG_LINK_TARGET, IRI.of(target));
+		} else {
+			DialectSupport.emit(source, out, location, node,
+					Vocab.TOGETL_ORG_LINK_TARGET, Literal.of(target));
+		}
+	}
+	
+	/**
+	 * Extracts the CUSTOM_ID referenced by an internal link, i.e. {@code #id}
+	 * or {@code <something>::#id}. A fragment on an external URL such as
+	 * {@code https://example.com/#top} is not treated as internal.
+	 */
+	private static String linkCustomId(String target) {
+		int hash = target.lastIndexOf('#');
+		if (hash < 0 || hash == target.length() - 1) {
+			return null;
+		}
+		String prefix = target.substring(0, hash);
+		if (prefix.isEmpty() || prefix.endsWith("::")) {
+			return target.substring(hash + 1);
+		}
+		return null;
+	}
+	
+	private static boolean isAbsoluteUri(String target) {
+		return ABSOLUTE_URI.matcher(target).matches();
 	}
 }

@@ -13,6 +13,7 @@ import net.nuke24.togetl.cli.ImportCommand;
 import net.nuke24.togetl.cli.VocabCommand;
 import net.nuke24.togetl.dialect.Dialects;
 import net.nuke24.togetl.dialect.GenericTEFDialect;
+import net.nuke24.togetl.dialect.OrgStructureDialect;
 import net.nuke24.togetl.dialect.TEFDialect;
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
@@ -98,6 +99,7 @@ public final class TestMain {
 		run("org reader", TestMain::testOrgReader);
 		run("org heading metadata", TestMain::testOrgHeadingMetadata);
 		run("org directives and tables", TestMain::testOrgDirectivesAndTables);
+		run("org custom ID links", TestMain::testOrgCustomIdLinks);
 		run("import command", TestMain::testImportCommand);
 		run("import command org-structure", TestMain::testImportCommandOrgStructure);
 		
@@ -850,6 +852,46 @@ public final class TestMain {
 		assertEquals(0, document.getDirectives().get(4).getHeadingIndex(), "directive heading index");
 	}
 	
+	private static void testOrgCustomIdLinks() throws Exception {
+		String org = ""
+				+ "* Target heading\n"
+				+ ":PROPERTIES:\n"
+				+ ":CUSTOM_ID: target-id\n"
+				+ ":END:\n"
+				+ "* Duplicate target heading\n"
+				+ ":PROPERTIES:\n"
+				+ ":CUSTOM_ID: target-id\n"
+				+ ":END:\n"
+				+ "* Linking heading\n"
+				+ "See [[#target-id]], [[notes.org::#target-id]], "
+				+ "[[https://example.com/x][External]], and [[relative/path]].\n";
+		byte[] bytes = org.getBytes(StandardCharsets.UTF_8);
+		String sourceUrl = "https://example.com/links.org";
+		OrgDocument document = OrgReader.read(sourceUrl, bytes);
+		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "org", "test/1");
+		ImportReport report = new ImportReport();
+		List<Statement> statements = collectOrg(
+				new OrgStructureDialect(), document, source, report);
+				
+		String target = Identifiers.mint("org-heading", "target-id");
+		check(has(statements, source.getDocumentIri(), Vocab.TOGETL_ORG_HEADING_LINK, target),
+				"document links to CUSTOM_ID heading");
+		assertEquals(2, countObject(statements, Vocab.TOGETL_ORG_LINK_TARGET, target),
+				"internal links resolve to CUSTOM_ID heading");
+		check(has(statements, source.getDocumentIri(), Vocab.TOGETL_ORG_HEADING_LINK,
+				Identifiers.mint("org-heading",
+						Identifiers.documentKey(source.getDocumentIri()) + ":2")),
+				"heading without CUSTOM_ID uses document-scoped IRI");
+		assertEquals(1, countObject(statements, Vocab.TOGETL_ORG_LINK_TARGET,
+				IRI.of("https://example.com/x").toString()), "absolute URI link emitted as IRI");
+		assertEquals(1, countObject(statements, Vocab.TOGETL_ORG_LINK_TARGET,
+				Literal.of("relative/path").toString()), "relative link emitted as literal");
+		assertEquals(4, countObject(statements, Vocab.RDF_TYPE,
+				Vocab.TOGETL_ORG_LINK_NODE.toString()), "links typed as OrgLink");
+		check(reportHas(report, "conflict", "org-heading", "CUSTOM_ID"),
+				"duplicate CUSTOM_ID reported");
+	}
+	
 	private static void testImportCommand() throws Exception {
 		Path dir = Files.createTempDirectory("togetl-test");
 		Path input = dir.resolve("data.tef");
@@ -1026,6 +1068,23 @@ public final class TestMain {
 	private static List<Statement> collect(
 			TEFDialect dialect,
 			TEFDocument document,
+			SourceDocument source,
+			ImportReport report
+	) throws Exception {
+		final List<Statement> statements = new ArrayList<Statement>();
+		StatementConsumer consumer = new StatementConsumer() {
+			@Override
+			public void accept(Statement statement) {
+				statements.add(statement);
+			}
+		};
+		dialect.map(document, source, consumer, report);
+		return statements;
+	}
+	
+	private static List<Statement> collectOrg(
+			OrgStructureDialect dialect,
+			OrgDocument document,
 			SourceDocument source,
 			ImportReport report
 	) throws Exception {
