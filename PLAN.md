@@ -158,6 +158,21 @@ The TEF parser from TScript34 (MIT) is vendored into the repository and patched.
 published `tscript34-p0014` artifact is not used directly because the patches below need
 to change its chunk model.
 
+Vendored files (package names adjusted):
+
+```
+net.nuke24.togetl.tef.TEFParser
+net.nuke24.togetl.tef.LLChunks
+net.nuke24.togetl.tef.LLChunkMerger
+net.nuke24.togetl.tef.util.ArrayUtil
+net.nuke24.togetl.tef.util.DucerUtil
+net.nuke24.togetl.ducer.Function
+net.nuke24.togetl.ducer.DucerChunk
+net.nuke24.togetl.ducer.DucerState2
+```
+
+Original copyright and license headers are preserved; a `NOTICE` records the origin.
+
 Patches:
 
 1. Add source spans to every chunk: line, column, byte start/end, end line/column.
@@ -172,7 +187,31 @@ Patches:
    content ending at `\n=`, trailing LF at EOF being content, lone CR as content, CRLF
    line endings.
 
-### 7.1 Tolerance
+### 7.1 Entry model
+
+`TefReader` merges chunks into entries:
+
+```java
+final class TEFEntry {
+    String type;              // "part"
+    String value;             // "p1310"
+    List<TEFHeader> headers;  // ordered, duplicates preserved
+    String content;           // may be empty
+    SourceSpan span;
+    List<TEFComment> comments;
+    List<TEFDirective> directives;
+}
+```
+
+`tef:content` is the entry's free-form note or description,
+and in mapped dialects should be translated into an appropriate
+domain predicate (currently `rdfs:comment`) on the mapped subject.
+
+The parser keeps the full raw entry form available.
+The `generic` dialect emits that structure directly, while mapped dialects
+emit domain/provenance statements and report unmapped constructs by location.
+
+### 7.2 Tolerance
 
 `--tolerance strict|warn|lenient`, default `warn`.
 
@@ -355,9 +394,74 @@ A build check fails if a mapping references an undefined predicate.
 
 ## 10. Database
 
-SQLite, loaded by Java. The schema is source-agnostic: documents, batches, loadings,
-statements, parse issues, report rows, and vocabulary terms. Domain views (for example,
-`part`, `part_file`, `part_alias`, `conflict`) are layered on top.
+SQLite, loaded by Java. The schema is source-agnostic:
+
+```sql
+CREATE TABLE document (
+    iri TEXT PRIMARY KEY,
+    source_url TEXT NOT NULL,
+    sha256 TEXT NOT NULL,
+    byte_length INTEGER NOT NULL,
+    detected_format TEXT,
+    parser_version TEXT
+);
+
+CREATE TABLE batch (
+    iri TEXT PRIMARY KEY,
+    started_at TEXT NOT NULL,
+    importer_version TEXT NOT NULL,
+    options_json TEXT NOT NULL
+);
+
+CREATE TABLE loading (
+    iri TEXT PRIMARY KEY,
+    batch_iri TEXT NOT NULL REFERENCES batch(iri),
+    document_iri TEXT NOT NULL REFERENCES document(iri)
+);
+
+CREATE TABLE statement (
+    id INTEGER PRIMARY KEY,
+    source TEXT NOT NULL,
+    line INTEGER,
+    column INTEGER,
+    end_line INTEGER,
+    end_column INTEGER,
+    subject TEXT NOT NULL,
+    predicate TEXT NOT NULL,
+    object TEXT NOT NULL,
+    object_kind TEXT NOT NULL,   -- iri | blank | literal
+    datatype TEXT,
+    batch_iri TEXT,
+    loading_iri TEXT
+);
+
+CREATE INDEX statement_subject ON statement(subject);
+CREATE INDEX statement_predicate ON statement(predicate);
+CREATE INDEX statement_object ON statement(object);
+CREATE INDEX statement_subject_predicate ON statement(subject, predicate);
+
+CREATE TABLE parse_issue (
+    id INTEGER PRIMARY KEY,
+    document_iri TEXT NOT NULL,
+    line INTEGER,
+    column INTEGER,
+    severity TEXT NOT NULL,
+    code TEXT NOT NULL,
+    message TEXT NOT NULL,
+    raw TEXT
+);
+
+CREATE TABLE vocab_term (
+    iri TEXT PRIMARY KEY,
+    kind TEXT,
+    label TEXT,
+    comment TEXT,
+    status TEXT,
+    defined_in TEXT
+);
+```
+
+Views for browsing (`part`, `part_file`, `part_alias`, `conflict`) are added per domain.
 
 The loader reads TOGETLTSV, so it can also load streams produced by other tools.
 
@@ -408,6 +512,22 @@ No authentication, no editing, no writes.
   verifies its checksum.
 - Tests use a small built-in harness (`TestMain`) rather than JUnit, to keep the
   dependency set to one jar.
+
+Commands:
+
+```sh
+./scripts/get-jdk.sh
+./scripts/get-sqlite-jdbc.sh
+./build.sh
+./test/run-tests.sh
+
+./togetl import --dialect parts --input fixtures/upstream/3DPrintingData.tef \
+    --output out/3dparts-data.togetltsv
+./togetl import --dialect namespaces --input vocab/togetl.tef \
+    --output out/togetl-vocab.togetltsv
+./togetl vocab --input out/togetl-vocab.togetltsv --report out/vocab-report.tsv
+./togetl db --tsv out/*.togetltsv --db out/togetl.sqlite
+```
 
 ## 14. Milestones
 

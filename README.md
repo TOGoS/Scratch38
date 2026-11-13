@@ -30,6 +30,9 @@ The build targets Java 8 and does not require Maven.
   directives, tolerance levels, and recovery for orphan continuations.
 - Generic TEF dialect: emits source-document metadata, entries, headers, comments,
   directives, and parse issues; reports unmapped entry types and fields.
+  Functional fields report conflicts instead of silently choosing a value;
+  identical duplicates are deduplicated and multi-valued fields keep all
+  values.
 - Declarative mapping dialects driven by TSV tables under `mappings/`:
   - `parts` for `3DPrintingData.tef`
   - `namespaces` for `namespaces.tef` and `vocab/*.tef`
@@ -38,7 +41,8 @@ The build targets Java 8 and does not require Maven.
 - Import command: `togetl import` writes deterministic, self-contained streams.
 - SQLite loader: `togetl load` reads TOGETLTSV streams into a source-agnostic
   schema with document, batch, loading, statement, parse-issue, report, and
-  vocabulary tables.
+  vocabulary tables. Batch and loading IRIs are deterministic, and re-running
+  the same load replaces that batch instead of duplicating statements.
 - Read-only PHP browser in `web/` with overview, subject, predicate, document,
   vocabulary, issue, and part pages.
 - Org and music importers are added in later milestones.
@@ -78,6 +82,7 @@ are identified by their absolute `file:` URL unless `--source-url` overrides it.
 Mapping tables live in `mappings/*.tsv` and are selected by name. Each table has
 an `#entry` section mapping entry types to subject templates and RDF types, and a
 `#field` section mapping headers to predicates, value parsers, and cardinality.
+Rules with `entryType` `*` apply unless a more specific rule exists.
 
 `vocab` exits non-zero when a mapping references an undefined term. Its report
 has one row per term with `ok`, `undefined`, `proposed`, `unused`, `duplicate`,
