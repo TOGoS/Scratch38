@@ -79,7 +79,7 @@ scope: Java source files
 title: Java indentation conventions
 request: Use tabs for indentation, with spaces only for alignment after tabs when needed.
 acceptance: Java files follow a single-tab indent rule consistently.
-notes: Enforced with .editorconfig and scripts/format-java-indent.sh; run the script when new Java files are added.
+notes: Enforced with .editorconfig and scripts/format-java-indent.py; run the script when new Java files are added.
 
 =task S36CR-006
 status: done
