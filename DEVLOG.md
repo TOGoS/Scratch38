@@ -30,3 +30,28 @@ it had been rebased into master).
 
 Noting here on the off chance there's any value in remembering
 that alternate history.
+
+## 2026-11-13 - Syntax errors in source documents - Master Haiku
+
+A scan of the source documents with the current parser found the
+following problems. The TEF parser will treat them as fatal once the
+streaming refactor lands, so they need fixing in the source documents.
+Line numbers refer to `fixtures/upstream/`.
+
+3DPrintingData.tef:
+- L457: no blank line between the `=part p1422` header block and the
+  content `You'll want to print two of these.`
+- L449, L456: `openscad-rendering-ref: ttp://...` should be `http://`.
+
+music.txt:
+- L49, 55, 59, 72, 80, 87, 90, 94, 101: indented items under `=category`
+  lines with no blank line before them.
+- L1574: `x-rdf-subject:urn:...` is missing the space after the colon.
+
+3DPrintingLog.org:
+- Unclosed drawers (no `:END:`) at L10455 (`:extra_width_at_corners:`),
+  L13941 (`:editorial:`), and `:PROPERTIES:` at L11726, 12317, 13865,
+  14954, 20368.
+- Duplicate `CUSTOM_ID`s at L11024, 11675, 18471, 20711, 20723.
+
+namespaces.tef and vocab/*.tef are clean.
