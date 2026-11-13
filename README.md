@@ -20,10 +20,10 @@ Implemented:
 - Vocabulary reporting (`togetl vocab`)
 
 Not yet implemented:
-- Org importer
+- Org importer (an Org parser library with tests exists, but no domain mapping to TOGETLTSV)
 - Music importer
 - Batch ontology formalization
-- Streaming input (readers currently load whole files)
+- TEF parser should be refactored to stream input (similar to Org reader)
 ## Build
 
 ```sh
