@@ -22,6 +22,8 @@ import net.nuke24.togetl.mapping.MappingTEFDialect;
 import net.nuke24.togetl.org.OrgDocument;
 import net.nuke24.togetl.org.OrgHeading;
 import net.nuke24.togetl.org.OrgReader;
+import net.nuke24.togetl.org.OrgTable;
+import net.nuke24.togetl.org.OrgTableRow;
 import net.nuke24.togetl.rdf.BlankNode;
 import net.nuke24.togetl.rdf.IRI;
 import net.nuke24.togetl.rdf.Literal;
@@ -95,6 +97,7 @@ public final class TestMain {
 		run("vocab command", TestMain::testVocabCommand);
 		run("org reader", TestMain::testOrgReader);
 		run("org heading metadata", TestMain::testOrgHeadingMetadata);
+		run("org directives and tables", TestMain::testOrgDirectivesAndTables);
 		run("import command", TestMain::testImportCommand);
 		run("import command org-structure", TestMain::testImportCommandOrgStructure);
 		
@@ -799,6 +802,54 @@ public final class TestMain {
 		assertEquals(1, dated.getTimestamps().size(), "heading-line timestamp parsed");
 	}
 	
+	private static void testOrgDirectivesAndTables() {
+		String org = ""
+				+ "#+TITLE: Example\n"
+				+ "#+NAME: item_0\n"
+				+ "#+CAPTION: Items\n"
+				+ "| Desc          | STL |\n"
+				+ "|---------------+-----|\n"
+				+ "| cup           | p1  |\n"
+				+ "| [[#custom-id]] |     |\n"
+				+ "\n"
+				+ "* Heading\n"
+				+ "#+NAME: printer_1\n"
+				+ "| Printer | Item       |\n"
+				+ "|---------+------------|\n"
+				+ "| KM      | WSITEM-6013 |\n"
+				+ "#+TBLFM: $2=upper($1)\n";
+		OrgDocument document = OrgReader.read(
+				"https://example.com/tables.org",
+				org.getBytes(StandardCharsets.UTF_8));
+		assertEquals(1, document.getHeadings().size(), "heading count");
+		assertEquals(5, document.getDirectives().size(), "directive count");
+		assertEquals(2, document.getTables().size(), "table count");
+		
+		OrgTable first = document.getTables().get(0);
+		assertEquals("item_0", first.getName(), "first table name");
+		assertEquals("Items", first.getCaption(), "first table caption");
+		assertEquals(-1, first.getHeadingIndex(), "document-level table");
+		assertEquals(4, first.getRows().size(), "first table row count");
+		assertEquals(2, first.getWidth(), "first table width");
+		OrgTableRow header = first.getRows().get(0);
+		assertEquals(false, header.isSeparator(), "header is not a separator");
+		assertEquals("Desc", header.getCell(0), "first header cell");
+		assertEquals("STL", header.getCell(1), "second header cell");
+		check(first.getRows().get(1).isSeparator(), "separator row detected");
+		assertEquals("cup", first.getRows().get(2).getCell(0), "data cell");
+		assertEquals("[[#custom-id]]", first.getRows().get(3).getCell(0), "link cell preserved");
+		assertEquals("", first.getRows().get(3).getCell(1), "empty cell preserved");
+		
+		OrgTable second = document.getTables().get(1);
+		assertEquals("printer_1", second.getName(), "second table name");
+		assertEquals(0, second.getHeadingIndex(), "heading-level table");
+		assertEquals("WSITEM-6013", second.getRows().get(2).getCell(1), "second table data cell");
+		
+		assertEquals("Example", document.getDirectives().get(0).getValue(), "first directive value");
+		assertEquals("TBLFM", document.getDirectives().get(4).getName(), "last directive name");
+		assertEquals(0, document.getDirectives().get(4).getHeadingIndex(), "directive heading index");
+	}
+	
 	private static void testImportCommand() throws Exception {
 		Path dir = Files.createTempDirectory("togetl-test");
 		Path input = dir.resolve("data.tef");
@@ -857,6 +908,10 @@ public final class TestMain {
 				+ ":slicer_xy_compensation: -0.15\n"
 				+ ":END:\n"
 				+ "SCHEDULED: <2026-11-12 Thu>\n"
+				+ "#+NAME: printers\n"
+				+ "| Printer | Item       |\n"
+				+ "|---------+------------|\n"
+				+ "| KM      | WSITEM-6013 |\n"
 				+ "** Child\n"
 				+ "- [ ] queue item\n";
 		Files.write(input, text.getBytes(StandardCharsets.UTF_8));
@@ -894,6 +949,8 @@ public final class TestMain {
 		boolean hasUncheckedCheckbox = false;
 		String propertySubject = null;
 		String planningSubject = null;
+		String tableSubject = null;
+		String directiveSubject = null;
 		for (Statement statement : read) {
 			if (statement.getPredicate().equals(outlineParentPredicate)
 					&& statement.getObject().toString().equals(rootSubject)) {
@@ -910,6 +967,14 @@ public final class TestMain {
 			if (statement.getPredicate().equals(Vocab.TOGETL_ORG_PLANNING_LINK)
 					&& statement.getSubject().toString().equals(rootSubject)) {
 				planningSubject = statement.getObject().toString();
+			}
+			if (statement.getPredicate().equals(Vocab.TOGETL_ORG_TABLE_LINK)
+					&& statement.getSubject().toString().equals(rootSubject)) {
+				tableSubject = statement.getObject().toString();
+			}
+			if (statement.getPredicate().equals(Vocab.TOGETL_ORG_DIRECTIVE_LINK)
+					&& statement.getSubject().toString().equals(rootSubject)) {
+				directiveSubject = statement.getObject().toString();
 			}
 		}
 		check(hasOutlineParent, "child heading links to parent");
@@ -930,6 +995,32 @@ public final class TestMain {
 				Literal.of("SCHEDULED").toString()), "planning keyword emitted");
 		check(has(read, planningSubject, Vocab.TOGETL_ORG_TIMESTAMP,
 				Literal.of("<2026-11-12 Thu>").toString()), "planning timestamp emitted");
+		check(tableSubject != null, "table node emitted");
+		check(has(read, tableSubject, Vocab.TOGETL_ORG_TABLE_NAME,
+				Literal.of("printers").toString()), "table name emitted");
+				
+		String dataRowSubject = null;
+		for (Statement statement : read) {
+			if (statement.getPredicate().equals(Vocab.TOGETL_ORG_TABLE_ROW_INDEX)
+					&& Literal.of("2", Vocab.XSD_INTEGER).toString()
+							.equals(statement.getObject().toString())) {
+				dataRowSubject = statement.getSubject().toString();
+			}
+		}
+		check(dataRowSubject != null, "table data row emitted");
+		boolean hasTableCell = false;
+		for (Statement statement : read) {
+			if (statement.getPredicate().equals(Vocab.TOGETL_ORG_TABLE_CELL_VALUE)
+					&& "data:,WSITEM-6013".equals(statement.getObject().toString())) {
+				hasTableCell = true;
+			}
+		}
+		check(hasTableCell, "table cell value emitted");
+		check(directiveSubject != null, "directive node emitted");
+		check(has(read, directiveSubject, Vocab.TOGETL_ORG_DIRECTIVE_NAME,
+				Literal.of("NAME").toString()), "directive name emitted");
+		check(has(read, directiveSubject, Vocab.TOGETL_ORG_DIRECTIVE_VALUE,
+				Literal.of("printers").toString()), "directive value emitted");
 	}
 	
 	private static List<Statement> collect(

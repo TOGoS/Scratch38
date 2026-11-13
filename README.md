@@ -57,7 +57,8 @@ The build targets Java 8 and does not require Maven.
 - Read-only PHP browser in `web/` with overview, subject, predicate, document,
   vocabulary, issue, and part pages.
 - Org structure importer: `--dialect org-structure` parses headings, outline
-  links, `CUSTOM_ID`, links, timestamps, and checkbox states from Org files.
+  links, `CUSTOM_ID`, TODO keywords, priorities, tags, planning entries,
+  properties, links, timestamps, checkbox states, `#+` directives, and tables.
 - Org named table mapping and the music importer are added in later milestones.
 
 ## Usage

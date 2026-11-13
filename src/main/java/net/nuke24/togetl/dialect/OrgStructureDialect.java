@@ -8,11 +8,14 @@ import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.org.OrgCheckbox;
+import net.nuke24.togetl.org.OrgDirective;
 import net.nuke24.togetl.org.OrgDocument;
 import net.nuke24.togetl.org.OrgHeading;
 import net.nuke24.togetl.org.OrgLink;
 import net.nuke24.togetl.org.OrgPlanning;
 import net.nuke24.togetl.org.OrgProperty;
+import net.nuke24.togetl.org.OrgTable;
+import net.nuke24.togetl.org.OrgTableRow;
 import net.nuke24.togetl.org.OrgTimestamp;
 import net.nuke24.togetl.rdf.BlankNode;
 import net.nuke24.togetl.rdf.IRI;
@@ -36,6 +39,12 @@ public final class OrgStructureDialect {
 		emitDocumentMetadata(document, source, out);
 		
 		String scope = Identifiers.documentHash(source.getDocumentIri());
+		List<IRI> headingIris = new ArrayList<IRI>();
+		for (int i = 0; i < document.getHeadings().size(); i++) {
+			OrgHeading heading = document.getHeadings().get(i);
+			headingIris.add(headingIri(source, i, heading.getCustomId()));
+		}
+		
 		List<IRI> levelStack = new ArrayList<IRI>();
 		List<String> titleStack = new ArrayList<String>();
 		for (int i = 0; i < document.getHeadings().size(); i++) {
@@ -45,7 +54,7 @@ public final class OrgStructureDialect {
 				titleStack.remove(titleStack.size() - 1);
 			}
 			
-			IRI subject = headingIri(source, i, heading.getCustomId());
+			IRI subject = headingIris.get(i);
 			Location headingLocation = Location.at(heading.getLine(), 1);
 			DialectSupport.emit(source, out, headingLocation, IRI.of(source.getDocumentIri()),
 					Vocab.TOGETL_ORG_HEADING_LINK, subject);
@@ -94,6 +103,104 @@ public final class OrgStructureDialect {
 			levelStack.add(subject);
 			titleStack.add(heading.getTitle());
 		}
+		
+		emitDirectives(document, source, out, scope, headingIris);
+		emitTables(document, source, out, scope, headingIris);
+	}
+	
+	private static void emitDirectives(
+			OrgDocument document,
+			SourceDocument source,
+			StatementConsumer out,
+			String scope,
+			List<IRI> headingIris
+	) throws IOException {
+		for (int i = 0; i < document.getDirectives().size(); i++) {
+			OrgDirective directive = document.getDirectives().get(i);
+			Location location = Location.at(directive.getLine(), directive.getColumn());
+			IRI owner = ownerIri(source, headingIris, directive.getHeadingIndex());
+			BlankNode node = BlankNode.of("org-directive-" + scope + "-" + i);
+			DialectSupport.emit(source, out, location, owner,
+					Vocab.TOGETL_ORG_DIRECTIVE_LINK, node);
+			DialectSupport.emit(source, out, location, node,
+					Vocab.RDF_TYPE, Vocab.TOGETL_ORG_DIRECTIVE);
+			DialectSupport.emit(source, out, location, node,
+					Vocab.TOGETL_ORG_DIRECTIVE_NAME, Literal.of(directive.getName()));
+			DialectSupport.emit(source, out, location, node,
+					Vocab.TOGETL_ORG_DIRECTIVE_VALUE, Literal.of(directive.getValue()));
+		}
+	}
+	
+	private static void emitTables(
+			OrgDocument document,
+			SourceDocument source,
+			StatementConsumer out,
+			String scope,
+			List<IRI> headingIris
+	) throws IOException {
+		for (int i = 0; i < document.getTables().size(); i++) {
+			OrgTable table = document.getTables().get(i);
+			Location tableLocation = Location.at(table.getLine(), 1);
+			IRI owner = ownerIri(source, headingIris, table.getHeadingIndex());
+			BlankNode tableNode = BlankNode.of("org-table-" + scope + "-" + i);
+			DialectSupport.emit(source, out, tableLocation, owner,
+					Vocab.TOGETL_ORG_TABLE_LINK, tableNode);
+			DialectSupport.emit(source, out, tableLocation, tableNode,
+					Vocab.RDF_TYPE, Vocab.TOGETL_ORG_TABLE);
+			if (table.getName() != null && !table.getName().isEmpty()) {
+				DialectSupport.emit(source, out, tableLocation, tableNode,
+						Vocab.TOGETL_ORG_TABLE_NAME, Literal.of(table.getName()));
+			}
+			if (table.getCaption() != null && !table.getCaption().isEmpty()) {
+				DialectSupport.emit(source, out, tableLocation, tableNode,
+						Vocab.TOGETL_ORG_TABLE_CAPTION, Literal.of(table.getCaption()));
+			}
+			
+			for (int j = 0; j < table.getRows().size(); j++) {
+				OrgTableRow row = table.getRows().get(j);
+				Location rowLocation = Location.at(row.getLine(), 1);
+				BlankNode rowNode = BlankNode.of(
+						"org-table-row-" + scope + "-" + i + "-" + j);
+				DialectSupport.emit(source, out, rowLocation, tableNode,
+						Vocab.TOGETL_ORG_TABLE_ROW_LINK, rowNode);
+				DialectSupport.emit(source, out, rowLocation, rowNode,
+						Vocab.RDF_TYPE, Vocab.TOGETL_ORG_TABLE_ROW);
+				DialectSupport.emit(source, out, rowLocation, rowNode,
+						Vocab.TOGETL_ORG_TABLE_ROW_INDEX,
+						Literal.of(Integer.toString(j), Vocab.XSD_INTEGER));
+				if (row.isSeparator()) {
+					DialectSupport.emit(source, out, rowLocation, rowNode,
+							Vocab.TOGETL_ORG_TABLE_ROW_SEPARATOR,
+							Literal.of("true", Vocab.XSD_BOOLEAN));
+					continue;
+				}
+				for (int k = 0; k < row.getCellCount(); k++) {
+					BlankNode cellNode = BlankNode.of(
+							"org-table-cell-" + scope + "-" + i + "-" + j + "-" + k);
+					DialectSupport.emit(source, out, rowLocation, rowNode,
+							Vocab.TOGETL_ORG_TABLE_CELL_LINK, cellNode);
+					DialectSupport.emit(source, out, rowLocation, cellNode,
+							Vocab.RDF_TYPE, Vocab.TOGETL_ORG_TABLE_CELL);
+					DialectSupport.emit(source, out, rowLocation, cellNode,
+							Vocab.TOGETL_ORG_TABLE_CELL_INDEX,
+							Literal.of(Integer.toString(k), Vocab.XSD_INTEGER));
+					DialectSupport.emit(source, out, rowLocation, cellNode,
+							Vocab.TOGETL_ORG_TABLE_CELL_VALUE,
+							Literal.of(row.getCell(k)));
+				}
+			}
+		}
+	}
+	
+	private static IRI ownerIri(
+			SourceDocument source,
+			List<IRI> headingIris,
+			int headingIndex
+	) {
+		if (headingIndex >= 0 && headingIndex < headingIris.size()) {
+			return headingIris.get(headingIndex);
+		}
+		return IRI.of(source.getDocumentIri());
 	}
 	
 	private static void emitDocumentMetadata(

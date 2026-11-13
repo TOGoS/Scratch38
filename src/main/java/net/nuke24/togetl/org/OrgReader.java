@@ -36,6 +36,10 @@ public final class OrgReader {
 			Pattern.compile("^\\s*#\\+begin_([A-Za-z0-9_-]+)(?:[ \t]+(.*))?$", Pattern.CASE_INSENSITIVE);
 	private static final Pattern BLOCK_END =
 			Pattern.compile("^\\s*#\\+end_([A-Za-z0-9_-]+)[ \t]*$", Pattern.CASE_INSENSITIVE);
+	private static final Pattern TABLE_ROW =
+			Pattern.compile("^\\s*\\|(.*)\\|\\s*$");
+	private static final Pattern TABLE_SEPARATOR =
+			Pattern.compile("^\\s*\\|[-+]+\\|\\s*$");
 	private static final Pattern LINK =
 			Pattern.compile("\\[\\[([^\\]]+)\\](?:\\[([^\\]]*)\\])?\\]");
 	private static final Pattern TIMESTAMP =
@@ -61,8 +65,14 @@ public final class OrgReader {
 		
 		String[] lines = text.split("\n", -1);
 		List<OrgHeading> headings = new ArrayList<OrgHeading>();
+		List<OrgDirective> directives = new ArrayList<OrgDirective>();
+		List<OrgTable> tables = new ArrayList<OrgTable>();
 		Set<String> todoKeywords = new HashSet<String>(DEFAULT_TODO_KEYWORDS);
 		OrgHeading currentHeading = null;
+		int headingIndex = -1;
+		OrgTable currentTable = null;
+		String pendingTableName = null;
+		String pendingTableCaption = null;
 		boolean inBlock = false;
 		String blockName = null;
 		boolean inDrawer = false;
@@ -83,6 +93,9 @@ public final class OrgReader {
 			if (blockBegin.matches()) {
 				inBlock = true;
 				blockName = blockBegin.group(1);
+				currentTable = null;
+				pendingTableName = null;
+				pendingTableCaption = null;
 				continue;
 			}
 			
@@ -90,8 +103,12 @@ public final class OrgReader {
 			if (headingMatch.matches()) {
 				currentHeading = parseHeading(headingMatch, todoKeywords, lineNumber);
 				headings.add(currentHeading);
+				headingIndex++;
 				inDrawer = false;
 				drawerName = null;
+				currentTable = null;
+				pendingTableName = null;
+				pendingTableCaption = null;
 				continue;
 			}
 			
@@ -118,10 +135,48 @@ public final class OrgReader {
 			
 			Matcher directiveMatch = DIRECTIVE.matcher(line);
 			if (directiveMatch.matches()) {
-				updateTodoKeywords(
-						directiveMatch.group(1), directiveMatch.group(2), todoKeywords);
+				String name = directiveMatch.group(1);
+				String value = directiveMatch.group(2).trim();
+				directives.add(new OrgDirective(
+						name, value, lineNumber, directiveMatch.start(1) + 1, headingIndex));
+				updateTodoKeywords(name, value, todoKeywords);
+				if ("NAME".equalsIgnoreCase(name)) {
+					pendingTableName = value;
+				} else if ("CAPTION".equalsIgnoreCase(name)) {
+					pendingTableCaption = value;
+				} else {
+					pendingTableName = null;
+					pendingTableCaption = null;
+				}
+				currentTable = null;
 				continue;
 			}
+			
+			Matcher tableRow = TABLE_ROW.matcher(line);
+			if (tableRow.matches()) {
+				if (currentTable == null) {
+					currentTable = new OrgTable(
+							pendingTableName, pendingTableCaption, lineNumber, headingIndex);
+					tables.add(currentTable);
+					pendingTableName = null;
+					pendingTableCaption = null;
+				}
+				String rowText = tableRow.group(1);
+				boolean separator = TABLE_SEPARATOR.matcher(line).matches();
+				List<String> cells = new ArrayList<String>();
+				for (String cell : rowText.split("\\|", -1)) {
+					cells.add(cell.trim());
+				}
+				currentTable.addRow(new OrgTableRow(cells, separator, lineNumber));
+				continue;
+			}
+			currentTable = null;
+			
+			if (line.trim().isEmpty()) {
+				continue;
+			}
+			pendingTableName = null;
+			pendingTableCaption = null;
 			
 			if (currentHeading == null) {
 				continue;
@@ -155,7 +210,7 @@ public final class OrgReader {
 			parseMarkers(currentHeading, line, lineNumber);
 		}
 		
-		return new OrgDocument(sourceIri, bytes.length, bom, headings);
+		return new OrgDocument(sourceIri, bytes.length, bom, headings, directives, tables);
 	}
 	
 	private static OrgHeading parseHeading(

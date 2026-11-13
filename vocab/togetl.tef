@@ -30,6 +30,18 @@ short-description: one property from an Org property drawer
 =type tag:nuke24.net,2026-11:togetl:OrgPlanning
 short-description: a planning keyword and timestamp on an Org heading
 
+=type tag:nuke24.net,2026-11:togetl:OrgDirective
+short-description: a #+NAME-style directive in an Org document
+
+=type tag:nuke24.net,2026-11:togetl:OrgTable
+short-description: a table in an Org document
+
+=type tag:nuke24.net,2026-11:togetl:OrgTableRow
+short-description: one row, including separator rows, of an Org table
+
+=type tag:nuke24.net,2026-11:togetl:OrgTableCell
+short-description: one cell of an Org table row
+
 =attribute tag:nuke24.net,2026-11:togetl:sourceDocument
 short-description: links a document import to its source document
 
@@ -135,3 +147,39 @@ short-description: target string of an Org link node
 
 =attribute tag:nuke24.net,2026-11:togetl:orgLinkLabel
 short-description: optional display label of an Org link node
+
+=attribute tag:nuke24.net,2026-11:togetl:orgDirective
+short-description: links an Org heading or document to a #+ directive
+
+=attribute tag:nuke24.net,2026-11:togetl:orgDirectiveName
+short-description: name of a #+ directive, without the leading #+ or colon
+
+=attribute tag:nuke24.net,2026-11:togetl:orgDirectiveValue
+short-description: value of a #+ directive
+
+=attribute tag:nuke24.net,2026-11:togetl:orgTable
+short-description: links an Org heading or document to one of its tables
+
+=attribute tag:nuke24.net,2026-11:togetl:orgTableName
+short-description: value of a #+NAME: directive associated with a table
+
+=attribute tag:nuke24.net,2026-11:togetl:orgTableCaption
+short-description: value of a #+CAPTION: directive associated with a table
+
+=attribute tag:nuke24.net,2026-11:togetl:orgTableRow
+short-description: links an Org table to one of its rows
+
+=attribute tag:nuke24.net,2026-11:togetl:orgTableRowIndex
+short-description: zero-based row ordinal within an Org table
+
+=attribute tag:nuke24.net,2026-11:togetl:orgTableRowSeparator
+short-description: whether an Org table row is a horizontal separator
+
+=attribute tag:nuke24.net,2026-11:togetl:orgTableCell
+short-description: links an Org table row to one of its cells
+
+=attribute tag:nuke24.net,2026-11:togetl:orgTableCellIndex
+short-description: zero-based cell ordinal within an Org table row
+
+=attribute tag:nuke24.net,2026-11:togetl:orgTableCellValue
+short-description: text content of an Org table cell
