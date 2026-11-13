@@ -41,7 +41,7 @@ public final class ImportCommand {
 	private String input;
 	private String output = "-";
 	private String sourceUri;
-	private String deriveSourceUrl;
+	private String deriveKind;
 	private String dialect = "generic";
 	private String reportPath;
 	
@@ -96,7 +96,7 @@ public final class ImportCommand {
 				sourceUri = value != null ? value : next(args, ++i, key);
 			} else if ("--derive-source-url".equals(key) || "--derive-source-uri".equals(key)) {
 				// TODO: For this, too.
-				deriveSourceUrl = value != null ? value : next(args, ++i, key);
+				deriveKind = value != null ? value : next(args, ++i, key);
 			} else if ("--dialect".equals(key)) {
 				dialect = value != null ? value : next(args, ++i, key);
 			} else if ("--report".equals(key)) {
@@ -111,14 +111,16 @@ public final class ImportCommand {
 		if (output == null || output.isEmpty()) {
 			throw new UsageException("--output must not be empty");
 		}
-		if (sourceUri == null && deriveSourceUrl == null) {
+		if (sourceUri == null && deriveKind == null) {
 			throw new UsageException("--source-url or --derive-source-url is required");
 		}
-		if (sourceUri != null && deriveSourceUrl != null) {
+		if (sourceUri != null && deriveKind != null) {
 			throw new UsageException("--source-url and --derive-source-url are mutually exclusive");
 		}
-		if (deriveSourceUrl != null && !"bitprint".equals(deriveSourceUrl)) {
-			throw new UsageException("Unknown --derive-source-url kind: " + deriveSourceUrl);
+		// Note: If ever there is more than just 'bitprint', we might consider
+		// centralizing information about digests somewhere.
+		if (deriveKind != null && !"bitprint".equals(deriveKind)) {
+			throw new UsageException("Unknown --derive-source-url kind: " + deriveKind);
 		}
 	}
 	
@@ -131,65 +133,36 @@ public final class ImportCommand {
 	
 	private void execute() throws IOException, TEFReadException {
 		TEFDialect selectedDialect = Dialects.byName(dialect);
-		// Note: If ever there is more than just 'bitprint', we might consider
-		// centralizing information about digests somewhere.
-		if (deriveSourceUrl != null) {
-			if (!"bitprint".equals(deriveSourceUrl)) {
-				throw new IllegalArgumentException("Unknown digest algorithm: " + deriveSourceUrl);
-			}
-			SourceProvenance.Digester digester = new SourceProvenance.Digester();
-			InputStream in = "-".equals(input) ? System.in : Files.newInputStream(Paths.get(input));
-			try {
-				byte[] block = new byte[65536];
-				int n;
-				while ((n = in.read(block)) >= 0) {
-					if (n > 0) {
-						digester.accept(Optional.of(Arrays.copyOf(block, n)));
-					}
-				}
-			} finally {
-				if (!"-".equals(input)) {
-					in.close();
-				}
-			}
-			digester.accept(Optional.<byte[]>empty());
-			sourceUri = digester.result().getBitprintUri();
-		}
-		String effectiveSourceUrl = sourceUri != null ? sourceUri : defaultSourceUrl(input);
-		
-		SourceProvenance.Digester digester = new SourceProvenance.Digester();
-		InputStream digestIn = "-".equals(input) ? System.in : Files.newInputStream(Paths.get(input));
+		boolean stdin = "-".equals(input);
+		Path file = stdin ? spoolStdin() : Paths.get(input);
 		try {
-			byte[] block = new byte[65536];
-			int n;
-			while ((n = digestIn.read(block)) >= 0) {
-				if (n > 0) {
-					digester.accept(Optional.of(Arrays.copyOf(block, n)));
-				}
-			}
+			importFile(selectedDialect, file);
 		} finally {
-			if (!"-".equals(input)) {
-				digestIn.close();
+			if (stdin) {
+				Files.deleteIfExists(file);
 			}
 		}
-		digester.accept(Optional.<byte[]>empty());
-		SourceProvenance provenance = digester.result();
-		
-		if (effectiveSourceUrl.startsWith("urn:bitprint:")) {
-			if (!digester.result().getBitprintUri().equals(effectiveSourceUrl)) {
-				throw new TEFReadException("source URL bitprint does not match content: expected "
-						+ digester.result().getBitprintUri() + " but got " + effectiveSourceUrl);
-			}
+	}
+	
+	private void importFile(TEFDialect selectedDialect, Path file) throws IOException, TEFReadException {
+		SourceProvenance provenance = digest(file);
+		String effectiveSourceUri;
+		if (deriveKind != null) {
+			effectiveSourceUri = provenance.getBitprintUri();
 		} else {
-			System.err.println("togetl import: warning: source URL is not a bitprint URN ("
-					+ effectiveSourceUrl + "); this may cause problems downstream");
+			effectiveSourceUri = sourceUri;
+			if (effectiveSourceUri.startsWith(BitprintScheme.BITPRINTURNPREFIX)) {
+				if (!effectiveSourceUri.equals(provenance.getBitprintUri())) {
+					throw new IOException("source URI does not match the input's bitprint: expected "
+							+ provenance.getBitprintUri() + " but got " + effectiveSourceUri);
+				}
+			} else {
+				System.err.println("togetl import: warning: source URI is not a bitprint URN ("
+						+ effectiveSourceUri + "); this may cause problems downstream");
+			}
 		}
 		
-		SourceDocument source = SourceDocument.of(
-				effectiveSourceUrl,
-				"tef",
-				Version.TEF_PARSER_VERSION);
-				
+		SourceDocument source = SourceDocument.of(effectiveSourceUri, "tef", Version.TEF_PARSER_VERSION);
 		ImportReport report = new ImportReport();
 		CountingConsumer counter = new CountingConsumer();
 		boolean fileOutput = !"-".equals(output);
@@ -206,22 +179,11 @@ public final class ImportCommand {
 			};
 			TEFDocumentSink document = selectedDialect.begin(source, consumer, report);
 			CountingSink entries = new CountingSink(document);
-			InputStream in;
-			Path spool = null;
-			if ("-".equals(input)) {
-				spool = Files.createTempFile("togetl-import-", ".tef");
-				Files.copy(System.in, spool, StandardCopyOption.REPLACE_EXISTING);
-				in = Files.newInputStream(spool);
-			} else {
-				in = Files.newInputStream(Paths.get(input));
-			}
+			InputStream in = Files.newInputStream(file);
 			try {
-				TEFReader.read(effectiveSourceUrl, in, entries);
+				TEFReader.read(effectiveSourceUri, in, entries);
 			} finally {
 				in.close();
-				if (spool != null) {
-					Files.deleteIfExists(spool);
-				}
 			}
 			document.finish(provenance);
 			tsv.flush();
@@ -230,7 +192,7 @@ public final class ImportCommand {
 			if (reportPath != null) {
 				writeReport(reportPath, report);
 			}
-			System.err.println("Imported " + effectiveSourceUrl);
+			System.err.println("Imported " + effectiveSourceUri);
 			System.err.println("  document " + source.getDocumentIri());
 			System.err.println("  document-import " + source.getDocumentImportIri());
 			System.err.println("  entries " + entries.entryCount + ", statements " + counter.count);
@@ -248,13 +210,33 @@ public final class ImportCommand {
 		}
 	}
 	
-	private static String defaultSourceUrl(String input) throws IOException {
-		if ("-".equals(input)) {
-			throw new IllegalArgumentException(
-					"--source-url is required when reading from standard input");
+	private static Path spoolStdin() throws IOException {
+		Path spool = Files.createTempFile("togetl-import-", ".tef");
+		try {
+			Files.copy(System.in, spool, StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException e) {
+			Files.deleteIfExists(spool);
+			throw e;
 		}
-		Path path = Paths.get(input).toAbsolutePath().normalize();
-		return path.toUri().toString();
+		return spool;
+	}
+	
+	private static SourceProvenance digest(Path file) throws IOException {
+		SourceProvenance.Digester digester = new SourceProvenance.Digester();
+		InputStream in = Files.newInputStream(file);
+		try {
+			byte[] block = new byte[65536];
+			int n;
+			while ((n = in.read(block)) >= 0) {
+				if (n > 0) {
+					digester.accept(Optional.of(Arrays.copyOf(block, n)));
+				}
+			}
+		} finally {
+			in.close();
+		}
+		digester.accept(Optional.<byte[]>empty());
+		return digester.result();
 	}
 	
 	private static Writer openOutput(String path) throws IOException {
