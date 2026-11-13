@@ -13,6 +13,7 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -35,6 +36,11 @@ import net.nuke24.togetl.dialect.TEFDocumentSink;
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
 import net.nuke24.togetl.etl.SourceProvenance;
+import net.nuke24.togetl.hash.Base32;
+import net.nuke24.togetl.hash.BitprintDigest;
+import net.nuke24.togetl.hash.BitprintScheme;
+import net.nuke24.togetl.hash.Tiger;
+import net.nuke24.togetl.hash.TigerTree;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.mapping.MappingTable;
 import net.nuke24.togetl.mapping.MappingTEFDialect;
@@ -98,7 +104,7 @@ public final class TestMain {
 	 */
 	private static final Set<String> enabledCategories = new HashSet<String>(
 			Collections.singletonList("core"));
-	
+			
 	private interface Check {
 		void run() throws Exception;
 	}
@@ -144,6 +150,7 @@ public final class TestMain {
 		run("source provenance", TestMain::testSourceProvenance);
 		run("multi sink order", TestMain::testMultiSinkOrder);
 		run("identifiers", TestMain::testIdentifiers);
+		run("hash known answers", TestMain::testHashKnownAnswers);
 		run("generic dialect", TestMain::testGenericDialect);
 		run("generic dialect round trip", TestMain::testGenericDialectRoundTrip);
 		run("parts mapping", TestMain::testPartsMapping);
@@ -167,6 +174,9 @@ public final class TestMain {
 		run("file-tests", "import rejects --tolerance", TestMain::testImportRejectsTolerance);
 		run("file-tests", "import writes provenance", TestMain::testImportWritesProvenance);
 		run("file-tests", "import from stdin", TestMain::testImportFromStdin);
+		run("file-tests", "import derives bitprint source", TestMain::testImportDerivesBitprint);
+		run("file-tests", "import rejects mismatched bitprint", TestMain::testImportRejectsMismatchedBitprint);
+		run("file-tests", "import rejects bad source options", TestMain::testImportRejectsBadSourceOptions);
 		
 		run("memory-tests", "import streams in a small heap", TestMain::testImportStreamsInSmallHeap);
 		
@@ -688,6 +698,46 @@ public final class TestMain {
 		assertEquals("content\r\n", entry.getContent(), "content preserves CRLF");
 	}
 	
+	private static String hex(byte[] bytes) {
+		StringBuilder out = new StringBuilder();
+		for (byte b : bytes) {
+			out.append(String.format("%02x", b & 0xFF));
+		}
+		return out.toString();
+	}
+	
+	private static byte[] digest(MessageDigest digest, byte[] input) {
+		digest.reset();
+		return digest.digest(input);
+	}
+	
+	private static void testHashKnownAnswers() throws Exception {
+		// Tiger-192 test vectors from the Tiger specification.
+		assertEquals("3293ac630c13f0245f92bbb1766e16167a4e58492dde73f3",
+				hex(digest(new Tiger(), new byte[0])), "Tiger of empty input");
+		assertEquals("2aab1484e8c158f2bfb8c5ff41b57a525129131c957b5f93",
+				hex(digest(new Tiger(), "abc".getBytes(StandardCharsets.US_ASCII))), "Tiger of abc");
+				
+		// A tree hash of a single leaf is the leaf hash: Tiger over a 0x00 prefix and the data.
+		check(Arrays.equals(digest(new Tiger(), new byte[] {0}), digest(new TigerTree(), new byte[0])),
+				"TigerTree of empty input is the empty leaf hash");
+				
+		// RFC 4648 Base32 test vectors, without padding.
+		assertEquals("MY", Base32.encode("f".getBytes(StandardCharsets.US_ASCII)), "Base32 of f");
+		assertEquals("MZXW6YTB", Base32.encode("fooba".getBytes(StandardCharsets.US_ASCII)), "Base32 of fooba");
+		assertEquals("MZXW6YTBOI", Base32.encode("foobar".getBytes(StandardCharsets.US_ASCII)), "Base32 of foobar");
+		
+		// SHA-1 test vector, and the bitprint URN built from it.
+		byte[] content = "abc".getBytes(StandardCharsets.US_ASCII);
+		assertEquals("a9993e364706816aba3e25717850c26c9cd0d89d",
+				hex(digest(MessageDigest.getInstance("SHA-1"), content)), "SHA-1 of abc");
+		String urn = BitprintScheme.instance.hashToUri(digest(new BitprintDigest(), content));
+		check(urn.startsWith("urn:bitprint:"), "bitprint prefix: " + urn);
+		assertEquals(13 + 32 + 1 + 39, urn.length(), "bitprint URN length");
+		assertEquals(Base32.encode(digest(MessageDigest.getInstance("SHA-1"), content)),
+				urn.substring(13, 13 + 32), "bitprint SHA-1 part");
+	}
+	
 	private static void testIdentifiers() throws Exception {
 		String url = "https://example.com/a b.tef";
 		String documentIri = Identifiers.documentIri(url);
@@ -1180,7 +1230,7 @@ public final class TestMain {
 		assertEquals("", bareTodo.getTitle(), "bare keyword has an empty title");
 		assertEquals("WAIT", bare.getHeadings().get(1).getTodoKeyword(),
 				"default keywords apply when no directive is present");
-		
+				
 		OrgDocument custom = OrgReader.read((
 				"* SHIP it\n"
 				+ "* WAIT thing\n"
@@ -1200,7 +1250,7 @@ public final class TestMain {
 				"TODO is not a keyword once a directive replaces the defaults");
 		assertEquals("TODO task", custom.getHeadings().get(3).getTitle(),
 				"TODO stays in the title");
-		
+				
 		OrgDocument duplicates = OrgReader.read((
 				"* A\n:PROPERTIES:\n:CUSTOM_ID: x\n:END:\n"
 				+ "* B\n:PROPERTIES:\n:CUSTOM_ID: x\n:END:\n").getBytes(StandardCharsets.UTF_8));
@@ -1214,7 +1264,7 @@ public final class TestMain {
 		assertEquals(1, table.getRows().size(), "|-5 degrees| is one row");
 		check(table.getRows().get(0).isSeparator(),
 				"any line starting with |- is a horizontal rule, even with text in it");
-		
+				
 		try {
 			new OrgParser().accept(Optional.of("embedded\nnewline"));
 			check(false, "a line containing LF must be rejected");
@@ -1315,24 +1365,81 @@ public final class TestMain {
 	
 	private static void testImportFromStdin() throws Exception {
 		Path dir = tempDir();
-		Path output = dir.resolve("stdin.togetltsv");
+		Path input = dir.resolve("data.tef");
+		Path fromFile = dir.resolve("file.togetltsv");
+		Path fromStdin = dir.resolve("stdin.togetltsv");
 		byte[] bytes = "=part p1\nname: Widget\n".getBytes(StandardCharsets.UTF_8);
+		Files.write(input, bytes);
+		
+		assertEquals(0, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", fromFile.toString(),
+				"--source-url", "file:///data.tef"
+		}), "file import exit code");
 		
 		InputStream originalIn = System.in;
 		System.setIn(new ByteArrayInputStream(bytes));
 		try {
 			assertEquals(0, ImportCommand.run(new String[] {
-					"--input", "-", "--output", output.toString(),
-					"--source-url", "file:///stdin.tef"
+					"--input", "-", "--output", fromStdin.toString(),
+					"--source-url", "file:///data.tef"
 			}), "stdin import exit code");
 		} finally {
 			System.setIn(originalIn);
 		}
-		String written = new String(Files.readAllBytes(output), StandardCharsets.UTF_8);
-		check(written.contains(Identifiers.sha256(bytes)), "stdin output should record the input's SHA-256");
+		check(Arrays.equals(Files.readAllBytes(fromFile), Files.readAllBytes(fromStdin)),
+				"stdin import should match the file import (stdin is read once, in full)");
+				
+		assertEquals(1, ImportCommand.run(new String[] {"--input", "-", "--output", fromStdin.toString()}),
+				"stdin without a source option should be refused");
+	}
+	
+	private static void testImportDerivesBitprint() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("data.tef");
+		Path output = dir.resolve("data.togetltsv");
+		byte[] bytes = "=part p1\nname: Widget\n".getBytes(StandardCharsets.UTF_8);
+		Files.write(input, bytes);
+		String expected = BitprintScheme.instance.hashToUri(digest(new BitprintDigest(), bytes));
 		
-		assertEquals(1, ImportCommand.run(new String[] {"--input", "-", "--output", output.toString()}),
-				"stdin without --source-url should be refused");
+		assertEquals(0, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString(),
+				"--derive-source-url", "bitprint"
+		}), "derived import exit code");
+		String written = new String(Files.readAllBytes(output), StandardCharsets.UTF_8);
+		check(written.contains(expected), "output should use the derived bitprint as source: " + expected);
+	}
+	
+	private static void testImportRejectsMismatchedBitprint() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("data.tef");
+		Path output = dir.resolve("data.togetltsv");
+		Files.write(input, "=part p1\nname: Widget\n".getBytes(StandardCharsets.UTF_8));
+		
+		assertEquals(1, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString(),
+				"--source-url", "urn:bitprint:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+		}), "mismatched bitprint exit code");
+		check(!Files.exists(output), "no output should be written for a mismatched bitprint");
+	}
+	
+	private static void testImportRejectsBadSourceOptions() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("data.tef");
+		Path output = dir.resolve("data.togetltsv");
+		Files.write(input, "=part p1\nname: Widget\n".getBytes(StandardCharsets.UTF_8));
+		
+		assertEquals(1, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString(),
+				"--derive-source-url", "sha1"
+		}), "unknown derive kind exit code");
+		assertEquals(1, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString(),
+				"--source-url", "file:///data.tef", "--derive-source-url", "bitprint"
+		}), "both source options exit code");
+		assertEquals(1, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString()
+		}), "no source option exit code");
+		check(!Files.exists(output), "no output should be written for rejected options");
 	}
 	
 	/**
