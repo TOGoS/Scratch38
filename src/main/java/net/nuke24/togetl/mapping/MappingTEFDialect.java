@@ -101,7 +101,7 @@ public final class MappingTEFDialect implements TEFDialect {
 						Namespaces.RDF_TYPE, IRI.of(entryRule.getTypeIri()));
 			}
 			if (entryRule.getAsWritten() != null) {
-				report.record("as-written-entry", entry.getType(), "", entryLocation);
+				report.record(ImportReport.AS_WRITTEN_ENTRY, entry.getType(), "", entryLocation);
 				DialectSupport.emit(source, out, entryLocation, subject,
 						Namespaces.TOGETL_AS_WRITTEN, Literal.of(entryRule.getAsWritten()));
 			}
@@ -121,7 +121,7 @@ public final class MappingTEFDialect implements TEFDialect {
 					continue;
 				}
 				if (fieldRule.getAsWritten() != null) {
-					report.record("as-written-field", entry.getType(), header.getKey(), location);
+					report.record(ImportReport.AS_WRITTEN_FIELD, entry.getType(), header.getKey(), location);
 					DialectSupport.emit(source, out, location, subject,
 							Namespaces.TOGETL_AS_WRITTEN, Literal.of(fieldRule.getAsWritten()));
 				}

@@ -36,6 +36,7 @@ import net.nuke24.togetl.dialect.GenericTEFDialect;
 import net.nuke24.togetl.dialect.TEFDialect;
 import net.nuke24.togetl.dialect.TEFDocumentSink;
 import net.nuke24.togetl.etl.ImportReport;
+import net.nuke24.togetl.etl.ReportParseException;
 import net.nuke24.togetl.etl.SourceDocument;
 import net.nuke24.togetl.etl.SourceProvenance;
 import net.nuke24.togetl.hash.Base32;
@@ -156,6 +157,7 @@ public final class TestMain {
 		run("generic dialect round trip", TestMain::testGenericDialectRoundTrip);
 		run("parts mapping", TestMain::testPartsMapping);
 		run("parts conflicts and duplicates", TestMain::testPartsConflicts);
+		run("import report tsv", TestMain::testImportReportTsv);
 		run("namespaces mapping", TestMain::testNamespacesMapping);
 		run("vocabulary report", TestMain::testVocabularyReport);
 		run("namespace catalog", TestMain::testNamespaceCatalog);
@@ -931,6 +933,85 @@ public final class TestMain {
 				"multi-valued field keeps b");
 		assertEquals(1, countObject(statements, Namespaces.GENERAL_SHORT_DESCRIPTION,
 				Literal.of("same").toString()), "identical duplicate is deduplicated");
+	}
+	
+	private static void testImportReportTsv() throws Exception {
+		ImportReport report = new ImportReport();
+		report.record(ImportReport.UNMAPPED_FIELD, "part", "mystery", Location.at(2, 3));
+		report.record(ImportReport.UNMAPPED_FIELD, "part", "mystery", Location.at(9, 1));
+		report.record(ImportReport.CONFLICT, "part", "name", Location.span(3, 1, 3, 5));
+		report.record(ImportReport.UNMAPPED_DIRECTIVE, "", "custom", null);
+		assertEquals(4, report.getOccurrenceCount(), "aggregated occurrence count");
+		
+		int mysteryCount = 0;
+		for (ImportReport.Row row : report.getRows()) {
+			if (ImportReport.UNMAPPED_FIELD.equals(row.getKind())
+					&& "mystery".equals(row.getField())) {
+				mysteryCount = row.getCount();
+			}
+		}
+		assertEquals(2, mysteryCount, "duplicate rows are aggregated");
+		
+		StringWriter out = new StringWriter();
+		report.writeTsv(out);
+		
+		List<ImportReport.Row> expected = report.getRows();
+		List<ImportReport.Row> actual = ImportReport.readTsv(
+				new StringReader(out.toString()), "report.tsv");
+		assertEquals(expected.size(), actual.size(), "round-trip row count");
+		for (int i = 0; i < expected.size(); i++) {
+			ImportReport.Row expectedRow = expected.get(i);
+			ImportReport.Row actualRow = actual.get(i);
+			assertEquals(expectedRow.getKind(), actualRow.getKind(), "round-trip kind");
+			assertEquals(expectedRow.getEntryType(), actualRow.getEntryType(),
+					"round-trip entry type");
+			assertEquals(expectedRow.getField(), actualRow.getField(), "round-trip field");
+			assertEquals(expectedRow.getCount(), actualRow.getCount(), "round-trip count");
+			assertEquals(expectedRow.getFirstLocation(), actualRow.getFirstLocation(),
+					"round-trip first location");
+		}
+		
+		List<ImportReport.Row> kindRows = ImportReport.readTsv(new StringReader(
+				ImportReport.TSV_HEADER + "\n"
+				+ "kind\tpart\tfoo\t1\tL1C1\n"
+				+ "conflict\tpart\tname\t2\tL2C1...L2C5\n"), "report.tsv");
+		assertEquals(2, kindRows.size(), "header is recognized structurally");
+		assertEquals("kind", kindRows.get(0).getKind(),
+				"a data row whose kind is 'kind' is not treated as a header");
+		assertEquals(Location.at(1, 1), kindRows.get(0).getFirstLocation(),
+				"single location parsed");
+		assertEquals(Location.span(2, 1, 2, 5), kindRows.get(1).getFirstLocation(),
+				"span location parsed");
+		
+		checkReportParseError(
+				ImportReport.TSV_HEADER + "\n"
+				+ "conflict\tpart\tname\t1\n",
+				2, "expected 5 report columns");
+		checkReportParseError(
+				ImportReport.TSV_HEADER + "\n"
+				+ "conflict\tpart\tname\tx\tL1C1\n",
+				2, "invalid report count");
+		checkReportParseError(
+				ImportReport.TSV_HEADER + "\n"
+				+ "conflict\tpart\tname\t0\tL1C1\n",
+				2, "count must be >= 1");
+		checkReportParseError(
+				ImportReport.TSV_HEADER + "\n"
+				+ "conflict\tpart\tname\t1\t\n",
+				2, "invalid report location");
+	}
+	
+	private static void checkReportParseError(String text, int line, String fragment)
+			throws Exception {
+		try {
+			ImportReport.readTsv(new StringReader(text), "report.tsv");
+			check(false, "report should be rejected: " + fragment);
+		} catch (ReportParseException expected) {
+			assertEquals(line, expected.getLineNumber(), "report error line");
+			assertEquals("report.tsv", expected.getSourceName(), "report error source");
+			check(expected.getMessage().contains(fragment),
+					"report error should mention '" + fragment + "': " + expected.getMessage());
+		}
 	}
 	
 	private static void testNamespacesMapping() throws Exception {

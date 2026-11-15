@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 import net.nuke24.togetl.Namespaces;
+import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.rdf.BlankNode;
 import net.nuke24.togetl.rdf.IRI;
@@ -48,7 +49,7 @@ public final class Loader {
 	
 	public LoadResult load(
 			List<LoadedStream> streams,
-			List<ConflictRow> reportRows,
+			List<ImportReport.Row> reportRows,
 			Vocabulary vocabulary
 	) throws SQLException {
 		if (streams == null || streams.isEmpty()) {
@@ -518,7 +519,7 @@ public final class Loader {
 	}
 	
 	private int insertReportRows(
-			List<ConflictRow> reportRows,
+			List<ImportReport.Row> reportRows,
 			String batchIri,
 			Iterable<String> documentIris
 	) throws SQLException {
@@ -541,14 +542,14 @@ public final class Loader {
 						+ " occurrence_count, first_location)"
 						+ " VALUES (?, ?, ?, ?, ?, ?, ?)");
 		try {
-			for (ConflictRow row : reportRows) {
+			for (ImportReport.Row row : reportRows) {
 				setNullableString(statement, 1, batchIri);
 				setNullableString(statement, 2, documentIri);
 				statement.setString(3, row.getKind());
 				statement.setString(4, row.getEntryType());
 				statement.setString(5, row.getField());
 				statement.setInt(6, row.getCount());
-				statement.setString(7, row.getFirstLocation());
+				statement.setString(7, row.getFirstLocation().toString());
 				statement.executeUpdate();
 			}
 		} finally {

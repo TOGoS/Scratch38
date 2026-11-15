@@ -13,11 +13,12 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.nuke24.togetl.db.ConflictRow;
 import net.nuke24.togetl.db.LoadResult;
 import net.nuke24.togetl.db.LoadedStream;
 import net.nuke24.togetl.db.Loader;
 import net.nuke24.togetl.db.SQLiteDatabase;
+import net.nuke24.togetl.etl.ImportReport;
+import net.nuke24.togetl.etl.ReportParseException;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.rdf.Statement;
 import net.nuke24.togetl.tef.TEFReadException;
@@ -66,6 +67,9 @@ public final class LoadCommand {
 			System.err.println("togetl load: " + e.getMessage());
 			return 1;
 		} catch (TOGETLTSVParseException e) {
+			System.err.println("togetl load: " + e.getMessage());
+			return 1;
+		} catch (ReportParseException e) {
 			System.err.println("togetl load: " + e.getMessage());
 			return 1;
 		} catch (IllegalArgumentException e) {
@@ -117,7 +121,9 @@ public final class LoadCommand {
 		return args[index];
 	}
 	
-	private int execute() throws IOException, SQLException, TOGETLTSVParseException, TEFReadException {
+	private int execute()
+			throws IOException, SQLException, TOGETLTSVParseException,
+			TEFReadException, ReportParseException {
 		List<LoadedStream> streams = new ArrayList<LoadedStream>();
 		for (String input : inputs) {
 			Path path = Paths.get(input);
@@ -134,9 +140,15 @@ public final class LoadCommand {
 					path.toString(), Identifiers.sha256(bytes), statements));
 		}
 		
-		List<ConflictRow> reportRows = new ArrayList<ConflictRow>();
+		List<ImportReport.Row> reportRows = new ArrayList<ImportReport.Row>();
 		for (String reportPath : reportPaths) {
-			reportRows.addAll(readReport(Paths.get(reportPath)));
+			Path path = Paths.get(reportPath);
+			Reader reportReader = Files.newBufferedReader(path, StandardCharsets.UTF_8);
+			try {
+				reportRows.addAll(ImportReport.readTsv(reportReader, path.toString()));
+			} finally {
+				reportReader.close();
+			}
 		}
 		
 		Vocabulary vocabulary = null;
@@ -190,41 +202,6 @@ public final class LoadCommand {
 		System.out.println("  parse issues " + result.getParseIssueCount()
 				+ ", report rows " + result.getReportRowCount()
 				+ ", vocab terms " + result.getVocabTermCount());
-	}
-	
-	private static List<ConflictRow> readReport(Path path)
-			throws IOException, TOGETLTSVParseException {
-		List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
-		List<ConflictRow> rows = new ArrayList<ConflictRow>();
-		int lineNumber = 0;
-		for (String line : lines) {
-			lineNumber++;
-			if (line.trim().isEmpty()) {
-				continue;
-			}
-			String[] columns = line.split("\t", -1);
-			if (columns.length < 4) {
-				throw new TOGETLTSVParseException(
-						lineNumber, "expected at least 4 report columns");
-			}
-			if ("kind".equals(columns[0])) {
-				continue;
-			}
-			int count;
-			try {
-				count = Integer.parseInt(columns[3]);
-			} catch (NumberFormatException e) {
-				throw new TOGETLTSVParseException(
-						lineNumber, "invalid report count: " + columns[3]);
-			}
-			rows.add(new ConflictRow(
-					columns[0],
-					columns[1],
-					columns[2],
-					count,
-					columns.length > 4 ? columns[4] : ""));
-		}
-		return rows;
 	}
 	
 	public static void usage(java.io.PrintStream err) {

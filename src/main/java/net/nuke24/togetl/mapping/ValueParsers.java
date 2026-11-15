@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import net.nuke24.togetl.Namespaces;
+import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.hash.BitprintScheme;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.rdf.IRI;
@@ -112,7 +113,7 @@ public final class ValueParsers {
 		if (isAcceptableIri(value)) {
 			context.emit(IRI.of(value));
 		} else {
-			context.report("invalid-iri");
+			context.report(ImportReport.INVALID_IRI);
 			context.emit(Literal.of(value));
 			context.emitRaw(context.getSubject(), Namespaces.TOGETL_AS_WRITTEN, Literal.of(value));
 		}
@@ -121,7 +122,7 @@ public final class ValueParsers {
 	private static void emitPartRef(ValueParserContext context, String value) throws IOException {
 		String trimmed = value.trim();
 		if (trimmed.isEmpty()) {
-			context.report("empty-value");
+			context.report(ImportReport.EMPTY_VALUE);
 			return;
 		}
 		if (isAcceptableIri(trimmed)) {
@@ -168,7 +169,7 @@ public final class ValueParsers {
 				context.emitRaw(object, Namespaces.RDF_TYPE, Namespaces.TOGETL_FILE);
 			}
 			if (ref.uri != null && !isAcceptableIri(ref.uri)) {
-				context.report("invalid-iri");
+				context.report(ImportReport.INVALID_IRI);
 				context.emitRaw(context.getSubject(), Namespaces.TOGETL_AS_WRITTEN, Literal.of(ref.uri));
 			}
 		}
@@ -229,7 +230,7 @@ public final class ValueParsers {
 			} else if (value.matches("-?\\d+\\.\\d+")) {
 				context.emit(Literal.of(value, Namespaces.XSD_DECIMAL));
 			} else {
-				context.report("unparsed-value");
+				context.report(ImportReport.UNPARSED_VALUE);
 				context.emit(Literal.of(value));
 			}
 		}
@@ -244,7 +245,7 @@ public final class ValueParsers {
 			} else if (value.matches("\\d{4}-\\d{2}-\\d{2}T.*")) {
 				context.emit(Literal.of(value, Namespaces.XSD_DATE_TIME));
 			} else {
-				context.report("unparsed-value");
+				context.report(ImportReport.UNPARSED_VALUE);
 				context.emit(Literal.of(value));
 			}
 		}
@@ -259,7 +260,7 @@ public final class ValueParsers {
 			} else if ("false".equals(value) || "no".equals(value) || "0".equals(value)) {
 				context.emit(Literal.of("false", Namespaces.XSD_BOOLEAN));
 			} else {
-				context.report("unparsed-value");
+				context.report(ImportReport.UNPARSED_VALUE);
 				context.emit(Literal.of(context.getHeader().getValue()));
 			}
 		}
