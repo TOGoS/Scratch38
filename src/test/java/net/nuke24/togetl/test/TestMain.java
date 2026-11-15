@@ -10,6 +10,7 @@ import java.io.PrintStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,6 +27,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
+import net.nuke24.togetl.Namespaces;
 import net.nuke24.togetl.cli.ImportCommand;
 import net.nuke24.togetl.cli.LoadCommand;
 import net.nuke24.togetl.cli.VocabCommand;
@@ -71,7 +73,6 @@ import net.nuke24.togetl.togetltsv.TOGETLTSVWriter;
 import net.nuke24.togetl.util.MultiSink;
 import net.nuke24.togetl.util.Sink;
 import net.nuke24.togetl.util.PercentCoder;
-import net.nuke24.togetl.vocab.Vocab;
 import net.nuke24.togetl.vocab.Vocabulary;
 import net.nuke24.togetl.vocab.VocabularyLoader;
 import net.nuke24.togetl.vocab.VocabularyReport;
@@ -157,6 +158,7 @@ public final class TestMain {
 		run("parts conflicts and duplicates", TestMain::testPartsConflicts);
 		run("namespaces mapping", TestMain::testNamespacesMapping);
 		run("vocabulary report", TestMain::testVocabularyReport);
+		run("namespace catalog", TestMain::testNamespaceCatalog);
 		run("vocab command", TestMain::testVocabCommand);
 		run("org reader", TestMain::testOrgReader);
 		run("org heading metadata", TestMain::testOrgHeadingMetadata);
@@ -228,7 +230,7 @@ public final class TestMain {
 	}
 	
 	private static void testAliases() {
-		AliasTable aliases = AliasTable.withDefaults();
+		AliasTable aliases = Namespaces.newAliasTable();
 		assertEquals(RDF + "type", aliases.expand("rdf:type"), "expand default alias");
 		assertEquals("rdf:type", aliases.compress(RDF + "type"), "compress default alias");
 		assertEquals(RDF, aliases.expand("rdf:"), "expand namespace alias");
@@ -786,30 +788,30 @@ public final class TestMain {
 		String entry = Identifiers.tefEntryIri(doc, 0);
 		assertEquals(statements.size(), countSource(statements, documentImport), "all statements use document import source");
 		
-		check(has(statements, doc, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT.toString()),
+		check(has(statements, doc, Namespaces.RDF_TYPE, Namespaces.TOGETL_DOCUMENT.toString()),
 				"document type statement");
-		check(has(statements, doc, Vocab.GENERAL_SHA256, Literal.of(Identifiers.sha256(bytes)).toString()),
+		check(has(statements, doc, Namespaces.GENERAL_SHA256, Literal.of(Identifiers.sha256(bytes)).toString()),
 				"document hash statement");
-		check(has(statements, documentImport, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT_IMPORT.toString()),
+		check(has(statements, documentImport, Namespaces.RDF_TYPE, Namespaces.TOGETL_DOCUMENT_IMPORT.toString()),
 				"document import type statement");
-		check(has(statements, documentImport, Vocab.TOGETL_SOURCE_DOCUMENT, doc),
+		check(has(statements, documentImport, Namespaces.TOGETL_SOURCE_DOCUMENT, doc),
 				"document import links to source document");
-		check(has(statements, documentImport, Vocab.TOGETL_PARSER_VERSION, Literal.of("test/1").toString()),
+		check(has(statements, documentImport, Namespaces.TOGETL_PARSER_VERSION, Literal.of("test/1").toString()),
 				"document import parser version");
-		check(has(statements, documentImport, Vocab.TOGETL_HAS_BOM,
-				Literal.of("false", Vocab.XSD_BOOLEAN).toString()), "document import BOM flag");
-		check(has(statements, entry, Vocab.TEF_ENTRY_TYPE, Literal.of("part").toString()),
+		check(has(statements, documentImport, Namespaces.TOGETL_HAS_BOM,
+				Literal.of("false", Namespaces.XSD_BOOLEAN).toString()), "document import BOM flag");
+		check(has(statements, entry, Namespaces.TEF_ENTRY_TYPE, Literal.of("part").toString()),
 				"entry type statement");
-		check(has(statements, entry, Vocab.TEF_ENTRY_VALUE, Literal.of("p1").toString()),
+		check(has(statements, entry, Namespaces.TEF_ENTRY_VALUE, Literal.of("p1").toString()),
 				"entry value statement");
-		check(has(statements, entry, Vocab.TEF_CONTENT, Literal.of("content\n").toString()),
+		check(has(statements, entry, Namespaces.TEF_CONTENT, Literal.of("content\n").toString()),
 				"entry content statement");
 				
-		assertEquals(2, countObject(statements, Vocab.TEF_KEY, Literal.of("tag").toString()),
+		assertEquals(2, countObject(statements, Namespaces.TEF_KEY, Literal.of("tag").toString()),
 				"both repeated headers captured");
-		assertEquals(1, countObject(statements, Vocab.TEF_TEXT, Literal.of("# a note").toString()),
+		assertEquals(1, countObject(statements, Namespaces.TEF_TEXT, Literal.of("# a note").toString()),
 				"document comment captured");
-		assertEquals(1, countObject(statements, Vocab.TEF_NAME, Literal.of("custom").toString()),
+		assertEquals(1, countObject(statements, Namespaces.TEF_NAME, Literal.of("custom").toString()),
 				"directive captured");
 				
 		check(reportHas(report, "unmapped-entry-type", "part", ""), "entry type reported");
@@ -828,7 +830,7 @@ public final class TestMain {
 		
 		List<Statement> statements = collect(new GenericTEFDialect(), bytes, source, report);
 		StringWriter out = new StringWriter();
-		TOGETLTSVWriter writer = new TOGETLTSVWriter(out, AliasTable.withDefaults());
+		TOGETLTSVWriter writer = new TOGETLTSVWriter(out, Namespaces.newAliasTable());
 		try {
 			for (Statement statement : statements) {
 				writer.write(statement);
@@ -862,34 +864,34 @@ public final class TestMain {
 		List<Statement> statements = collect(dialect, bytes, source, report);
 		String part = Identifiers.mintData("part", "p1");
 		
-		check(has(statements, part, Vocab.RDF_TYPE, Vocab.PARTS3D_PART.toString()),
+		check(has(statements, part, Namespaces.RDF_TYPE, Namespaces.PARTS3D_PART.toString()),
 				"part type");
-		check(has(statements, part, Vocab.GENERAL_SHORT_DESCRIPTION,
+		check(has(statements, part, Namespaces.GENERAL_SHORT_DESCRIPTION,
 				Literal.of("Widget").toString()), "short description");
-		check(has(statements, part, Vocab.GENERAL_TAG, Literal.of("a").toString()),
+		check(has(statements, part, Namespaces.GENERAL_TAG, Literal.of("a").toString()),
 				"first tag");
-		check(has(statements, part, Vocab.GENERAL_TAG, Literal.of("b").toString()),
+		check(has(statements, part, Namespaces.GENERAL_TAG, Literal.of("b").toString()),
 				"second tag");
-		check(has(statements, part, Vocab.GENERAL_IS_MEMBER_OF,
+		check(has(statements, part, Namespaces.GENERAL_IS_MEMBER_OF,
 				Identifiers.referenceIri("p2")), "member-of resolves to a part IRI");
-		check(!has(statements, part, Vocab.TOGETL_DOCUMENT_LINK, source.getDocumentIri()),
+		check(!has(statements, part, Namespaces.TOGETL_DOCUMENT_LINK, source.getDocumentIri()),
 				"mapped part should not be linked to source TEF document");
 		String stlResource = "http://wherever-files.nuke24.net/uri-res/raw/urn:bitprint:ABC/p1.stl";
-		check(has(statements, part, Vocab.PARTS3D_STL_FILE, stlResource),
+		check(has(statements, part, Namespaces.PARTS3D_STL_FILE, stlResource),
 				"stl file resource URL");
-		check(!has(statements, stlResource, Vocab.GENERAL_FILENAME,
+		check(!has(statements, stlResource, Namespaces.GENERAL_FILENAME,
 				Literal.of("p1.stl").toString()), "canonical file URL does not duplicate filename");
-		check(!has(statements, stlResource, Vocab.RDF_TYPE,
-				Vocab.TOGETL_FILE.toString()), "canonical file URL does not duplicate file type");
-		check(has(statements, part, Vocab.PARTS3D_OPENSCAD_RENDERING,
+		check(!has(statements, stlResource, Namespaces.RDF_TYPE,
+				Namespaces.TOGETL_FILE.toString()), "canonical file URL does not duplicate file type");
+		check(has(statements, part, Namespaces.PARTS3D_OPENSCAD_RENDERING,
 				"http://example.com/p1.png"), "rendering reference");
-		check(has(statements, part, Vocab.RDFS_COMMENT,
+		check(has(statements, part, Namespaces.RDFS_COMMENT,
 				Literal.of("A part.\n").toString()), "content becomes a comment");
 		check(reportHas(report, "unmapped-field", "part", "mystery"),
 				"unknown field is reported");
-		assertEquals(0, countObject(statements, Vocab.TEF_KEY, Literal.of("mystery").toString()),
+		assertEquals(0, countObject(statements, Namespaces.TEF_KEY, Literal.of("mystery").toString()),
 				"unknown field is not emitted as TEF structure in mapped dialect");
-		check(!has(statements, part, Vocab.TEF_ENTRY_TYPE, Literal.of("part").toString()),
+		check(!has(statements, part, Namespaces.TEF_ENTRY_TYPE, Literal.of("part").toString()),
 				"mapped subject does not get TEF entry metadata");
 	}
 	
@@ -917,17 +919,17 @@ public final class TestMain {
 				
 		List<Statement> statements = collect(dialect, bytes, source, report);
 		
-		assertEquals(1, countObject(statements, Vocab.GENERAL_SHORT_DESCRIPTION,
+		assertEquals(1, countObject(statements, Namespaces.GENERAL_SHORT_DESCRIPTION,
 				Literal.of("first").toString()), "first value kept");
-		assertEquals(1, countObject(statements, Vocab.GENERAL_SHORT_DESCRIPTION,
+		assertEquals(1, countObject(statements, Namespaces.GENERAL_SHORT_DESCRIPTION,
 				Literal.of("second").toString()), "conflicting value kept");
 		check(reportHas(report, "conflict", "part", "short-description"),
 				"functional conflict is reported");
-		assertEquals(1, countObject(statements, Vocab.GENERAL_TAG, Literal.of("a").toString()),
+		assertEquals(1, countObject(statements, Namespaces.GENERAL_TAG, Literal.of("a").toString()),
 				"multi-valued field keeps a");
-		assertEquals(1, countObject(statements, Vocab.GENERAL_TAG, Literal.of("b").toString()),
+		assertEquals(1, countObject(statements, Namespaces.GENERAL_TAG, Literal.of("b").toString()),
 				"multi-valued field keeps b");
-		assertEquals(1, countObject(statements, Vocab.GENERAL_SHORT_DESCRIPTION,
+		assertEquals(1, countObject(statements, Namespaces.GENERAL_SHORT_DESCRIPTION,
 				Literal.of("same").toString()), "identical duplicate is deduplicated");
 	}
 	
@@ -954,21 +956,21 @@ public final class TestMain {
 				
 		List<Statement> statements = collect(dialect, bytes, source, report);
 		
-		check(has(statements, "http://example.com/ns/", Vocab.RDF_TYPE,
-				Vocab.TOGETL_NAMESPACE.toString()), "namespace type and trimmed subject");
-		check(has(statements, "http://example.com/ns/", Vocab.GENERAL_PROJECT_HOMEPAGE,
+		check(has(statements, "http://example.com/ns/", Namespaces.RDF_TYPE,
+				Namespaces.TOGETL_NAMESPACE.toString()), "namespace type and trimmed subject");
+		check(has(statements, "http://example.com/ns/", Namespaces.GENERAL_PROJECT_HOMEPAGE,
 				"https://example.com/"), "project homepage");
-		check(has(statements, "http://example.com/ns/Thing", Vocab.RDF_TYPE,
-				Vocab.RDFS_CLASS.toString()), "type is a class");
-		check(has(statements, "http://example.com/ns/prop", Vocab.RDF_TYPE,
-				Vocab.RDF_PROPERTY.toString()), "attribute is a property");
-		check(has(statements, "http://example.com/ns/Type", Vocab.RDF_TYPE,
-				Vocab.RDFS_DATATYPE.toString()), "datatype is a datatype");
-		check(has(statements, "http://example.com/ns/Format", Vocab.RDF_TYPE,
-				Vocab.GENERAL_FORMAT_CLASS.toString()), "format is a format");
-		check(has(statements, "urn:oid:1.2.3", Vocab.RDF_TYPE,
-				Vocab.GENERAL_PROJECT_BASE.toString()), "project base");
-		check(has(statements, "urn:oid:1.2.3", Vocab.GENERAL_TITLE,
+		check(has(statements, "http://example.com/ns/Thing", Namespaces.RDF_TYPE,
+				Namespaces.RDFS_CLASS.toString()), "type is a class");
+		check(has(statements, "http://example.com/ns/prop", Namespaces.RDF_TYPE,
+				Namespaces.RDF_PROPERTY.toString()), "attribute is a property");
+		check(has(statements, "http://example.com/ns/Type", Namespaces.RDF_TYPE,
+				Namespaces.RDFS_DATATYPE.toString()), "datatype is a datatype");
+		check(has(statements, "http://example.com/ns/Format", Namespaces.RDF_TYPE,
+				Namespaces.GENERAL_FORMAT_CLASS.toString()), "format is a format");
+		check(has(statements, "urn:oid:1.2.3", Namespaces.RDF_TYPE,
+				Namespaces.GENERAL_PROJECT_BASE.toString()), "project base");
+		check(has(statements, "urn:oid:1.2.3", Namespaces.GENERAL_TITLE,
 				Literal.of("Project").toString()), "project title");
 	}
 	
@@ -988,12 +990,33 @@ public final class TestMain {
 		
 		boolean found = false;
 		for (VocabularyReport.Row row : report.getRows()) {
-			if (row.getTerm().equals(Vocab.GENERAL_SHORT_DESCRIPTION.toString())) {
+			if (row.getTerm().equals(Namespaces.GENERAL_SHORT_DESCRIPTION.toString())) {
 				found = true;
 				assertEquals(VocabularyReport.OK, row.getStatus(), "shortDescription status");
 			}
 		}
 		check(found, "shortDescription appears in the report");
+	}
+	
+	private static void testNamespaceCatalog() throws Exception {
+		Vocabulary vocabulary = VocabularyLoader.loadDefaults();
+		check(vocabulary.size() > 0, "vocabulary definitions were loaded");
+		for (Field field : Namespaces.class.getFields()) {
+			String term;
+			if (field.getType() == IRI.class) {
+				term = field.get(null).toString();
+			} else if (field.getType() == String.class && field.getName().endsWith("_NS")) {
+				term = (String) field.get(null);
+			} else {
+				continue;
+			}
+			if (!term.startsWith("tag:nuke24.net,2026-11:")) {
+				continue;
+			}
+			check(
+					vocabulary.isDefined(term),
+					field.getName() + " (" + term + ") is defined in vocab/*.tef");
+		}
 	}
 	
 	private static void testVocabCommand() throws Exception {
@@ -1862,7 +1885,7 @@ public final class TestMain {
 	
 	private static String write(Statement... statements) throws Exception {
 		StringWriter out = new StringWriter();
-		TOGETLTSVWriter writer = new TOGETLTSVWriter(out, AliasTable.withDefaults());
+		TOGETLTSVWriter writer = new TOGETLTSVWriter(out, Namespaces.newAliasTable());
 		try {
 			for (Statement statement : statements) {
 				writer.write(statement);

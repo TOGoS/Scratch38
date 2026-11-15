@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import net.nuke24.togetl.Namespaces;
 import net.nuke24.togetl.togetltsv.AliasTable;
 
 /**
@@ -111,7 +112,7 @@ public final class MappingTable {
 	
 	public static MappingTable parse(String name, List<String> lines) {
 		MappingTable table = new MappingTable(name);
-		AliasTable aliases = AliasTable.withDefaults();
+		AliasTable aliases = Namespaces.newAliasTable();
 		String section = "";
 		int lineNumber = 0;
 		

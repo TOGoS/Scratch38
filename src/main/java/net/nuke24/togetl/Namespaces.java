@@ -1,19 +1,25 @@
-package net.nuke24.togetl.vocab;
+package net.nuke24.togetl;
 
 import net.nuke24.togetl.rdf.IRI;
+import net.nuke24.togetl.togetltsv.AliasTable;
 
 /**
- * IRIs for project, TEF, and RDF vocabulary terms used by importers.
+ * RDF namespace prefixes and term IRIs used by TOGETL.
  *
- * <p>TOGETL terms and TEF metadata terms live under tag URIs in the project
- * namespace, while instance and derived data IDs use a more specific tag URI
- * namespace for each data domain.</p>
+ * <p>This is the authoritative Java catalog for namespaces and terms. The
+ * canonical definitions of the {@code tag:nuke24.net,2026-11:*} terms live in
+ * {@code vocab/*.tef}; keep these constants in sync with those files.</p>
+ *
+ * <p>Instance identifiers are minted by {@link net.nuke24.togetl.ident.Identifiers},
+ * which uses the namespace constants here. Namespace prefixes are fully
+ * spelled out so that they can be found by searching for their literal form.</p>
  */
-public final class Vocab {
+public final class Namespaces {
 	public static final String TOGETL_NS = "tag:nuke24.net,2026-11:togetl:";
 	public static final String TEF_NS = "tag:nuke24.net,2026-11:togetl:tef:";
 	public static final String GENERAL_NS = "tag:nuke24.net,2026-11:general:";
 	public static final String PARTS3D_NS = "tag:nuke24.net,2026-11:3dparts:";
+	public static final String WSITEM_NS = "tag:nuke24.net,2026-11:wsitem:";
 	public static final String RDF_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 	public static final String RDFS_NS = "http://www.w3.org/2000/01/rdf-schema#";
 	public static final String XSD_NS = "http://www.w3.org/2001/XMLSchema#";
@@ -28,6 +34,9 @@ public final class Vocab {
 	public static final IRI RDFS_COMMENT = IRI.of(RDFS_NS + "comment");
 	public static final IRI RDFS_LABEL = IRI.of(RDFS_NS + "label");
 	public static final IRI XSD_INTEGER = IRI.of(XSD_NS + "integer");
+	public static final IRI XSD_DECIMAL = IRI.of(XSD_NS + "decimal");
+	public static final IRI XSD_DATE = IRI.of(XSD_NS + "date");
+	public static final IRI XSD_DATE_TIME = IRI.of(XSD_NS + "dateTime");
 	public static final IRI XSD_BOOLEAN = IRI.of(XSD_NS + "boolean");
 	public static final IRI XSD_STRING = IRI.of(XSD_NS + "string");
 	
@@ -60,7 +69,7 @@ public final class Vocab {
 	public static final IRI TOGETL_PARSE_ISSUE_LINK = togetl("parseIssue");
 	public static final IRI GENERAL_SHA256 = general("sha256");
 	public static final IRI GENERAL_BYTE_LENGTH = general("byteLength");
-
+	
 	// Parse issues.
 	public static final IRI TOGETL_SEVERITY = togetl("severity");
 	public static final IRI TOGETL_CODE = togetl("code");
@@ -122,7 +131,26 @@ public final class Vocab {
 	public static final IRI PARTS3D_STL_FILE = parts3d("stlFile");
 	public static final IRI PARTS3D_CSG_FILE = parts3d("csgFile");
 	
-	private Vocab() { }
+	private Namespaces() { }
+	
+	/**
+	 * A TOGETLTSV alias table containing the standard namespace prefixes.
+	 */
+	public static AliasTable newAliasTable() {
+		AliasTable aliases = new AliasTable();
+		aliases.define("rdf:", RDF_NS);
+		aliases.define("rdfs:", RDFS_NS);
+		aliases.define("xsd:", XSD_NS);
+		aliases.define("togetl:", TOGETL_NS);
+		aliases.define("general:", GENERAL_NS);
+		aliases.define("3dparts:", PARTS3D_NS);
+		aliases.define("wsitem:", WSITEM_NS);
+		aliases.define("tef:", TEF_NS);
+		aliases.define("cc:", CC_NS);
+		aliases.define("dc:", DC_NS);
+		aliases.define("dcterms:", DCTERMS_NS);
+		return aliases;
+	}
 	
 	public static IRI togetl(String localName) {
 		return IRI.of(TOGETL_NS + localName);
@@ -134,6 +162,10 @@ public final class Vocab {
 	
 	public static IRI parts3d(String localName) {
 		return IRI.of(PARTS3D_NS + localName);
+	}
+	
+	public static IRI wsitem(String localName) {
+		return IRI.of(WSITEM_NS + localName);
 	}
 	
 	public static IRI tef(String localName) {

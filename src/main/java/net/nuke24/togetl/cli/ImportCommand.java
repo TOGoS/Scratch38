@@ -13,6 +13,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Optional;
 
+import net.nuke24.togetl.Namespaces;
 import net.nuke24.togetl.Version;
 import net.nuke24.togetl.dialect.Dialects;
 import net.nuke24.togetl.dialect.TEFDialect;
@@ -29,7 +30,6 @@ import net.nuke24.togetl.tef.TEFEntry;
 import net.nuke24.togetl.tef.TEFReadException;
 import net.nuke24.togetl.tef.TEFReader;
 import net.nuke24.togetl.tef.TEFSink;
-import net.nuke24.togetl.togetltsv.AliasTable;
 import net.nuke24.togetl.togetltsv.TOGETLTSVWriter;
 
 /**
@@ -173,7 +173,7 @@ public final class ImportCommand {
 		boolean complete = false;
 		Writer outputWriter = openOutput(output);
 		try {
-			TOGETLTSVWriter tsv = new TOGETLTSVWriter(outputWriter, AliasTable.withDefaults());
+			TOGETLTSVWriter tsv = new TOGETLTSVWriter(outputWriter, Namespaces.newAliasTable());
 			StatementConsumer consumer = new StatementConsumer() {
 				@Override
 				public void accept(Statement statement) throws IOException {

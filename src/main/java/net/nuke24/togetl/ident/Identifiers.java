@@ -4,17 +4,16 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import net.nuke24.togetl.Namespaces;
+
 /**
  * Mints the tag URIs used for instances and derived records.
  *
- * <p>The date in the authority is fixed. Changing it would silently re-identify
- * every instance, so it is a constant rather than an option.</p>
+ * <p>The namespaces are fixed by {@link Namespaces}. Changing them would
+ * silently re-identify every instance, so they are constants rather than
+ * options.</p>
  */
 public final class Identifiers {
-	public static final String TAG_DATE = "2026-11";
-	public static final String TAG_PREFIX = "tag:nuke24.net," + TAG_DATE + ":togetl:";
-	public static final String DATA_TAG_PREFIX = "tag:nuke24.net," + TAG_DATE + ":3dparts:";
-	
 	private static final char[] HEX = "0123456789abcdef".toCharArray();
 	
 	private Identifiers() {
@@ -26,11 +25,11 @@ public final class Identifiers {
 	 * {@code A-Za-z0-9-._~:}.
 	 */
 	public static String mint(String type, String key) {
-		return mintNamespace(TAG_PREFIX, type, key);
+		return mintNamespace(Namespaces.TOGETL_NS, type, key);
 	}
 	
 	public static String mintData(String type, String key) {
-		return mintNamespace(DATA_TAG_PREFIX, type, key);
+		return mintNamespace(Namespaces.PARTS3D_NS, type, key);
 	}
 	
 	public static String mintNamespace(String namespace, String type, String key) {

@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import net.nuke24.togetl.Namespaces;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.rdf.BlankNode;
 import net.nuke24.togetl.rdf.IRI;
@@ -22,7 +23,6 @@ import net.nuke24.togetl.rdf.Literal;
 import net.nuke24.togetl.rdf.Location;
 import net.nuke24.togetl.rdf.Node;
 import net.nuke24.togetl.rdf.Statement;
-import net.nuke24.togetl.vocab.Vocab;
 import net.nuke24.togetl.vocab.Vocabulary;
 
 /**
@@ -164,9 +164,9 @@ public final class Loader {
 		
 		for (LoadedStream stream : streams) {
 			for (Statement statement : stream.getStatements()) {
-				if (Vocab.RDF_TYPE.equals(statement.getPredicate())
+				if (Namespaces.RDF_TYPE.equals(statement.getPredicate())
 						&& statement.getObject() instanceof IRI
-						&& Vocab.TOGETL_DOCUMENT.toString().equals(statement.getObject().toString())
+						&& Namespaces.TOGETL_DOCUMENT.toString().equals(statement.getObject().toString())
 						&& statement.getSubject() instanceof IRI) {
 					String iri = statement.getSubject().toString();
 					if (!documents.containsKey(iri)) {
@@ -178,7 +178,7 @@ public final class Loader {
 		
 		for (LoadedStream stream : streams) {
 			for (Statement statement : stream.getStatements()) {
-				if (Vocab.TOGETL_SOURCE_DOCUMENT.equals(statement.getPredicate())
+				if (Namespaces.TOGETL_SOURCE_DOCUMENT.equals(statement.getPredicate())
 						&& statement.getSubject() instanceof IRI
 						&& statement.getObject() instanceof IRI) {
 					documentByDocumentImport.put(
@@ -200,15 +200,15 @@ public final class Loader {
 				if (meta == null) {
 					continue;
 				}
-				if (Vocab.TOGETL_SOURCE_URI.equals(statement.getPredicate())) {
+				if (Namespaces.TOGETL_SOURCE_URI.equals(statement.getPredicate())) {
 					meta.sourceUri = literalValue(statement.getObject());
-				} else if (Vocab.GENERAL_SHA256.equals(statement.getPredicate())) {
+				} else if (Namespaces.GENERAL_SHA256.equals(statement.getPredicate())) {
 					meta.sha256 = literalValue(statement.getObject());
-				} else if (Vocab.GENERAL_BYTE_LENGTH.equals(statement.getPredicate())) {
+				} else if (Namespaces.GENERAL_BYTE_LENGTH.equals(statement.getPredicate())) {
 					meta.byteLength = parseLong(literalValue(statement.getObject()));
-				} else if (Vocab.TOGETL_FORMAT.equals(statement.getPredicate())) {
+				} else if (Namespaces.TOGETL_FORMAT.equals(statement.getPredicate())) {
 					meta.format = literalValue(statement.getObject());
-				} else if (Vocab.TOGETL_PARSER_VERSION.equals(statement.getPredicate())) {
+				} else if (Namespaces.TOGETL_PARSER_VERSION.equals(statement.getPredicate())) {
 					meta.parserVersion = literalValue(statement.getObject());
 				}
 			}
@@ -217,7 +217,7 @@ public final class Loader {
 		Set<String> documentImportIris = new HashSet<String>();
 		for (LoadedStream stream : streams) {
 			for (Statement statement : stream.getStatements()) {
-				if (Vocab.TOGETL_SOURCE_DOCUMENT.equals(statement.getPredicate())
+				if (Namespaces.TOGETL_SOURCE_DOCUMENT.equals(statement.getPredicate())
 						&& statement.getSubject() instanceof IRI) {
 					documentImportIris.add(statement.getSubject().toString());
 				}
@@ -270,7 +270,7 @@ public final class Loader {
 			for (Statement statement : stream.getStatements()) {
 				if (!(statement.getSubject() instanceof IRI)
 						|| !(statement.getObject() instanceof IRI)
-						|| !Vocab.TOGETL_SOURCE_DOCUMENT.equals(statement.getPredicate())) {
+						|| !Namespaces.TOGETL_SOURCE_DOCUMENT.equals(statement.getPredicate())) {
 					continue;
 				}
 				String runIri = statement.getSubject().toString();
@@ -429,7 +429,7 @@ public final class Loader {
 		
 		for (LoadedStream stream : streams) {
 			for (Statement statement : stream.getStatements()) {
-				if (Vocab.TOGETL_PARSE_ISSUE_LINK.equals(statement.getPredicate())
+				if (Namespaces.TOGETL_PARSE_ISSUE_LINK.equals(statement.getPredicate())
 						&& statement.getObject() instanceof BlankNode
 						&& statement.getSubject() instanceof IRI) {
 					String key = statement.getObject().toString();
@@ -449,13 +449,13 @@ public final class Loader {
 				if (meta == null) {
 					continue;
 				}
-				if (Vocab.TOGETL_SEVERITY.equals(statement.getPredicate())) {
+				if (Namespaces.TOGETL_SEVERITY.equals(statement.getPredicate())) {
 					meta.severity = literalValue(statement.getObject());
-				} else if (Vocab.TOGETL_CODE.equals(statement.getPredicate())) {
+				} else if (Namespaces.TOGETL_CODE.equals(statement.getPredicate())) {
 					meta.code = literalValue(statement.getObject());
-				} else if (Vocab.TOGETL_MESSAGE.equals(statement.getPredicate())) {
+				} else if (Namespaces.TOGETL_MESSAGE.equals(statement.getPredicate())) {
 					meta.message = literalValue(statement.getObject());
-				} else if (Vocab.TOGETL_RAW.equals(statement.getPredicate())) {
+				} else if (Namespaces.TOGETL_RAW.equals(statement.getPredicate())) {
 					meta.raw = literalValue(statement.getObject());
 				}
 			}

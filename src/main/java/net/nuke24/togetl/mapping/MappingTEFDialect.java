@@ -6,6 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
+import net.nuke24.togetl.Namespaces;
 import net.nuke24.togetl.dialect.DialectSupport;
 import net.nuke24.togetl.dialect.TEFDocumentSink;
 import net.nuke24.togetl.dialect.TEFDialect;
@@ -19,7 +20,6 @@ import net.nuke24.togetl.rdf.Node;
 import net.nuke24.togetl.rdf.StatementConsumer;
 import net.nuke24.togetl.tef.TEFEntry;
 import net.nuke24.togetl.tef.TEFHeader;
-import net.nuke24.togetl.vocab.Vocab;
 
 /**
  * Maps TEF entries through a declarative mapping table.
@@ -98,16 +98,16 @@ public final class MappingTEFDialect implements TEFDialect {
 			
 			if (entryRule.getTypeIri() != null) {
 				DialectSupport.emit(source, out, entryLocation, subject,
-						Vocab.RDF_TYPE, IRI.of(entryRule.getTypeIri()));
+						Namespaces.RDF_TYPE, IRI.of(entryRule.getTypeIri()));
 			}
 			if (entryRule.getAsWritten() != null) {
 				report.record("as-written-entry", entry.getType(), "", entryLocation);
 				DialectSupport.emit(source, out, entryLocation, subject,
-						Vocab.TOGETL_AS_WRITTEN, Literal.of(entryRule.getAsWritten()));
+						Namespaces.TOGETL_AS_WRITTEN, Literal.of(entryRule.getAsWritten()));
 			}
 			
 			if (!entry.getContent().isEmpty()) {
-				conflicts.emit(source, out, report, subject, Vocab.RDFS_COMMENT,
+				conflicts.emit(source, out, report, subject, Namespaces.RDFS_COMMENT,
 						Literal.of(entry.getContent()), "1",
 						entry.getType(), "content", entryLocation);
 			}
@@ -123,7 +123,7 @@ public final class MappingTEFDialect implements TEFDialect {
 				if (fieldRule.getAsWritten() != null) {
 					report.record("as-written-field", entry.getType(), header.getKey(), location);
 					DialectSupport.emit(source, out, location, subject,
-							Vocab.TOGETL_AS_WRITTEN, Literal.of(fieldRule.getAsWritten()));
+							Namespaces.TOGETL_AS_WRITTEN, Literal.of(fieldRule.getAsWritten()));
 				}
 				ValueParser parser = ValueParsers.byName(fieldRule.getValueParser());
 				ValueParserContext context = new ValueParserContext(
