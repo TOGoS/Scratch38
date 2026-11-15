@@ -20,7 +20,10 @@ Primary references:
 
 ## Vocabulary and namespaces
 
-Canonical vocab files:
+Canonical vocab files; these are the canonical source of information about RDF terms.
+We may still decide to rename or reorganize terms in the tag:nuke24.net,2026-11` namespace,
+but when that happens we should update these files first,
+and then make sure their names and meanings elsewhere in the codebase match:
 - [vocab/togetl.tef](./vocab/togetl.tef): `togetl:*` terms (project/infrastructure)
 - [vocab/domain.tef](./vocab/domain.tef): non-`togetl` terms (`general:*`, `3dparts:*`, `wsitem:*`)
 - [vocab/tef-dialect.tef](./vocab/tef-dialect.tef): TEF structural terms
@@ -29,8 +32,13 @@ Tag-URI base convention:
 - `tag:nuke24.net,2026-11:togetl:` for project/infrastructure terms
 - `tag:nuke24.net,2026-11:general:`, `tag:nuke24.net,2026-11:3dparts:`, etc. for domain/shared terms
 
-The entire `tag:nuke24.net,2026-11:*` vocabulary namespace is, for now, project-local and not yet externally standardized.
-No outside consumers are known to depend on it yet, so vocabulary renames are acceptable as long as this note remains.
+The entire `tag:nuke24.net,2026-11:*` vocabulary namespace is, for now,
+project-local and not yet externally standardized.
+No outside consumers are known to depend on it yet,
+so vocabulary renames are acceptable as long as this note remains.
+
+Ask the architect (TOGoS, 'the user') for clarification before documenting
+more precise meaning about terms.
 
 ## Important modeling decisions (do not regress)
 
@@ -38,7 +46,7 @@ No outside consumers are known to depend on it yet, so vocabulary renames are ac
   (e.g. "-ref" suffixes should not be carried over, since RDF explicitly indicates by-value or by-reference as part of the value, rather than in the predicate name).
 - TEF source header names may still include legacy spellings (typo variants),
   but those map to canonical RDF predicates, and should emit warnings or errors so that the source documents can eventually be normalized.
-  
+
 Some specific cases:
 - `doc-ref` maps to `general:isDocumentedBy`.
 - Mapped domain subjects should **not** get automatic `togetl:document` links just because they came from a TEF file;

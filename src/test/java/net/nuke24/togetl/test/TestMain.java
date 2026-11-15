@@ -788,7 +788,7 @@ public final class TestMain {
 		
 		check(has(statements, doc, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT.toString()),
 				"document type statement");
-		check(has(statements, doc, Vocab.TOGETL_SHA256, Literal.of(Identifiers.sha256(bytes)).toString()),
+		check(has(statements, doc, Vocab.GENERAL_SHA256, Literal.of(Identifiers.sha256(bytes)).toString()),
 				"document hash statement");
 		check(has(statements, documentImport, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT_IMPORT.toString()),
 				"document import type statement");
@@ -862,26 +862,26 @@ public final class TestMain {
 		List<Statement> statements = collect(dialect, bytes, source, report);
 		String part = Identifiers.mintData("part", "p1");
 		
-		check(has(statements, part, Vocab.RDF_TYPE, Vocab.TOGETL_PART.toString()),
+		check(has(statements, part, Vocab.RDF_TYPE, Vocab.PARTS3D_PART.toString()),
 				"part type");
-		check(has(statements, part, Vocab.TOGETL_SHORT_DESCRIPTION,
+		check(has(statements, part, Vocab.GENERAL_SHORT_DESCRIPTION,
 				Literal.of("Widget").toString()), "short description");
-		check(has(statements, part, Vocab.TOGETL_TAG, Literal.of("a").toString()),
+		check(has(statements, part, Vocab.GENERAL_TAG, Literal.of("a").toString()),
 				"first tag");
-		check(has(statements, part, Vocab.TOGETL_TAG, Literal.of("b").toString()),
+		check(has(statements, part, Vocab.GENERAL_TAG, Literal.of("b").toString()),
 				"second tag");
-		check(has(statements, part, Vocab.TOGETL_IS_MEMBER_OF,
+		check(has(statements, part, Vocab.GENERAL_IS_MEMBER_OF,
 				Identifiers.referenceIri("p2")), "member-of resolves to a part IRI");
 		check(!has(statements, part, Vocab.TOGETL_DOCUMENT_LINK, source.getDocumentIri()),
 				"mapped part should not be linked to source TEF document");
 		String stlResource = "http://wherever-files.nuke24.net/uri-res/raw/urn:bitprint:ABC/p1.stl";
-		check(has(statements, part, Vocab.TOGETL_STL_FILE, stlResource),
+		check(has(statements, part, Vocab.PARTS3D_STL_FILE, stlResource),
 				"stl file resource URL");
-		check(!has(statements, stlResource, Vocab.TOGETL_FILENAME,
+		check(!has(statements, stlResource, Vocab.GENERAL_FILENAME,
 				Literal.of("p1.stl").toString()), "canonical file URL does not duplicate filename");
 		check(!has(statements, stlResource, Vocab.RDF_TYPE,
 				Vocab.TOGETL_FILE.toString()), "canonical file URL does not duplicate file type");
-		check(has(statements, part, Vocab.TOGETL_OPENSCAD_RENDERING,
+		check(has(statements, part, Vocab.PARTS3D_OPENSCAD_RENDERING,
 				"http://example.com/p1.png"), "rendering reference");
 		check(has(statements, part, Vocab.RDFS_COMMENT,
 				Literal.of("A part.\n").toString()), "content becomes a comment");
@@ -917,17 +917,17 @@ public final class TestMain {
 				
 		List<Statement> statements = collect(dialect, bytes, source, report);
 		
-		assertEquals(1, countObject(statements, Vocab.TOGETL_SHORT_DESCRIPTION,
+		assertEquals(1, countObject(statements, Vocab.GENERAL_SHORT_DESCRIPTION,
 				Literal.of("first").toString()), "first value kept");
-		assertEquals(1, countObject(statements, Vocab.TOGETL_SHORT_DESCRIPTION,
+		assertEquals(1, countObject(statements, Vocab.GENERAL_SHORT_DESCRIPTION,
 				Literal.of("second").toString()), "conflicting value kept");
 		check(reportHas(report, "conflict", "part", "short-description"),
 				"functional conflict is reported");
-		assertEquals(1, countObject(statements, Vocab.TOGETL_TAG, Literal.of("a").toString()),
+		assertEquals(1, countObject(statements, Vocab.GENERAL_TAG, Literal.of("a").toString()),
 				"multi-valued field keeps a");
-		assertEquals(1, countObject(statements, Vocab.TOGETL_TAG, Literal.of("b").toString()),
+		assertEquals(1, countObject(statements, Vocab.GENERAL_TAG, Literal.of("b").toString()),
 				"multi-valued field keeps b");
-		assertEquals(1, countObject(statements, Vocab.TOGETL_SHORT_DESCRIPTION,
+		assertEquals(1, countObject(statements, Vocab.GENERAL_SHORT_DESCRIPTION,
 				Literal.of("same").toString()), "identical duplicate is deduplicated");
 	}
 	
@@ -956,7 +956,7 @@ public final class TestMain {
 		
 		check(has(statements, "http://example.com/ns/", Vocab.RDF_TYPE,
 				Vocab.TOGETL_NAMESPACE.toString()), "namespace type and trimmed subject");
-		check(has(statements, "http://example.com/ns/", Vocab.TOGETL_PROJECT_HOMEPAGE,
+		check(has(statements, "http://example.com/ns/", Vocab.GENERAL_PROJECT_HOMEPAGE,
 				"https://example.com/"), "project homepage");
 		check(has(statements, "http://example.com/ns/Thing", Vocab.RDF_TYPE,
 				Vocab.RDFS_CLASS.toString()), "type is a class");
@@ -965,10 +965,10 @@ public final class TestMain {
 		check(has(statements, "http://example.com/ns/Type", Vocab.RDF_TYPE,
 				Vocab.RDFS_DATATYPE.toString()), "datatype is a datatype");
 		check(has(statements, "http://example.com/ns/Format", Vocab.RDF_TYPE,
-				Vocab.TOGETL_FORMAT_CLASS.toString()), "format is a format");
+				Vocab.GENERAL_FORMAT_CLASS.toString()), "format is a format");
 		check(has(statements, "urn:oid:1.2.3", Vocab.RDF_TYPE,
-				Vocab.TOGETL_PROJECT_BASE.toString()), "project base");
-		check(has(statements, "urn:oid:1.2.3", Vocab.TOGETL_TITLE,
+				Vocab.GENERAL_PROJECT_BASE.toString()), "project base");
+		check(has(statements, "urn:oid:1.2.3", Vocab.GENERAL_TITLE,
 				Literal.of("Project").toString()), "project title");
 	}
 	
@@ -988,7 +988,7 @@ public final class TestMain {
 		
 		boolean found = false;
 		for (VocabularyReport.Row row : report.getRows()) {
-			if (row.getTerm().equals(Vocab.TOGETL_SHORT_DESCRIPTION.toString())) {
+			if (row.getTerm().equals(Vocab.GENERAL_SHORT_DESCRIPTION.toString())) {
 				found = true;
 				assertEquals(VocabularyReport.OK, row.getStatus(), "shortDescription status");
 			}

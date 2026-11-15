@@ -65,7 +65,7 @@ public final class VocabularyReport {
 		addUse(usedBy, Vocab.TEF_ENTRY_INDEX.toString(), "dialect");
 		addUse(usedBy, Vocab.TEF_ENTRY_TYPE.toString(), "dialect");
 		addUse(usedBy, Vocab.TOGETL_AS_WRITTEN.toString(), "dialect");
-		addUse(usedBy, Vocab.TOGETL_FILENAME.toString(), "dialect");
+		addUse(usedBy, Vocab.GENERAL_FILENAME.toString(), "dialect");
 		addUse(usedBy, Vocab.TOGETL_FILE.toString(), "dialect");
 		
 		Set<String> allTerms = new TreeSet<String>();

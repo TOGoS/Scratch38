@@ -36,15 +36,15 @@ public final class Vocab {
 	public static final IRI TOGETL_DOCUMENT_IMPORT = togetl("DocumentImport");
 	public static final IRI TOGETL_PARSE_ISSUE = togetl("ParseIssue");
 	public static final IRI TOGETL_FILE = togetl("File");
-	public static final IRI TOGETL_PART = data("Part");
-	public static final IRI TOGETL_PART_CATEGORY = data("PartCategory");
-	public static final IRI TOGETL_PART_SET = data("PartSet");
-	public static final IRI TOGETL_CATEGORY = general("Category");
-	public static final IRI TOGETL_STANDARD = general("Standard");
-	public static final IRI TOGETL_NARRATION = data("Narration");
 	public static final IRI TOGETL_NAMESPACE = togetl("Namespace");
-	public static final IRI TOGETL_PROJECT_BASE = general("ProjectBase");
-	public static final IRI TOGETL_FORMAT_CLASS = general("Format");
+	public static final IRI TOGETL_NARRATION = togetl("Narration");
+	public static final IRI PARTS3D_PART = parts3d("Part");
+	public static final IRI PARTS3D_PART_CATEGORY = parts3d("PartCategory");
+	public static final IRI PARTS3D_PART_SET = parts3d("PartSet");
+	public static final IRI GENERAL_CATEGORY = general("Category");
+	public static final IRI GENERAL_STANDARD = general("Standard");
+	public static final IRI GENERAL_PROJECT_BASE = general("ProjectBase");
+	public static final IRI GENERAL_FORMAT_CLASS = general("Format");
 	public static final IRI TEF_ENTRY = tef("Entry");
 	public static final IRI TEF_HEADER = tef("Header");
 	public static final IRI TEF_COMMENT = tef("Comment");
@@ -53,14 +53,14 @@ public final class Vocab {
 	// Document metadata.
 	public static final IRI TOGETL_SOURCE_DOCUMENT = togetl("sourceDocument");
 	public static final IRI TOGETL_SOURCE_URI = togetl("sourceUri");
-	public static final IRI TOGETL_SHA256 = general("sha256");
-	public static final IRI TOGETL_BYTE_LENGTH = general("byteLength");
 	public static final IRI TOGETL_FORMAT = togetl("format");
 	public static final IRI TOGETL_PARSER_VERSION = togetl("parserVersion");
 	public static final IRI TOGETL_HAS_BOM = togetl("hasBom");
 	public static final IRI TOGETL_DOCUMENT_LINK = togetl("document");
 	public static final IRI TOGETL_PARSE_ISSUE_LINK = togetl("parseIssue");
-	
+	public static final IRI GENERAL_SHA256 = general("sha256");
+	public static final IRI GENERAL_BYTE_LENGTH = general("byteLength");
+
 	// Parse issues.
 	public static final IRI TOGETL_SEVERITY = togetl("severity");
 	public static final IRI TOGETL_CODE = togetl("code");
@@ -77,6 +77,11 @@ public final class Vocab {
 	public static final IRI TEF_HEADER_LINK = tef("header");
 	public static final IRI TEF_COMMENT_LINK = tef("comment");
 	public static final IRI TEF_DIRECTIVE_LINK = tef("directive");
+	// TODO: Figure out how these TEF_ terms are used
+	// and whether they could be moved to general
+	// or given more specific names (like TEF_ENTRY_KEY).
+	// If moved, update in tef-dialect.tef, which is the canonical
+	// source of term information.
 	public static final IRI TEF_KEY = tef("key");
 	public static final IRI TEF_VALUE = tef("value");
 	public static final IRI TEF_INDEX = tef("index");
@@ -88,37 +93,36 @@ public final class Vocab {
 	public static final IRI TOGETL_UNMAPPED_ENTRY = togetl("unmappedEntry");
 	public static final IRI TOGETL_UNMAPPED_FIELD = togetl("unmappedField");
 	public static final IRI TOGETL_AS_WRITTEN = togetl("asWritten");
-	public static final IRI TOGETL_FILENAME = general("filename");
+	public static final IRI GENERAL_FILENAME = general("filename");
 	
 	// Domain predicates.
-	public static final IRI TOGETL_NAME = general("name");
-	public static final IRI TOGETL_TITLE = general("title");
-	public static final IRI TOGETL_SHORT_DESCRIPTION = general("shortDescription");
-	public static final IRI TOGETL_TAG = general("tag");
-	public static final IRI TOGETL_KEYWORD = general("keyword");
-	public static final IRI TOGETL_IS_MEMBER_OF = general("isMemberOf");
-	public static final IRI TOGETL_MEMBER = general("member");
-	public static final IRI TOGETL_SEE_ALSO = general("seeAlso");
-	public static final IRI TOGETL_OBSOLETED_BY = general("obsoletedBy");
-	public static final IRI TOGETL_STL_FILE = data("stlFile");
-	public static final IRI TOGETL_CSG_FILE = data("csgFile");
-	public static final IRI TOGETL_FILE_LINK = general("file");
-	public static final IRI TOGETL_IMAGE = general("image");
-	public static final IRI TOGETL_PHOTO = general("photo");
-	public static final IRI TOGETL_IS_DOCUMENTED_BY = general("isDocumentedBy");
-	public static final IRI TOGETL_DEMO = general("demo");
-	public static final IRI TOGETL_OPENSCAD_RENDERING = data("openscadRendering");
-	public static final IRI TOGETL_OPENSCAD_DESIGN = data("openscadDesign");
-	public static final IRI TOGETL_MIRROR = general("mirror");
-	public static final IRI TOGETL_ALIAS = general("alias");
-	public static final IRI TOGETL_CREATED = general("created");
-	public static final IRI TOGETL_SOURCE = general("source");
-	public static final IRI TOGETL_PROJECT_HOMEPAGE = general("projectHomepage");
-	public static final IRI TOGETL_SUBFORMAT_OF = general("subformatOf");
-	public static final IRI TOGETL_CONTENT_TYPE = togetl("contentType");
+	public static final IRI GENERAL_NAME = general("name");
+	public static final IRI GENERAL_TITLE = general("title");
+	public static final IRI GENERAL_SHORT_DESCRIPTION = general("shortDescription");
+	public static final IRI GENERAL_TAG = general("tag");
+	public static final IRI GENERAL_KEYWORD = general("keyword");
+	public static final IRI GENERAL_IS_MEMBER_OF = general("isMemberOf");
+	public static final IRI GENERAL_MEMBER = general("member");
+	public static final IRI GENERAL_SEE_ALSO = general("seeAlso");
+	public static final IRI GENERAL_OBSOLETED_BY = general("obsoletedBy");
+	public static final IRI GENERAL_FILE_LINK = general("file");
+	public static final IRI GENERAL_IMAGE = general("image");
+	public static final IRI GENERAL_PHOTO = general("photo");
+	public static final IRI GENERAL_DOCUMENTED_BY = general("isDocumentedBy");
+	public static final IRI GENERAL_DEMO = general("demo");
+	public static final IRI GENERAL_MIRROR = general("mirror");
+	public static final IRI GENERAL_ALIAS = general("alias");
+	public static final IRI GENERAL_CREATED = general("created");
+	public static final IRI GENERAL_SOURCE = general("source");
+	public static final IRI GENERAL_PROJECT_HOMEPAGE = general("projectHomepage");
+	public static final IRI GENERAL_SUBFORMAT_OF = general("subformatOf");
+	public static final IRI GENERAL_CONTENT_TYPE = togetl("contentType");
+	public static final IRI PARTS3D_OPENSCAD_RENDERING = parts3d("openscadRendering");
+	public static final IRI PARTS3D_OPENSCAD_DESIGN = parts3d("openscadDesign");
+	public static final IRI PARTS3D_STL_FILE = parts3d("stlFile");
+	public static final IRI PARTS3D_CSG_FILE = parts3d("csgFile");
 	
-	private Vocab() {
-	}
+	private Vocab() { }
 	
 	public static IRI togetl(String localName) {
 		return IRI.of(TOGETL_NS + localName);
@@ -128,7 +132,7 @@ public final class Vocab {
 		return IRI.of(GENERAL_NS + localName);
 	}
 	
-	public static IRI data(String localName) {
+	public static IRI parts3d(String localName) {
 		return IRI.of(PARTS3D_NS + localName);
 	}
 	

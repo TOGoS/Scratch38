@@ -162,7 +162,7 @@ public final class ValueParsers {
 			if (!isCanonicalGatewayResource
 					&& ref.name != null
 					&& !ref.name.isEmpty()) {
-				context.emitRaw(object, Vocab.TOGETL_FILENAME, Literal.of(ref.name));
+				context.emitRaw(object, Vocab.GENERAL_FILENAME, Literal.of(ref.name));
 			}
 			if (!isCanonicalGatewayResource) {
 				context.emitRaw(object, Vocab.RDF_TYPE, Vocab.TOGETL_FILE);

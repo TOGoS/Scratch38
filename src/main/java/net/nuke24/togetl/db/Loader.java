@@ -202,9 +202,9 @@ public final class Loader {
 				}
 				if (Vocab.TOGETL_SOURCE_URI.equals(statement.getPredicate())) {
 					meta.sourceUri = literalValue(statement.getObject());
-				} else if (Vocab.TOGETL_SHA256.equals(statement.getPredicate())) {
+				} else if (Vocab.GENERAL_SHA256.equals(statement.getPredicate())) {
 					meta.sha256 = literalValue(statement.getObject());
-				} else if (Vocab.TOGETL_BYTE_LENGTH.equals(statement.getPredicate())) {
+				} else if (Vocab.GENERAL_BYTE_LENGTH.equals(statement.getPredicate())) {
 					meta.byteLength = parseLong(literalValue(statement.getObject()));
 				} else if (Vocab.TOGETL_FORMAT.equals(statement.getPredicate())) {
 					meta.format = literalValue(statement.getObject());
