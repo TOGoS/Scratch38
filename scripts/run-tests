@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+export TOGETL_ROOT="$(dirname "$0")/.."
+
+make out/.test-classes-built
+. "$TOGETL_ROOT/scripts/java-env.sh"
+exec "$JAVA" -cp "out/classes:out/test-classes:lib/*" net.nuke24.togetl.test.TestMain "$@"
