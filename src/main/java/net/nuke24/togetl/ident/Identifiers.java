@@ -74,7 +74,7 @@ public final class Identifiers {
 		return documentIri + "#tef-entry-" + ordinal;
 	}
 	
-	static final Pattern   WSWHATEVER_PATTERN = Pattern.compile("^(?:WSITEM|WSPROJECT|WSBATCH|WSTYPE)-(\\d+)$");
+	static final Pattern   WSWHATEVER_PATTERN = Pattern.compile("^(?:WSBATCH|WSITEM|WSPROJECT|WSTASK|WSTYPE)-(\\d+)$");
 	static final Pattern GFM_PARTNAME_PATTERN = Pattern.compile("^gfm(\\d+)$");
 	static final Pattern  BT_PARTNAME_PATTERN = Pattern.compile( "^bt(\\d+)$");
 	static final Pattern   P_PARTNAME_PATTERN = Pattern.compile(  "^p(\\d+)$");
