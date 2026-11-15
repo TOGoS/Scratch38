@@ -876,7 +876,7 @@ public final class TestMain {
 				Identifiers.shortNameToUri("p2")), "member-of resolves to a part IRI");
 		check(!has(statements, part, Namespaces.TOGETL_DOCUMENT_LINK, source.getDocumentIri()),
 				"mapped part should not be linked to source TEF document");
-		String stlResource = "http://wherever-files.nuke24.net/uri-res/raw/urn:bitprint:ABC/p1.stl";
+		String stlResource = "http://wherever-files.nuke24.net/uri-res/raw/urn:bitprint:ABC/p2700.stl";
 		check(has(statements, part, Namespaces.PARTS3D_STL_FILE, stlResource),
 				"stl file resource URL");
 		check(!has(statements, stlResource, Namespaces.GENERAL_FILENAME,
@@ -884,7 +884,7 @@ public final class TestMain {
 		check(!has(statements, stlResource, Namespaces.RDF_TYPE,
 				Namespaces.TOGETL_FILE.toString()), "canonical file URL does not duplicate file type");
 		check(has(statements, part, Namespaces.PARTS3D_OPENSCAD_RENDERING,
-				"http://example.com/p1.png"), "rendering reference");
+				"http://example.com/p2700.png"), "rendering reference");
 		check(has(statements, part, Namespaces.RDFS_COMMENT,
 				Literal.of("A part.\n").toString()), "content becomes a comment");
 		check(reportHas(report, "unmapped-field", "part", "mystery"),

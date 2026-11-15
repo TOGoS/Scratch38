@@ -2,15 +2,16 @@
 #
 # Part-like entries share one IRI space so that member-of, members, see-also,
 # and obsoleted-by references resolve to the entries that define them. The
-# entry type is still recorded through rdf:type.
+# entry type is still recorded through rdf:type.  ${fullUri} resolves the
+# entry value the same way as part references (p*, gfm*, bt*, WSITEM-*, ...).
 
 #entry
 entryType	subjectTemplate	type	note
-part	tag:nuke24.net,2026-11:3dparts:part:${valueEncoded}	3dparts:Part
-part-category	tag:nuke24.net,2026-11:3dparts:part:${valueEncoded}	3dparts:PartCategory
-part-set	tag:nuke24.net,2026-11:3dparts:part:${valueEncoded}	3dparts:PartSet
-category	tag:nuke24.net,2026-11:3dparts:part:${valueEncoded}	general:Category
-p1rt	tag:nuke24.net,2026-11:3dparts:part:${valueEncoded}	3dparts:Part	asWritten=p1rt
+part	${fullUri}	3dparts:Part
+part-category	${fullUri}	3dparts:PartCategory
+part-set	${fullUri}	3dparts:PartSet
+category	${fullUri}	general:Category
+p1rt	${fullUri}	3dparts:Part	asWritten=p1rt
 standard	tag:nuke24.net,2026-11:3dparts:standard:${valueEncoded}	general:Standard
 narration	tag:nuke24.net,2026-11:3dparts:narration:${valueEncoded}	togetl:Narration
 
