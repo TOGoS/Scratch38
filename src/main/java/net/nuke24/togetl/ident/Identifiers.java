@@ -3,6 +3,8 @@ package net.nuke24.togetl.ident;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import net.nuke24.togetl.Namespaces;
 
@@ -27,11 +29,7 @@ public final class Identifiers {
 	public static String mint(String type, String key) {
 		return mintNamespace(Namespaces.TOGETL_NS, type, key);
 	}
-	
-	public static String mintData(String type, String key) {
-		return mintNamespace(Namespaces.PARTS3D_NS, type, key);
-	}
-	
+		
 	public static String mintNamespace(String namespace, String type, String key) {
 		checkType(type);
 		if (namespace == null || namespace.isEmpty()) {
@@ -76,22 +74,36 @@ public final class Identifiers {
 		return documentIri + "#tef-entry-" + ordinal;
 	}
 	
+	static final Pattern   WSWHATEVER_PATTERN = Pattern.compile("^(?:WSITEM|WSPROJECT|WSBATCH|WSTYPE)-(\\d+)$");
+	static final Pattern GFM_PARTNAME_PATTERN = Pattern.compile("^gfm(\\d+)$");
+	static final Pattern  BT_PARTNAME_PATTERN = Pattern.compile( "^bt(\\d+)$");
+	static final Pattern   P_PARTNAME_PATTERN = Pattern.compile(  "^p(\\d+)$");
+	
 	/**
 	 * Interprets a source reference key. This is the single place where the
 	 * provisional identifier scheme for project IDs is decided.
 	 */
-	public static String referenceIri(String key) {
-		if (key == null) {
+	public static String referenceIri(String shortName) {
+		if( shortName == null ) {
 			throw new IllegalArgumentException("Reference key must not be null");
 		}
-		String trimmed = key.trim();
-		if (trimmed.startsWith("WSPROJECT-")) {
-			return mintData("project", trimmed);
+		assert( shortName.equals(shortName.trim()) );
+		Matcher m;
+		if( (m = WSWHATEVER_PATTERN.matcher(shortName)).matches() ) {
+			return Namespaces.WSITEM_NS + m.group(1);			
 		}
-		if (trimmed.startsWith("WSITEM-")) {
-			return mintData("item", trimmed);
+		// TODO: These should probably only really be assumed within the context of
+		// certain files, since they're such short prefixes.
+		if( (m = GFM_PARTNAME_PATTERN.matcher(shortName)).matches() ) {
+			return Namespaces.PARTS3D_PARTS_NS + (500 + Integer.valueOf(m.group(1)));
 		}
-		return mintData("part", trimmed);
+		if( (m =  BT_PARTNAME_PATTERN.matcher(shortName)).matches() ) {
+			return Namespaces.PARTS3D_PARTS_NS + (600 + Integer.valueOf(m.group(1)));
+		}
+		if( (m =   P_PARTNAME_PATTERN.matcher(shortName)).matches() ) {
+			return Namespaces.PARTS3D_PARTS_NS + (  0 + Integer.valueOf(m.group(1)));
+		}
+		throw new IllegalArgumentException("Don't know how tu URN-ify '"+shortName+"'");
 	}
 	
 	/** The part of a minted IRI after the common prefix, used to scope blank nodes. */

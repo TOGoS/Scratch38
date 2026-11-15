@@ -19,7 +19,8 @@ public final class Namespaces {
 	public static final String TEF_NS = "tag:nuke24.net,2026-11:togetl:tef:";
 	public static final String GENERAL_NS = "tag:nuke24.net,2026-11:general:";
 	public static final String PARTS3D_NS = "tag:nuke24.net,2026-11:3dparts:";
-	public static final String WSITEM_NS = "tag:nuke24.net,2026-11:wsitem:";
+	public static final String WSITEM_NS = "urn:oid:1.3.6.1.4.1.44848.260.";
+	public static final String PARTS3D_PARTS_NS = "urn:oid:1.3.6.1.4.1.44848.265.";
 	public static final String RDF_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 	public static final String RDFS_NS = "http://www.w3.org/2000/01/rdf-schema#";
 	public static final String XSD_NS = "http://www.w3.org/2001/XMLSchema#";

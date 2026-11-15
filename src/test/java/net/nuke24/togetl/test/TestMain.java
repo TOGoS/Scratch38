@@ -845,12 +845,12 @@ public final class TestMain {
 	
 	private static void testPartsMapping() throws Exception {
 		String text =
-				"=part p1\n"
+				"=part p2700\n"
 				+ "short-description: Widget\n"
 				+ "tags: a, b\n"
 				+ "member-of: p2\n"
-				+ "stl-file: p1.stl\turn:bitprint:ABC\n"
-				+ "openscad-rendering-ref: http://example.com/p1.png\n"
+				+ "stl-file: p2700.stl\turn:bitprint:ABC\n"
+				+ "openscad-rendering-ref: http://example.com/p2700.png\n"
 				+ "mystery: value\n"
 				+ "\n"
 				+ "A part.\n";
@@ -860,9 +860,9 @@ public final class TestMain {
 		ImportReport report = new ImportReport();
 		MappingTEFDialect dialect = new MappingTEFDialect(
 				"parts", MappingTable.load("parts"));
-				
+		
 		List<Statement> statements = collect(dialect, bytes, source, report);
-		String part = Identifiers.mintData("part", "p1");
+		String part = Namespaces.PARTS3D_PARTS_NS + "2700";
 		
 		check(has(statements, part, Namespaces.RDF_TYPE, Namespaces.PARTS3D_PART.toString()),
 				"part type");
@@ -880,7 +880,7 @@ public final class TestMain {
 		check(has(statements, part, Namespaces.PARTS3D_STL_FILE, stlResource),
 				"stl file resource URL");
 		check(!has(statements, stlResource, Namespaces.GENERAL_FILENAME,
-				Literal.of("p1.stl").toString()), "canonical file URL does not duplicate filename");
+				Literal.of("p2700.stl").toString()), "canonical file URL does not duplicate filename");
 		check(!has(statements, stlResource, Namespaces.RDF_TYPE,
 				Namespaces.TOGETL_FILE.toString()), "canonical file URL does not duplicate file type");
 		check(has(statements, part, Namespaces.PARTS3D_OPENSCAD_RENDERING,
