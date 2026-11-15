@@ -83,7 +83,7 @@ public final class Identifiers {
 	 * Interprets a source reference key. This is the single place where the
 	 * provisional identifier scheme for project IDs is decided.
 	 */
-	public static String referenceIri(String shortName) {
+	public static String shortNameToUri(String shortName) {
 		if( shortName == null ) {
 			throw new IllegalArgumentException("Reference key must not be null");
 		}

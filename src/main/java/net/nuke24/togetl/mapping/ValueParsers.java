@@ -127,7 +127,7 @@ public final class ValueParsers {
 		if (isAcceptableIri(trimmed)) {
 			context.emit(IRI.of(trimmed));
 		} else {
-			context.emit(IRI.of(Identifiers.referenceIri(trimmed)));
+			context.emit(IRI.of(Identifiers.shortNameToUri(trimmed)));
 		}
 	}
 	

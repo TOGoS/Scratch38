@@ -873,7 +873,7 @@ public final class TestMain {
 		check(has(statements, part, Namespaces.GENERAL_TAG, Literal.of("b").toString()),
 				"second tag");
 		check(has(statements, part, Namespaces.GENERAL_IS_MEMBER_OF,
-				Identifiers.referenceIri("p2")), "member-of resolves to a part IRI");
+				Identifiers.shortNameToUri("p2")), "member-of resolves to a part IRI");
 		check(!has(statements, part, Namespaces.TOGETL_DOCUMENT_LINK, source.getDocumentIri()),
 				"mapped part should not be linked to source TEF document");
 		String stlResource = "http://wherever-files.nuke24.net/uri-res/raw/urn:bitprint:ABC/p1.stl";
