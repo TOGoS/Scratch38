@@ -1,0 +1,3 @@
+** TODO S36CR-012 - ~WSITEM-~ maps to ~urn:oid:1.3.6.1.4.1.44848.260.~
+
+We can update that in the importers.
