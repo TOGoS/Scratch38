@@ -35,7 +35,7 @@ public final class ImportReport {
 	public static final String TSV_HEADER =
 			"kind\tentryType\tfield\tcount\tfirstLocation";
 	
-	private final Map<String, AggregatedRow> rows = new TreeMap<String, AggregatedRow>();
+	private final Map<String, Row> rows = new TreeMap<String, Row>();
 	
 	public void unmappedEntryType(String entryType, Location location) {
 		record(UNMAPPED_ENTRY_TYPE, entryType, "", location);
@@ -54,33 +54,22 @@ public final class ImportReport {
 	}
 	
 	public void record(String kind, String entryType, String field, Location location) {
-		if (kind == null || kind.isEmpty()) {
-			throw new IllegalArgumentException("Report row kind must not be empty");
-		}
 		String key = kind + '\u0000' + entryType + '\u0000' + field;
-		AggregatedRow row = rows.get(key);
+		Row row = rows.get(key);
 		if (row == null) {
-			row = new AggregatedRow(
+			rows.put(key, new Row(
 					kind,
-					entryType == null ? "" : entryType,
-					field == null ? "" : field,
-					location == null ? Location.none() : location);
-			rows.put(key, row);
+					entryType,
+					field,
+					1,
+					location == null ? Location.none() : location));
+		} else {
+			row.count++;
 		}
-		row.count++;
 	}
 	
 	public List<Row> getRows() {
-		List<Row> result = new ArrayList<Row>(rows.size());
-		for (AggregatedRow row : rows.values()) {
-			result.add(new Row(
-					row.kind,
-					row.entryType,
-					row.field,
-					row.count,
-					row.firstLocation));
-		}
-		return Collections.unmodifiableList(result);
+		return Collections.unmodifiableList(new ArrayList<Row>(rows.values()));
 	}
 	
 	public int getRowCount() {
@@ -89,7 +78,7 @@ public final class ImportReport {
 	
 	public int getOccurrenceCount() {
 		int total = 0;
-		for (AggregatedRow row : rows.values()) {
+		for (Row row : rows.values()) {
 			total += row.count;
 		}
 		return total;
@@ -98,16 +87,16 @@ public final class ImportReport {
 	public void writeTsv(Writer out) throws IOException {
 		out.write(TSV_HEADER);
 		out.write('\n');
-		for (Row row : getRows()) {
-			out.write(clean(row.getKind()));
+		for (Row row : rows.values()) {
+			out.write(clean(row.kind));
 			out.write('\t');
-			out.write(clean(row.getEntryType()));
+			out.write(clean(row.entryType));
 			out.write('\t');
-			out.write(clean(row.getField()));
+			out.write(clean(row.field));
 			out.write('\t');
-			out.write(Integer.toString(row.getCount()));
+			out.write(Integer.toString(row.count));
 			out.write('\t');
-			out.write(row.getFirstLocation().toString());
+			out.write(row.firstLocation.toString());
 			out.write('\n');
 		}
 	}
@@ -148,8 +137,7 @@ public final class ImportReport {
 				throw new ReportParseException(
 						sourceName,
 						lineNumber,
-						"invalid report count: " + columns[3],
-						e);
+						"invalid report count: " + columns[3]);
 			}
 			Location location;
 			try {
@@ -158,22 +146,12 @@ public final class ImportReport {
 				throw new ReportParseException(
 						sourceName,
 						lineNumber,
-						"invalid report location: " + columns[4],
-						e);
+						"invalid report location: " + columns[4]);
 			}
 			try {
-				rows.add(new Row(
-						columns[0],
-						columns[1],
-						columns[2],
-						count,
-						location));
+				rows.add(new Row(columns[0], columns[1], columns[2], count, location));
 			} catch (IllegalArgumentException e) {
-				throw new ReportParseException(
-						sourceName,
-						lineNumber,
-						e.getMessage(),
-						e);
+				throw new ReportParseException(sourceName, lineNumber, e.getMessage());
 			}
 		}
 		return rows;
@@ -183,36 +161,16 @@ public final class ImportReport {
 		return value.replace('\t', ' ').replace('\r', ' ').replace('\n', ' ');
 	}
 	
-	private static final class AggregatedRow {
-		final String kind;
-		final String entryType;
-		final String field;
-		final Location firstLocation;
-		int count = 0;
-		
-		AggregatedRow(
-				String kind,
-				String entryType,
-				String field,
-				Location firstLocation
-		) {
-			this.kind = kind;
-			this.entryType = entryType;
-			this.field = field;
-			this.firstLocation = firstLocation;
-		}
-	}
-	
 	/**
-	 * One report row. Instances are immutable so the same type can represent
-	 * both aggregated write-side rows and rows read back from a report file.
+	 * One report row. Counts are mutated only by {@link ImportReport#record};
+	 * callers outside this class cannot change a row.
 	 */
 	public static final class Row {
 		private final String kind;
 		private final String entryType;
 		private final String field;
-		private final int count;
 		private final Location firstLocation;
+		private int count;
 		
 		public Row(
 				String kind,

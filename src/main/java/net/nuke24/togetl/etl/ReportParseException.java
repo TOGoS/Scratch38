@@ -16,17 +16,6 @@ public final class ReportParseException extends Exception {
 		this.lineNumber = lineNumber;
 	}
 	
-	public ReportParseException(
-			String sourceName,
-			int lineNumber,
-			String message,
-			Throwable cause
-	) {
-		super(formatMessage(sourceName, lineNumber, message), cause);
-		this.sourceName = sourceName;
-		this.lineNumber = lineNumber;
-	}
-	
 	public String getSourceName() {
 		return sourceName;
 	}
