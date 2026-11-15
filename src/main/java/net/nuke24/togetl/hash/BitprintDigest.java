@@ -7,21 +7,8 @@ import java.security.NoSuchAlgorithmException;
  * Mirrors ContentCouch's BitprintDigest: a MessageDigest wrapping SHA-1 and a
  * Tiger tree hash, formatted as {@code urn:bitprint:<sha1>.<tigerTree>}.
  */
-public final class BitprintDigest extends MessageDigest {
-	public static String format(byte[] hash) {
-		byte[] sha1Hash = new byte[20];
-		byte[] tigerTreeHash = new byte[24];
-		System.arraycopy(hash, 0, sha1Hash, 0, 20);
-		System.arraycopy(hash, 20, tigerTreeHash, 0, 24);
-		return Base32.encode(sha1Hash) + "." + Base32.encode(tigerTreeHash);
-	}
-	
-	public static String of(byte[] bytes) {
-		BitprintDigest digest = new BitprintDigest();
-		digest.update(bytes);
-		return "urn:bitprint:" + format(digest.digest());
-	}
-	
+public final class BitprintDigest extends MessageDigest
+{
 	private MessageDigest sha1;
 	private TigerTree tigerTree;
 	
