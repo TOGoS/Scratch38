@@ -123,7 +123,7 @@ public final class ImportCommand {
 		}
 		// Note: If ever there is more than just 'bitprint', we might consider
 		// centralizing information about digests somewhere.
-		if (sourceUriDm != null && !"bitprint".equals(sourceUriDm)) {
+		if (sourceUriDm != null && !SourceURIDerivationMethod.BITPRINT.equals(sourceUriDm)) {
 			throw new UsageException("Unknown --derive-source-uri method: " + sourceUriDm);
 		}
 	}
@@ -273,12 +273,12 @@ public final class ImportCommand {
 	public static void usage(java.io.PrintStream err) {
 		err.println("Usage: togetl import --input <file|-> [options]");
 		err.println();
-		err.println("  --input <file|->       Source document (required)");
-		err.println("  --output <file|->      TOGETLTSV output (default: -)");
-		err.println("  --source-uri <uri>     Source URI of the document");
-		err.println("  --derive-source-uri <kind>  Derive the source URI from the content (bitprint)");
-		err.println("  --dialect <name>       " + Dialects.names() + " (default: generic)");
-		err.println("  --report <file>        Write the unmapped-construct report as TSV");
+		err.println("  --input=<file|->       Source document (required)");
+		err.println("  --output=<file|->      TOGETLTSV output (default: -)");
+		err.println("  --source-uri=<uri>     Source URI of the document");
+		err.println("  --derive-source-uri=<method>  Derive the source URI from the content (bitprint)");
+		err.println("  --dialect=<name>       " + Dialects.names() + " (default: generic)");
+		err.println("  --report=<file>        Write the unmapped-construct report as TSV");
 	}
 	
 	private static final class CountingSink implements TEFSink {
