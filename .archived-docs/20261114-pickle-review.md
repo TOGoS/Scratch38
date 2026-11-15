@@ -444,3 +444,86 @@ Findings 8–16 are smaller, mostly local cleanups; they are still worth doing b
 ---
 
 **Which would you like me to implement?** Reply with finding numbers or groups (for example “1, 2, 4, 5” or “all of 1–10”). I recommend starting with **1, 2, 4, 5, and 6**; finding 5 in particular needs your decision on whether directives inside an entry should also be emitted at document level, since fixing it changes generated output.
+
+-----
+
+I asked Master Pickle to elaborate on #1.  They said:
+
+## 1. Import-report roles and data flow
+
+The report is a side channel, not part of the TOGETLTSV statement stream. It records “source constructs the selected dialect could not map,” plus value conflicts.
+
+### The classes and who calls them
+
+| Class                                                 | Role                                                                                                                                                                    | Produced/called by
+| ImportReport (etl/ImportReport.java:20-119)           | Write-side aggregate. Keys rows by (kind, entryType, field), keeps the first Location, increments a count, and serializes with writeTsv (:65-79).                       | ImportCommand creates it; DialectSupport, MappingTEFDialect, and ValueParserContext record into it; ImportCommand.writeReport calls writeTsv.
+| ImportReport.Row (:85-118)                            | One aggregated row: kind, entry type, field, count, typed Location. Constructor is package-private and count is mutable, so it is only usable as an internal aggregate. | ImportReport only.
+| db.ConflictRow (db/ConflictRow.java:6-49)             | Read-side DTO: same five fields, but location is a String, and the name says “conflict” even though it also represents unmapped fields, directives, and entry types.    | LoadCommand.readReport; passed through Loader.load into Loader.insertReportRows.
+| LoadCommand.readReport (cli/LoadCommand.java:195-228) | Ad-hoc TSV parser for the report file. Splits on tabs, ignores blank lines, skips the header by checking columns[0].equals("kind"), parses count, builds ConflictRows.  | LoadCommand.execute (:137-140).
+| Loader (db/Loader.java:49-52, 81, 520-558)            | Database writer. insertReportRows assigns the current batch and, if the batch has exactly one document, that document IRI; then inserts into import_report_row.         | LoadCommand.execute.
+| SQLiteDatabase (db/SQLiteDatabase.java:95-117)        | Defines import_report_row and the conflict view (WHERE kind = 'conflict').                                                                                              | Schema initialization.
+
+The surrounding pipeline:
+- TEFReader emits TEFSink events: documentComment, documentDirective, entry (TEFReader.java:270-285).
+- TEFDialect.begin(...) returns a TEFDocumentSink; both dialects extend DialectSupport.DocumentSession.
+- DialectSupport.DocumentSession routes document-level events and entry indexes; subclasses implement mapEntry.
+- ImportCommand wires the sink, the statement consumer, the TSV writer, and the report together (ImportCommand.java:151-215).
+
+### Write path
+
+source bytes
+  -> ImportCommand.digest -> SourceProvenance (sha256 + bitprint)
+  -> SourceDocument (document IRI + document-import IRI)
+  -> dialect.begin(source, statementConsumer, report)
+  -> TEFReader.read(...)
+       -> documentComment/documentDirective -> DialectSupport
+       -> entry -> dialect.mapEntry
+            -> statements -> TOGETLTSVWriter
+            -> diagnostics -> ImportReport.record(...)
+  -> document.finish(provenance) -> document metadata statements
+  -> ImportReport.writeTsv(Writer)   [only if --report]
+
+ImportReport aggregates during the read. writeReport (ImportCommand.java:259-271) opens the output file and calls writeTsv. The header is kind entryType field count firstLocation; fields are escaped for tabs/newlines, but firstLocation is not because Location.toString() cannot contain whitespace.
+
+### Load path
+
+--input TOGETLTSV files
+  -> TOGETLTSVReader.readAll -> List<Statement>
+  -> LoadedStream(name, sha256, statements)
+
+--report TSV files
+  -> LoadCommand.readReport -> List<ConflictRow>
+  -> Loader.load(streams, reportRows, vocabulary)
+
+Loader:
+  derive documents from statement provenance
+  insert batch/loading/document/statement/parse_issue
+  insertReportRows -> import_report_row
+       -> document_iri only when the batch has exactly one document
+
+### Why the duplication exists
+
+ImportReport.Row is an aggregate owned by the import side: it has a typed Location, mutable count, and package-private construction. ConflictRow is a transport DTO owned by the load side: it has a string location and a public constructor. They are structurally identical but were never given a shared format owner, so the parser and writer each define the schema independently.
+
+That independence already produces concrete inconsistencies:
+
+- The writer always writes five columns, but readReport accepts four and silently supplies "" for the missing location (LoadCommand.java:206,225).
+- Header detection is data-based: a real row whose kind is "kind" is silently skipped (:210).
+- Report parse errors are thrown as TOGETLTSVParseException (:207,217), even though the file is not TOGETLTSV and the error has nothing to do with that format.
+- ConflictRow is named for one kind, but is used for all kinds.
+- Report kinds are string literals spread across ImportReport, MappingTEFDialect, and ValueParsers; there is no single list of valid kinds.
+- The columns are semantically overloaded: for unmapped-directive, entryType is empty and field holds the directive name (ImportReport.java:31-33). A consumer must know the kind to interpret the columns.
+- There is no write-then-read round-trip test; the DB test writes a hand-made report (TestMain.java:1496-1499).
+
+### Suggested shape
+
+The format should have one owner. I recommend keeping it in etl because that is the producer:
+
+1. Make ImportReport.Row the single shared row type: immutable from the outside, public constructor or factory, typed Location, count supplied on construction.
+2. Add a reader next to the writer, e.g. ImportReport.readTsv(Reader, sourceName), returning List<ImportReport.Row>. Detect the header structurally (exact five-column header) rather than by a data value. Reject wrong column counts and invalid counts with a dedicated ReportParseException that includes the file name and line.
+3. Change Loader.load and insertReportRows to take List<ImportReport.Row> and use row.getFirstLocation().toString() for the DB. Delete ConflictRow.
+4. Keep the on-disk five-column schema and the import_report_row/conflict view unchanged.
+5. Move the report-kind strings into constants (or an enum if you want a closed set) in ImportReport, and have ValueParsers/MappingTEFDialect use them.
+6. Add tests for: round-trip write/read, header recognition, a row whose kind is "kind", four-column rejection, invalid count, and a missing location.
+
+The only architectural choice is dependency direction. db currently does not import etl; having it consume etl.ImportReport.Row creates a one-way db -> etl dependency, which is fine because etl does not depend on db. If you prefer to keep db independent of import semantics, put the row type and TSV codec in a small neutral net.nuke24.togetl.report package instead. I’d choose the etl version for now; it avoids inventing a package for one format.
