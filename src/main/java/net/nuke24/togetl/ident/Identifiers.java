@@ -90,7 +90,7 @@ public final class Identifiers {
 		assert( shortName.equals(shortName.trim()) );
 		Matcher m;
 		if( (m = WSWHATEVER_PATTERN.matcher(shortName)).matches() ) {
-			return Namespaces.WSITEM_NS + m.group(1);			
+			return Namespaces.WSITEM_NS + m.group(1);
 		}
 		// TODO: These should probably only really be assumed within the context of
 		// certain files, since they're such short prefixes.
