@@ -5,7 +5,6 @@ import java.io.IOException;
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
 import net.nuke24.togetl.rdf.StatementConsumer;
-import net.nuke24.togetl.tef.TEFDocument;
 import net.nuke24.togetl.tef.TEFEntry;
 
 /**
@@ -24,20 +23,22 @@ public final class GenericTEFDialect implements TEFDialect {
 	}
 	
 	@Override
-	public void map(
-			TEFDocument document,
+	public TEFDocumentSink begin(
 			SourceDocument source,
 			StatementConsumer out,
 			ImportReport report
 	) throws IOException {
-		DialectSupport.emitDocumentMetadata(document, source, out);
-		DialectSupport.emitDocumentAnnotations(document, source, out, report);
-		
-		for (int entryIndex = 0; entryIndex < document.getEntries().size(); entryIndex++) {
-			TEFEntry entry = document.getEntries().get(entryIndex);
-			DialectSupport.emitGenericEntry(document, source, entry, entryIndex, out, report);
+		return new Session(source, out, report);
+	}
+	
+	private static final class Session extends DialectSupport.DocumentSession {
+		Session(SourceDocument source, StatementConsumer out, ImportReport report) {
+			super(source, out, report);
 		}
 		
-		DialectSupport.emitIssues(document, source, out);
+		@Override
+		protected void mapEntry(TEFEntry entry, int entryIndex) throws IOException {
+			DialectSupport.emitGenericEntry(source, out, entry, entryIndex, report);
+		}
 	}
 }

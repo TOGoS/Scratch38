@@ -45,15 +45,15 @@ public final class Identifiers {
 	}
 	
 	/**
-	 * The document IRI is derived from the source URL, not from its content, so
-	 * that a moved document keeps its identity. The content hash is recorded
-	 * separately as {@code togetl:sha256}.
+	 * The document IRI is the source URI itself, so a document's identity is its
+	 * source URI: the bitprint of its content when that is derived, or the URI
+	 * given explicitly. The content hash is also recorded as {@code togetl:sha256}.
 	 */
-	public static String documentIri(String sourceUrl) {
-		if (sourceUrl == null || sourceUrl.isEmpty()) {
-			throw new IllegalArgumentException("sourceUrl must not be empty");
+	public static String documentIri(String source) {
+		if (source == null || source.isEmpty()) {
+			throw new IllegalArgumentException("source must not be empty");
 		}
-		return mint("document", shortSha256(sourceUrl.getBytes(StandardCharsets.UTF_8)));
+		return source;
 	}
 	
 	/** A deterministic identifier for one document import against one document. */
@@ -68,13 +68,13 @@ public final class Identifiers {
 				"document-import",
 				shortSha256((documentIri + "\n" + parserVersion).getBytes(StandardCharsets.UTF_8)));
 	}
-
+	
 	/** A generic TEF entry resource within a document. */
 	public static String tefEntryIri(String documentIri, int ordinal) {
 		if (ordinal < 0) {
 			throw new IllegalArgumentException("ordinal must be >= 0");
 		}
-		return mint("tef-entry", documentKey(documentIri) + ":" + ordinal);
+		return documentIri + "#tef-entry-" + ordinal;
 	}
 	
 	/**
@@ -97,19 +97,16 @@ public final class Identifiers {
 	
 	/** The part of a minted IRI after the common prefix, used to scope blank nodes. */
 	public static String documentKey(String documentIri) {
-		if (documentIri == null || !documentIri.startsWith(TAG_PREFIX)) {
-			throw new IllegalArgumentException("Not a togetl tag URI: " + documentIri);
+		if (documentIri == null || documentIri.isEmpty()) {
+			throw new IllegalArgumentException("documentIri must not be empty");
 		}
-		return documentIri.substring(TAG_PREFIX.length());
+		return documentIri;
 	}
 	
 	/** The hash segment of a document IRI, safe for use in blank node labels. */
 	public static String documentHash(String documentIri) {
 		String key = documentKey(documentIri);
-		if (!key.startsWith("document:")) {
-			throw new IllegalArgumentException("Not a document IRI: " + documentIri);
-		}
-		return key.substring("document:".length());
+		return shortSha256(key.getBytes(StandardCharsets.UTF_8));
 	}
 	
 	public static String sha256(byte[] bytes) {
@@ -177,7 +174,7 @@ public final class Identifiers {
 		}
 	}
 	
-	private static String hex(byte[] bytes) {
+	public static String hex(byte[] bytes) {
 		char[] chars = new char[bytes.length * 2];
 		for (int i = 0; i < bytes.length; i++) {
 			int b = bytes[i] & 0xFF;

@@ -55,3 +55,9 @@ music.txt:
 - Duplicate `CUSTOM_ID`s at L11024, 11675, 18471, 20711, 20723.
 
 namespaces.tef and vocab/*.tef are clean.
+
+## 2026-11-13 - Document identity is the bitprint of its content - Master Beam
+
+Documents are now identified by the bitprint of their content rather than a hash
+of their source URL. The source URL is still recorded as togetl:sourceUrl.
+A document entity ID is still undefined; see the TODO in Identifiers.

@@ -23,7 +23,7 @@ public final class SQLiteDatabase {
 	private static final String[] SCHEMA = new String[] {
 		"CREATE TABLE IF NOT EXISTS document ("
 			+ "iri TEXT PRIMARY KEY,"
-			+ "source_url TEXT NOT NULL,"
+			+ "source_uri TEXT NOT NULL,"
 			+ "sha256 TEXT NOT NULL,"
 			+ "byte_length INTEGER NOT NULL,"
 			+ "detected_format TEXT,"

@@ -24,8 +24,8 @@ short-description: an RDF namespace or ontology
 =attribute tag:nuke24.net,2026-11:togetl:sourceDocument
 short-description: links a document import to its source document
 
-=attribute tag:nuke24.net,2026-11:togetl:sourceUrl
-short-description: the canonical URL of a source document
+=attribute tag:nuke24.net,2026-11:togetl:sourceUri
+short-description: the source URI of a document: its bitprint, or the URI given at import
 
 =attribute tag:nuke24.net,2026-11:togetl:format
 short-description: the detected or declared source format

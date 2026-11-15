@@ -1,8 +1,11 @@
 package net.nuke24.togetl.test;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FilterReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.Reader;
 import java.io.StringReader;
@@ -10,13 +13,18 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import net.nuke24.togetl.cli.ImportCommand;
 import net.nuke24.togetl.cli.LoadCommand;
@@ -24,8 +32,15 @@ import net.nuke24.togetl.cli.VocabCommand;
 import net.nuke24.togetl.db.SQLiteDatabase;
 import net.nuke24.togetl.dialect.GenericTEFDialect;
 import net.nuke24.togetl.dialect.TEFDialect;
+import net.nuke24.togetl.dialect.TEFDocumentSink;
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
+import net.nuke24.togetl.etl.SourceProvenance;
+import net.nuke24.togetl.hash.Base32;
+import net.nuke24.togetl.hash.BitprintDigest;
+import net.nuke24.togetl.hash.BitprintScheme;
+import net.nuke24.togetl.hash.Tiger;
+import net.nuke24.togetl.hash.TigerTree;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.mapping.MappingTable;
 import net.nuke24.togetl.mapping.MappingTEFDialect;
@@ -33,6 +48,7 @@ import net.nuke24.togetl.org.OrgDocument;
 import net.nuke24.togetl.org.OrgHeading;
 import net.nuke24.togetl.org.OrgParser;
 import net.nuke24.togetl.org.OrgReader;
+import net.nuke24.togetl.org.OrgSyntaxException;
 import net.nuke24.togetl.org.OrgTable;
 import net.nuke24.togetl.org.OrgTableRow;
 import net.nuke24.togetl.rdf.BlankNode;
@@ -41,17 +57,20 @@ import net.nuke24.togetl.rdf.Literal;
 import net.nuke24.togetl.rdf.Location;
 import net.nuke24.togetl.rdf.Statement;
 import net.nuke24.togetl.rdf.StatementConsumer;
+import net.nuke24.togetl.tef.TEFComment;
+import net.nuke24.togetl.tef.TEFDirective;
 import net.nuke24.togetl.tef.TEFDocument;
 import net.nuke24.togetl.tef.TEFEntry;
 import net.nuke24.togetl.tef.TEFHeader;
-import net.nuke24.togetl.tef.TEFIssue;
 import net.nuke24.togetl.tef.TEFReadException;
 import net.nuke24.togetl.tef.TEFReader;
+import net.nuke24.togetl.tef.TEFSink;
 import net.nuke24.togetl.togetltsv.AliasTable;
 import net.nuke24.togetl.togetltsv.TOGETLTSVReader;
 import net.nuke24.togetl.togetltsv.TOGETLTSVWriter;
+import net.nuke24.togetl.util.MultiSink;
+import net.nuke24.togetl.util.Sink;
 import net.nuke24.togetl.util.PercentCoder;
-import net.nuke24.togetl.util.Tolerance;
 import net.nuke24.togetl.vocab.Vocab;
 import net.nuke24.togetl.vocab.Vocabulary;
 import net.nuke24.togetl.vocab.VocabularyLoader;
@@ -77,7 +96,15 @@ public final class TestMain {
 			
 	private static int failures = 0;
 	private static int passed = 0;
-	
+	private static int skipped = 0;
+	/**
+	 * Categories that run. "core" is always on; the others are opt-in with
+	 * --include=file-tests,memory-tests, because they touch the file system or
+	 * take a while.
+	 */
+	private static final Set<String> enabledCategories = new HashSet<String>(
+			Collections.singletonList("core"));
+			
 	private interface Check {
 		void run() throws Exception;
 	}
@@ -86,6 +113,16 @@ public final class TestMain {
 	}
 	
 	public static void main(String[] args) {
+		for (String arg : args) {
+			if (arg.startsWith("--include=")) {
+				for (String category : arg.substring("--include=".length()).split(",")) {
+					enabledCategories.add(category.trim());
+				}
+			} else {
+				System.err.println("Usage: TestMain [--include=file-tests,memory-tests]");
+				System.exit(2);
+			}
+		}
 		run("percent coder", TestMain::testPercentCoder);
 		run("locations", TestMain::testLocations);
 		run("aliases", TestMain::testAliases);
@@ -106,7 +143,14 @@ public final class TestMain {
 		run("tef invalid utf-8", TestMain::testTefInvalidUtf8);
 		run("tef spans", TestMain::testTefSpans);
 		run("tef crlf", TestMain::testTefCrLf);
+		run("tef streamed input", TestMain::testTefStreamedInput);
+		run("tef utf-8 split across blocks", TestMain::testTefUtf8SplitAcrossBlocks);
+		run("tef invalid utf-8 split across blocks", TestMain::testTefInvalidUtf8SplitAcrossBlocks);
+		run("tef entries arrive before end of input", TestMain::testTefEntriesArriveBeforeEnd);
+		run("source provenance", TestMain::testSourceProvenance);
+		run("multi sink order", TestMain::testMultiSinkOrder);
 		run("identifiers", TestMain::testIdentifiers);
+		run("hash known answers", TestMain::testHashKnownAnswers);
 		run("generic dialect", TestMain::testGenericDialect);
 		run("generic dialect round trip", TestMain::testGenericDialectRoundTrip);
 		run("parts mapping", TestMain::testPartsMapping);
@@ -126,15 +170,34 @@ public final class TestMain {
 		run("database load", TestMain::testDatabaseLoad);
 		run("database simple provenance", TestMain::testDatabaseSimpleProvenance);
 		
+		run("file-tests", "import leaves no output on syntax error", TestMain::testImportNoOutputOnError);
+		run("file-tests", "import rejects --tolerance", TestMain::testImportRejectsTolerance);
+		run("file-tests", "import writes provenance", TestMain::testImportWritesProvenance);
+		run("file-tests", "import from stdin", TestMain::testImportFromStdin);
+		run("file-tests", "import derives bitprint source", TestMain::testImportDerivesBitprint);
+		run("file-tests", "import rejects mismatched bitprint", TestMain::testImportRejectsMismatchedBitprint);
+		run("file-tests", "import rejects bad source options", TestMain::testImportRejectsBadSourceOptions);
+		
+		run("memory-tests", "import streams in a small heap", TestMain::testImportStreamsInSmallHeap);
+		
 		System.out.println();
 		if (failures > 0) {
-			System.out.println(failures + " test(s) failed, " + passed + " passed");
+			System.out.println(failures + " test(s) failed, " + passed + " passed, " + skipped + " skipped");
 			System.exit(1);
 		}
-		System.out.println(passed + " test(s) passed");
+		System.out.println(passed + " test(s) passed, " + skipped + " skipped");
 	}
 	
 	private static void run(String name, Check check) {
+		run("core", name, check);
+	}
+	
+	private static void run(String category, String name, Check check) {
+		if (!enabledCategories.contains(category)) {
+			skipped++;
+			System.out.println("skip " + name + " (needs --include=" + category + ")");
+			return;
+		}
 		try {
 			check.run();
 			passed++;
@@ -251,7 +314,6 @@ public final class TestMain {
 	
 	private static void testTefBasicEntry() throws Exception {
 		TEFDocument document = readTef("=part p1310\nname: Widget\n\nSome content\n");
-		assertEquals(0, document.getIssues().size(), "issue count");
 		assertEquals(1, document.getEntries().size(), "entry count");
 		
 		TEFEntry entry = document.getEntries().get(0);
@@ -277,7 +339,6 @@ public final class TestMain {
 				+ "\t";
 				
 		TEFDocument document = readTef(text);
-		assertEquals(0, document.getIssues().size(), "issue count");
 		assertEquals(1, document.getEntries().size(), "entry count");
 		
 		TEFEntry entry = document.getEntries().get(0);
@@ -301,7 +362,6 @@ public final class TestMain {
 	
 	private static void testTefContentBoundaries() throws Exception {
 		TEFDocument document = readTef("=foo bar\n\nhello\n=foo baz\n\nworld");
-		assertEquals(0, document.getIssues().size(), "issue count");
 		assertEquals(2, document.getEntries().size(), "entry count");
 		assertEquals("hello", document.getEntries().get(0).getContent(), "first content");
 		assertEquals("world", document.getEntries().get(1).getContent(), "second content");
@@ -309,14 +369,12 @@ public final class TestMain {
 	
 	private static void testTefEqualsEscape() throws Exception {
 		TEFDocument document = readTef("=foo bar\n\nhello\n==\n");
-		assertEquals(0, document.getIssues().size(), "issue count");
 		assertEquals(1, document.getEntries().size(), "entry count");
 		assertEquals("hello\n=\n", document.getEntries().get(0).getContent(), "escaped equals");
 	}
 	
 	private static void testTefEscapedHeaderEquals() throws Exception {
 		TEFDocument document = readTef("=foo bar\n==note: value\n\ncontent");
-		assertEquals(0, document.getIssues().size(), "issue count");
 		assertEquals(1, document.getEntries().size(), "entry count");
 		
 		TEFEntry entry = document.getEntries().get(0);
@@ -336,7 +394,6 @@ public final class TestMain {
 				+ "content";
 				
 		TEFDocument document = readTef(text);
-		assertEquals(0, document.getIssues().size(), "issue count");
 		assertEquals(1, document.getDirectives().size(), "document directive count");
 		assertEquals("format", document.getDirectives().get(0).getName(), "directive name");
 		assertEquals("x", document.getDirectives().get(0).getValue(), "directive value");
@@ -351,49 +408,19 @@ public final class TestMain {
 	}
 	
 	private static void testTefOrphanContinuation() throws Exception {
-		String text = "=part p1\n name: Bob\n";
-		TEFDocument document = readTef(text);
-		assertEquals(1, document.getIssues().size(), "issue count");
-		assertEquals("orphan-continuation", document.getIssues().get(0).getCode(), "issue code");
-		assertEquals(1, document.getEntries().size(), "entry count");
-		
-		TEFEntry entry = document.getEntries().get(0);
-		assertEquals(0, entry.getHeaders().size(), "header count");
-		assertEquals(" name: Bob", entry.getContent(), "recovered content");
-		
-		checkThrowsStrict(text);
+		checkTefError("=part p1\n name: Bob\n", "Unexpected indented line");
 	}
 	
 	private static void testTefHeaderWithoutColon() throws Exception {
-		String text = "=part p1\nname: Bob\nThis is content.\n\nmore";
-		TEFDocument document = readTef(text);
-		assertEquals(1, document.getIssues().size(), "issue count");
-		assertEquals("header-without-colon", document.getIssues().get(0).getCode(), "issue code");
-		
-		TEFEntry entry = document.getEntries().get(0);
-		assertEquals(1, entry.getHeaders().size(), "header count");
-		assertEquals("This is content.\nmore", entry.getContent(), "recovered content");
-		
-		checkThrowsStrict(text);
+		checkTefError(
+				"=part p1\nname: Bob\nThis is content.\n\nmore",
+				"Header line has no 'key: value' colon");
 	}
 	
 	private static void testTefTightHeader() throws Exception {
-		String text =
-				"=recording x\n"
-				+ "x-rdf-subject:urn:bitprint:ABC\n"
-				+ "title: Bob\n";
-		TEFDocument document = readTef(text);
-		assertEquals(1, document.getIssues().size(), "issue count");
-		assertEquals("tight-header-colon", document.getIssues().get(0).getCode(), "issue code");
-		
-		TEFEntry entry = document.getEntries().get(0);
-		assertEquals(2, entry.getHeaders().size(), "header count");
-		assertEquals("x-rdf-subject", entry.getHeaders().get(0).getKey(), "tight header key");
-		assertEquals("urn:bitprint:ABC", entry.getHeaders().get(0).getValue(), "tight header value");
-		assertEquals("title", entry.getHeaders().get(1).getKey(), "following header key");
-		assertEquals("Bob", entry.getHeaders().get(1).getValue(), "following header value");
-		
-		checkThrowsStrict(text);
+		checkTefError(
+				"=recording x\nx-rdf-subject:urn:bitprint:ABC\ntitle: Bob\n",
+				"Missing space after header colon");
 	}
 	
 	private static void testTefByteOrderMark() throws Exception {
@@ -418,23 +445,233 @@ public final class TestMain {
 		System.arraycopy(prefix, 0, bytes, 0, prefix.length);
 		bytes[prefix.length] = (byte) 0xFF;
 		bytes[prefix.length + 1] = (byte) '\n';
+		checkTefError(bytes, "Invalid UTF-8");
 		
-		TEFDocument document = readTef(bytes, Tolerance.WARN);
-		assertEquals(1, document.getIssues().size(), "issue count");
-		assertEquals("invalid-utf8", document.getIssues().get(0).getCode(), "issue code");
-		assertEquals(1, document.getEntries().size(), "entry count");
+		byte[] truncated = new byte[prefix.length + 1];
+		System.arraycopy(prefix, 0, truncated, 0, prefix.length);
+		truncated[prefix.length] = (byte) 0xC3;
+		checkTefError(truncated, "Invalid UTF-8");
+	}
+	
+	private static void testTefStreamedInput() throws Exception {
+		StringBuilder text = new StringBuilder("=part p1\nname: Bob\n\n");
+		for (int i = 0; i < 20000; i++) {
+			text.append("caf\u00e9 line ").append(i).append('\n');
+		}
+		byte[] body = text.toString().getBytes(StandardCharsets.UTF_8);
+		byte[] bytes = new byte[body.length + 3];
+		bytes[0] = (byte) 0xEF;
+		bytes[1] = (byte) 0xBB;
+		bytes[2] = (byte) 0xBF;
+		System.arraycopy(body, 0, bytes, 3, body.length);
 		
-		TEFHeader header = document.getEntries().get(0).getHeaders().get(0);
-		assertEquals("name", header.getKey(), "header key");
-		check(header.getValue().indexOf('\uFFFD') >= 0, "replacement character should be present");
+		TEFDocument expected = TEFReader.read(DOC, bytes);
+		final byte[] source = bytes;
+		InputStream oneByteAtATime = new InputStream() {
+			private int pos;
+			
+			@Override
+			public int read() {
+				return pos < source.length ? (source[pos++] & 0xFF) : -1;
+			}
+			
+			@Override
+			public int read(byte[] b, int off, int len) {
+				if (pos >= source.length) {
+					return -1;
+				}
+				b[off] = source[pos++];
+				return 1;
+			}
+		};
+		final List<TEFEntry> entries = new ArrayList<TEFEntry>();
+		TEFReader.read(DOC, oneByteAtATime, new TEFSink() {
+			@Override
+			public void documentComment(TEFComment comment) {
+			}
+			
+			@Override
+			public void documentDirective(TEFDirective directive) {
+			}
+			
+			@Override
+			public void entry(TEFEntry entry) {
+				entries.add(entry);
+			}
+		});
+		assertEquals(expected.getEntries().size(), entries.size(), "entry count");
+		TEFEntry entry = entries.get(0);
+		assertEquals("part", entry.getType(), "entry type survives BOM stripping");
+		assertEquals("Bob", entry.getHeaders().get(0).getValue(), "header value");
+		assertEquals(expected.getEntries().get(0).getContent(), entry.getContent(), "content");
+		check(entry.getContent().contains("caf\u00e9 line 19999"), "content should reach the last line");
+	}
+	
+	/** Collects what a TEFSink receives, for tests that inspect the stream. */
+	private static final class RecordingSink implements TEFSink {
+		final List<TEFEntry> entries = new ArrayList<TEFEntry>();
+		final List<TEFComment> comments = new ArrayList<TEFComment>();
+		final List<TEFDirective> directives = new ArrayList<TEFDirective>();
 		
+		@Override
+		public void documentComment(TEFComment comment) {
+			comments.add(comment);
+		}
+		
+		@Override
+		public void documentDirective(TEFDirective directive) {
+			directives.add(directive);
+		}
+		
+		@Override
+		public void entry(TEFEntry entry) {
+			entries.add(entry);
+		}
+	}
+	
+	/** Feeds bytes to a parser in blocks of the given size, then ends the input. */
+	private static RecordingSink parseInBlocks(byte[] bytes, int blockSize) throws Exception {
+		RecordingSink sink = new RecordingSink();
+		Sink<byte[]> parser = TEFReader.parser(DOC, sink);
+		for (int offset = 0; offset < bytes.length; offset += blockSize) {
+			int end = Math.min(bytes.length, offset + blockSize);
+			parser.accept(Optional.of(Arrays.copyOfRange(bytes, offset, end)));
+		}
+		parser.accept(Optional.<byte[]>empty());
+		return sink;
+	}
+	
+	private static String describe(List<TEFEntry> entries) {
+		StringBuilder out = new StringBuilder();
+		for (TEFEntry entry : entries) {
+			out.append(entry.getType()).append(' ').append(entry.getValue()).append('\n');
+			for (TEFHeader header : entry.getHeaders()) {
+				out.append(header.getKey()).append('=').append(header.getValue()).append('\n');
+			}
+			out.append(entry.getContent()).append("\n--\n");
+		}
+		return out.toString();
+	}
+	
+	private static void testTefUtf8SplitAcrossBlocks() throws Exception {
+		String[] samples = {"caf\u00e9", "\u20ac", "\ud83d\ude00"};
+		for (String sample : samples) {
+			String text = "\uFEFF=part p1\nname: " + sample + " x\n\n" + sample + sample + "\n";
+			byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+			String whole = describe(parseInBlocks(bytes, bytes.length).entries);
+			for (int blockSize : new int[] {1, 2, 3, 5, 7}) {
+				assertEquals(whole, describe(parseInBlocks(bytes, blockSize).entries),
+						"parse with blocks of " + blockSize + " for " + sample);
+			}
+		}
+	}
+	
+	private static void testTefInvalidUtf8SplitAcrossBlocks() throws Exception {
+		byte[][] invalid = {
+				{(byte) 0xE2, (byte) 0x82},
+				{(byte) 0xE2, (byte) 0x28, (byte) 0xA1},
+				{(byte) 0xF0, (byte) 0x9F, (byte) 0x98},
+		};
+		byte[] prefix = "=part p1\nname: ".getBytes(StandardCharsets.UTF_8);
+		byte[] newline = {(byte) '\n'};
+		for (byte[] badSequence : invalid) {
+			byte[] bytes = concat(prefix, badSequence, newline);
+			for (int blockSize : new int[] {1, 2, bytes.length}) {
+				boolean threw = false;
+				try {
+					parseInBlocks(bytes, blockSize);
+				} catch (TEFReadException expected) {
+					threw = true;
+					check(expected.getMessage().contains("Invalid UTF-8"),
+							"error should be invalid UTF-8: " + expected.getMessage());
+				}
+				check(threw, "invalid UTF-8 should be rejected with blocks of " + blockSize);
+			}
+		}
+		
+		byte[] truncated = concat(prefix, new byte[] {(byte) 0xE2, (byte) 0x82}, new byte[0]);
 		boolean threw = false;
 		try {
-			readTef(bytes, Tolerance.STRICT);
+			parseInBlocks(truncated, 1);
 		} catch (TEFReadException expected) {
 			threw = true;
 		}
-		check(threw, "strict should reject invalid UTF-8");
+		check(threw, "input ending mid-character should be rejected");
+	}
+	
+	private static byte[] concat(byte[]... parts) {
+		int total = 0;
+		for (byte[] part : parts) {
+			total += part.length;
+		}
+		byte[] out = new byte[total];
+		int offset = 0;
+		for (byte[] part : parts) {
+			System.arraycopy(part, 0, out, offset, part.length);
+			offset += part.length;
+		}
+		return out;
+	}
+	
+	private static void testTefEntriesArriveBeforeEnd() throws Exception {
+		RecordingSink sink = new RecordingSink();
+		Sink<byte[]> parser = TEFReader.parser(DOC, sink);
+		parser.accept(Optional.of("=part a\nname: 1\n\nx\n=part b\nname: 2\n\n".getBytes(StandardCharsets.UTF_8)));
+		assertEquals(1, sink.entries.size(), "first entry is delivered before end of input");
+		assertEquals("a", sink.entries.get(0).getValue(), "first entry value");
+		parser.accept(Optional.<byte[]>empty());
+		assertEquals(2, sink.entries.size(), "second entry is delivered at end of input");
+	}
+	
+	private static void testSourceProvenance() throws Exception {
+		byte[] plain = "=part p1\n".getBytes(StandardCharsets.UTF_8);
+		byte[] withBom = concat(new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF}, plain);
+		
+		SourceProvenance p = SourceProvenance.of(withBom);
+		assertEquals(Identifiers.sha256(withBom), p.getSha256(), "sha256 of all bytes including BOM");
+		assertEquals((long) withBom.length, p.getByteLength(), "byte length includes BOM");
+		check(p.hasBom(), "BOM detected");
+		check(!SourceProvenance.of(plain).hasBom(), "no BOM in plain input");
+		
+		SourceProvenance.Digester digester = new SourceProvenance.Digester();
+		for (byte b : withBom) {
+			digester.accept(Optional.of(new byte[] {b}));
+		}
+		digester.accept(Optional.<byte[]>empty());
+		SourceProvenance streamed = digester.result();
+		assertEquals(p.getSha256(), streamed.getSha256(), "streamed sha256");
+		assertEquals(p.getByteLength(), streamed.getByteLength(), "streamed length");
+		check(streamed.hasBom(), "BOM detected when split across blocks");
+		
+		boolean threw = false;
+		try {
+			new SourceProvenance.Digester().result();
+		} catch (IllegalStateException expected) {
+			threw = true;
+		}
+		check(threw, "result before end of input should be refused");
+	}
+	
+	private static void testMultiSinkOrder() throws Exception {
+		final List<String> log = new ArrayList<String>();
+		Sink<String> first = new Sink<String>() {
+			@Override
+			public void accept(Optional<String> item) {
+				log.add("first:" + item.orElse("<end>"));
+			}
+		};
+		Sink<String> second = new Sink<String>() {
+			@Override
+			public void accept(Optional<String> item) {
+				log.add("second:" + item.orElse("<end>"));
+			}
+		};
+		Sink<String> both = new MultiSink<String>(Arrays.asList(first, second));
+		both.accept(Optional.of("a"));
+		both.accept(Optional.of("b"));
+		both.accept(Optional.<String>empty());
+		assertEquals("[first:a, second:a, first:b, second:b, first:<end>, second:<end>]",
+				log.toString(), "every target sees every item and the end, in order");
 	}
 	
 	private static void testTefSpans() throws Exception {
@@ -454,7 +691,6 @@ public final class TestMain {
 	
 	private static void testTefCrLf() throws Exception {
 		TEFDocument document = readTef("=part p1\r\nname: Bob\r\n\r\ncontent\r\n");
-		assertEquals(0, document.getIssues().size(), "issue count");
 		assertEquals(1, document.getEntries().size(), "entry count");
 		
 		TEFEntry entry = document.getEntries().get(0);
@@ -462,26 +698,61 @@ public final class TestMain {
 		assertEquals("content\r\n", entry.getContent(), "content preserves CRLF");
 	}
 	
+	private static String hex(byte[] bytes) {
+		StringBuilder out = new StringBuilder();
+		for (byte b : bytes) {
+			out.append(String.format("%02x", b & 0xFF));
+		}
+		return out.toString();
+	}
+	
+	private static byte[] digest(MessageDigest digest, byte[] input) {
+		digest.reset();
+		return digest.digest(input);
+	}
+	
+	private static void testHashKnownAnswers() throws Exception {
+		// Tiger-192 test vectors from the Tiger specification.
+		assertEquals("3293ac630c13f0245f92bbb1766e16167a4e58492dde73f3",
+				hex(digest(new Tiger(), new byte[0])), "Tiger of empty input");
+		assertEquals("2aab1484e8c158f2bfb8c5ff41b57a525129131c957b5f93",
+				hex(digest(new Tiger(), "abc".getBytes(StandardCharsets.US_ASCII))), "Tiger of abc");
+				
+		// A tree hash of a single leaf is the leaf hash: Tiger over a 0x00 prefix and the data.
+		check(Arrays.equals(digest(new Tiger(), new byte[] {0}), digest(new TigerTree(), new byte[0])),
+				"TigerTree of empty input is the empty leaf hash");
+				
+		// RFC 4648 Base32 test vectors, without padding.
+		assertEquals("MY", Base32.encode("f".getBytes(StandardCharsets.US_ASCII)), "Base32 of f");
+		assertEquals("MZXW6YTB", Base32.encode("fooba".getBytes(StandardCharsets.US_ASCII)), "Base32 of fooba");
+		assertEquals("MZXW6YTBOI", Base32.encode("foobar".getBytes(StandardCharsets.US_ASCII)), "Base32 of foobar");
+		
+		// SHA-1 test vector, and the bitprint URN built from it.
+		byte[] content = "abc".getBytes(StandardCharsets.US_ASCII);
+		assertEquals("a9993e364706816aba3e25717850c26c9cd0d89d",
+				hex(digest(MessageDigest.getInstance("SHA-1"), content)), "SHA-1 of abc");
+		String urn = BitprintScheme.instance.hashToUri(digest(new BitprintDigest(), content));
+		check(urn.startsWith("urn:bitprint:"), "bitprint prefix: " + urn);
+		assertEquals(13 + 32 + 1 + 39, urn.length(), "bitprint URN length");
+		assertEquals(Base32.encode(digest(MessageDigest.getInstance("SHA-1"), content)),
+				urn.substring(13, 13 + 32), "bitprint SHA-1 part");
+	}
+	
 	private static void testIdentifiers() throws Exception {
-		String url = "https://example.com/a b.tef";
-		String documentIri = Identifiers.documentIri(url);
+		String uri = "https://example.com/a b.tef";
+		String documentIri = Identifiers.documentIri(uri);
 		String documentImportIri = Identifiers.documentImportIri(documentIri, "test/1");
-		String prefix = Identifiers.TAG_PREFIX + "document:";
-		String importPrefix = Identifiers.TAG_PREFIX + "document-import:";
-		check(documentIri.startsWith(prefix), "document IRI prefix: " + documentIri);
-		check(documentImportIri.startsWith(importPrefix), "document import IRI prefix: " + documentImportIri);
-		assertEquals(prefix.length() + 16, documentIri.length(), "document hash length");
-		assertEquals(importPrefix.length() + 16, documentImportIri.length(), "document import hash length");
-		assertEquals(documentIri, Identifiers.documentIri(url), "document IRI is deterministic");
+		assertEquals(uri, documentIri, "document IRI is the source URI");
+		assertEquals(documentIri, Identifiers.documentIri(uri), "document IRI is deterministic");
 		assertEquals(documentImportIri, Identifiers.documentImportIri(documentIri, "test/1"),
 				"document import IRI is deterministic");
 		check(!documentImportIri.equals(Identifiers.documentImportIri(documentIri, "test/2")),
 				"parser versions produce different document imports");
-		check(!documentIri.equals(Identifiers.documentIri(url + "x")), "different URLs differ");
+		check(!documentIri.equals(Identifiers.documentIri(uri + "x")), "different URIs differ");
 		
 		String entryIri = Identifiers.tefEntryIri(documentIri, 7);
-		check(entryIri.startsWith(Identifiers.TAG_PREFIX + "tef-entry:"), "entry IRI prefix");
-		check(entryIri.endsWith(":7"), "entry ordinal suffix");
+		check(entryIri.startsWith(uri + "#tef-entry-"), "entry IRI prefix");
+		check(entryIri.endsWith("7"), "entry ordinal suffix");
 		
 		assertEquals(
 				"tag:nuke24.net,2026-11:togetl:part:a%2fb",
@@ -505,12 +776,11 @@ public final class TestMain {
 				+ "\n"
 				+ "content\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-		String sourceUrl = "https://example.com/data.tef";
-		TEFDocument document = TEFReader.read(sourceUrl, bytes);
-		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+		String sourceUri = "https://example.com/data.tef";
+		SourceDocument source = SourceDocument.of(sourceUri, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		
-		List<Statement> statements = collect(new GenericTEFDialect(), document, source, report);
+		List<Statement> statements = collect(new GenericTEFDialect(), bytes, source, report);
 		String doc = source.getDocumentIri();
 		String documentImport = source.getDocumentImportIri();
 		String entry = Identifiers.tefEntryIri(doc, 0);
@@ -552,12 +822,11 @@ public final class TestMain {
 	private static void testGenericDialectRoundTrip() throws Exception {
 		String text = "=part p1\nname: Widget\ntag: a\ntag: b\n\ncontent\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-		String sourceUrl = "https://example.com/data.tef";
-		TEFDocument document = TEFReader.read(sourceUrl, bytes);
-		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+		String sourceUri = "https://example.com/data.tef";
+		SourceDocument source = SourceDocument.of(sourceUri, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		
-		List<Statement> statements = collect(new GenericTEFDialect(), document, source, report);
+		List<Statement> statements = collect(new GenericTEFDialect(), bytes, source, report);
 		StringWriter out = new StringWriter();
 		TOGETLTSVWriter writer = new TOGETLTSVWriter(out, AliasTable.withDefaults());
 		try {
@@ -584,14 +853,13 @@ public final class TestMain {
 				+ "\n"
 				+ "A part.\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-		String sourceUrl = "https://example.com/data.tef";
-		TEFDocument document = TEFReader.read(sourceUrl, bytes);
-		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+		String sourceUri = "https://example.com/data.tef";
+		SourceDocument source = SourceDocument.of(sourceUri, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		MappingTEFDialect dialect = new MappingTEFDialect(
 				"parts", MappingTable.load("parts"));
 				
-		List<Statement> statements = collect(dialect, document, source, report);
+		List<Statement> statements = collect(dialect, bytes, source, report);
 		String part = Identifiers.mintData("part", "p1");
 		
 		check(has(statements, part, Vocab.RDF_TYPE, Vocab.TOGETL_PART.toString()),
@@ -641,14 +909,13 @@ public final class TestMain {
 				+ "=part p2\n"
 				+ "short-description: same\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-		String sourceUrl = "https://example.com/conflicts.tef";
-		TEFDocument document = TEFReader.read(sourceUrl, bytes);
-		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+		String sourceUri = "https://example.com/conflicts.tef";
+		SourceDocument source = SourceDocument.of(sourceUri, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		MappingTEFDialect dialect = new MappingTEFDialect(
 				"parts", MappingTable.load("parts"));
 				
-		List<Statement> statements = collect(dialect, document, source, report);
+		List<Statement> statements = collect(dialect, bytes, source, report);
 		
 		assertEquals(1, countObject(statements, Vocab.TOGETL_SHORT_DESCRIPTION,
 				Literal.of("first").toString()), "first value kept");
@@ -679,14 +946,13 @@ public final class TestMain {
 				+ "=projbase urn:oid:1.2.3\n"
 				+ "title: Project\n";
 		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-		String sourceUrl = "https://example.com/namespaces.tef";
-		TEFDocument document = TEFReader.read(sourceUrl, bytes);
-		SourceDocument source = SourceDocument.of(sourceUrl, bytes, "tef", "test/1");
+		String sourceUri = "https://example.com/namespaces.tef";
+		SourceDocument source = SourceDocument.of(sourceUri, "tef", "test/1");
 		ImportReport report = new ImportReport();
 		MappingTEFDialect dialect = new MappingTEFDialect(
 				"namespaces", MappingTable.load("namespaces"));
 				
-		List<Statement> statements = collect(dialect, document, source, report);
+		List<Statement> statements = collect(dialect, bytes, source, report);
 		
 		check(has(statements, "http://example.com/ns/", Vocab.RDF_TYPE,
 				Vocab.TOGETL_NAMESPACE.toString()), "namespace type and trimmed subject");
@@ -869,19 +1135,25 @@ public final class TestMain {
 		assertEquals(0, document.getDirectives().get(4).getHeadingIndex(), "directive heading index");
 	}
 	
+	private static void checkOrgError(String text, int line, String fragment) {
+		boolean threw = false;
+		try {
+			OrgReader.read(text.getBytes(StandardCharsets.UTF_8));
+		} catch (OrgSyntaxException expected) {
+			threw = true;
+			assertEquals(line, expected.getLine(), "org error line");
+			check(expected.getMessage().contains(fragment), "org error should mention " + fragment);
+		}
+		check(threw, "org syntax error should be fatal: " + fragment);
+	}
+	
 	private static void testOrgRecovery() {
-		OrgDocument blocked = OrgReader.read(
-				"\uFEFF* A\n#+begin_src\n* B\n* C\n".getBytes(StandardCharsets.UTF_8));
-		check(blocked.hasBom(), "byte order mark detected");
-		assertEquals(1, blocked.getHeadings().size(), "headings inside unclosed block are ignored");
-		assertEquals(1, blocked.getDiagnostics().size(), "unclosed block diagnostic count");
-		assertEquals(2, blocked.getDiagnostics().get(0).getLine(), "unclosed block diagnostic line");
+		OrgDocument bom = OrgReader.read("\uFEFF* A\n".getBytes(StandardCharsets.UTF_8));
+		check(bom.hasBom(), "byte order mark detected");
 		
-		OrgDocument drawer = OrgReader.read(
-				"* A\n:PROPERTIES:\n:CUSTOM_ID: a\n* B\n".getBytes(StandardCharsets.UTF_8));
-		assertEquals(2, drawer.getHeadings().size(), "heading after unclosed drawer");
-		assertEquals(1, drawer.getDiagnostics().size(), "unclosed drawer diagnostic count");
-		assertEquals(2, drawer.getDiagnostics().get(0).getLine(), "unclosed drawer diagnostic line");
+		checkOrgError("* A\n#+begin_src\n* B\n* C\n", 2, "unclosed block");
+		checkOrgError("* A\n:PROPERTIES:\n:CUSTOM_ID: a\n* B\n", 2, "unclosed drawer");
+		checkOrgError("* A\n:notes:\nno end here\n", 2, "unclosed drawer");
 		
 		OrgDocument tables = OrgReader.read(
 				"* T\n|-|-|\n| a | b |\n|---+---|\n".getBytes(StandardCharsets.UTF_8));
@@ -958,7 +1230,7 @@ public final class TestMain {
 		assertEquals("", bareTodo.getTitle(), "bare keyword has an empty title");
 		assertEquals("WAIT", bare.getHeadings().get(1).getTodoKeyword(),
 				"default keywords apply when no directive is present");
-		
+				
 		OrgDocument custom = OrgReader.read((
 				"* SHIP it\n"
 				+ "* WAIT thing\n"
@@ -978,7 +1250,7 @@ public final class TestMain {
 				"TODO is not a keyword once a directive replaces the defaults");
 		assertEquals("TODO task", custom.getHeadings().get(3).getTitle(),
 				"TODO stays in the title");
-		
+				
 		OrgDocument duplicates = OrgReader.read((
 				"* A\n:PROPERTIES:\n:CUSTOM_ID: x\n:END:\n"
 				+ "* B\n:PROPERTIES:\n:CUSTOM_ID: x\n:END:\n").getBytes(StandardCharsets.UTF_8));
@@ -992,7 +1264,7 @@ public final class TestMain {
 		assertEquals(1, table.getRows().size(), "|-5 degrees| is one row");
 		check(table.getRows().get(0).isSeparator(),
 				"any line starting with |- is a horizontal rule, even with text in it");
-		
+				
 		try {
 			new OrgParser().accept(Optional.of("embedded\nnewline"));
 			check(false, "a line containing LF must be rejected");
@@ -1019,12 +1291,14 @@ public final class TestMain {
 		assertEquals(0, ImportCommand.run(new String[] {
 				"--input", input.toString(),
 				"--output", first.toString(),
-				"--report", report.toString()
+				"--report", report.toString(),
+				"--source-uri", "file:///data.tef"
 		}), "first import exit code");
 		
 		assertEquals(0, ImportCommand.run(new String[] {
 				"--input", input.toString(),
-				"--output", second.toString()
+				"--output", second.toString(),
+				"--source-uri", "file:///data.tef"
 		}), "second import exit code");
 		
 		byte[] firstBytes = Files.readAllBytes(first);
@@ -1041,6 +1315,171 @@ public final class TestMain {
 				reportLines.get(0),
 				"report header");
 		check(reportLines.size() > 1, "report has rows");
+	}
+	
+	private static Path tempDir() throws IOException {
+		Path dir = Files.createTempDirectory("togetl-test");
+		dir.toFile().deleteOnExit();
+		return dir;
+	}
+	
+	private static void testImportNoOutputOnError() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("broken.tef");
+		Path output = dir.resolve("broken.togetltsv");
+		Files.write(input, "=part p1\nname: Bob\nno colon here\n".getBytes(StandardCharsets.UTF_8));
+		
+		assertEquals(1, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString()
+		}), "syntax error exit code");
+		check(!Files.exists(output), "partial output should be removed after a syntax error");
+	}
+	
+	private static void testImportRejectsTolerance() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("data.tef");
+		Path output = dir.resolve("data.togetltsv");
+		Files.write(input, "=part p1\nname: Bob\n".getBytes(StandardCharsets.UTF_8));
+		
+		assertEquals(1, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString(), "--tolerance", "warn"
+		}), "--tolerance exit code");
+		check(!Files.exists(output), "no output should be written for a rejected option");
+	}
+	
+	private static void testImportWritesProvenance() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("data.tef");
+		Path output = dir.resolve("data.togetltsv");
+		byte[] bytes = "=part p1\nname: Widget\n".getBytes(StandardCharsets.UTF_8);
+		Files.write(input, bytes);
+		
+		assertEquals(0, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString(),
+				"--source-uri", "file:///data.tef"
+		}), "import exit code");
+		String written = new String(Files.readAllBytes(output), StandardCharsets.UTF_8);
+		check(written.contains(Identifiers.sha256(bytes)), "output should record the input's SHA-256");
+		check(written.contains("data:," + bytes.length + "|"), "output should record the input's byte length");
+	}
+	
+	private static void testImportFromStdin() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("data.tef");
+		Path fromFile = dir.resolve("file.togetltsv");
+		Path fromStdin = dir.resolve("stdin.togetltsv");
+		byte[] bytes = "=part p1\nname: Widget\n".getBytes(StandardCharsets.UTF_8);
+		Files.write(input, bytes);
+		
+		assertEquals(0, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", fromFile.toString(),
+				"--source-uri", "file:///data.tef"
+		}), "file import exit code");
+		
+		InputStream originalIn = System.in;
+		System.setIn(new ByteArrayInputStream(bytes));
+		try {
+			assertEquals(0, ImportCommand.run(new String[] {
+					"--input", "-", "--output", fromStdin.toString(),
+					"--source-uri", "file:///data.tef"
+			}), "stdin import exit code");
+		} finally {
+			System.setIn(originalIn);
+		}
+		check(Arrays.equals(Files.readAllBytes(fromFile), Files.readAllBytes(fromStdin)),
+				"stdin import should match the file import (stdin is read once, in full)");
+				
+		assertEquals(1, ImportCommand.run(new String[] {"--input", "-", "--output", fromStdin.toString()}),
+				"stdin without a source option should be refused");
+	}
+	
+	private static void testImportDerivesBitprint() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("data.tef");
+		Path output = dir.resolve("data.togetltsv");
+		byte[] bytes = "=part p1\nname: Widget\n".getBytes(StandardCharsets.UTF_8);
+		Files.write(input, bytes);
+		String expected = BitprintScheme.instance.hashToUri(digest(new BitprintDigest(), bytes));
+		
+		assertEquals(0, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString(),
+				"--derive-source-uri", "bitprint"
+		}), "derived import exit code");
+		String written = new String(Files.readAllBytes(output), StandardCharsets.UTF_8);
+		check(written.contains(expected), "output should use the derived bitprint as source: " + expected);
+	}
+	
+	private static void testImportRejectsMismatchedBitprint() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("data.tef");
+		Path output = dir.resolve("data.togetltsv");
+		Files.write(input, "=part p1\nname: Widget\n".getBytes(StandardCharsets.UTF_8));
+		
+		assertEquals(1, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString(),
+				"--source-uri", "urn:bitprint:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+		}), "mismatched bitprint exit code");
+		check(!Files.exists(output), "no output should be written for a mismatched bitprint");
+	}
+	
+	private static void testImportRejectsBadSourceOptions() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("data.tef");
+		Path output = dir.resolve("data.togetltsv");
+		Files.write(input, "=part p1\nname: Widget\n".getBytes(StandardCharsets.UTF_8));
+		
+		assertEquals(1, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString(),
+				"--derive-source-uri", "sha1"
+		}), "unknown derive kind exit code");
+		assertEquals(1, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString(),
+				"--source-uri", "file:///data.tef", "--derive-source-uri", "bitprint"
+		}), "both source options exit code");
+		assertEquals(1, ImportCommand.run(new String[] {
+				"--input", input.toString(), "--output", output.toString()
+		}), "no source option exit code");
+		check(!Files.exists(output), "no output should be written for rejected options");
+	}
+	
+	/**
+	 * Imports a generated document of about 20 MB in a child JVM with a 48 MB
+	 * heap. Holding the whole input or the whole document in memory fails here.
+	 */
+	private static void testImportStreamsInSmallHeap() throws Exception {
+		Path dir = tempDir();
+		Path input = dir.resolve("large.tef");
+		try (java.io.Writer out = Files.newBufferedWriter(input, StandardCharsets.UTF_8)) {
+			out.write("#format http://ns.nuke24.net/TEF/Formats/SyntaxV0.3\n\n");
+			for (int i = 0; i < 140000; i++) {
+				out.write("=part p" + i + "\nname: Part number " + i + "\ntags: a, b\n\n");
+				out.write("Some description of part " + i + ".\nIt has two lines.\n\n");
+			}
+		}
+		
+		String java = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
+		Process process = new ProcessBuilder(
+				java, "-Xmx48m",
+				"-cp", System.getProperty("java.class.path"),
+				"net.nuke24.togetl.cli.Main", "import",
+				"--dialect", "generic",
+				"--source-uri", "file:///large.tef",
+				"--input", input.toString(),
+				"--output", "-")
+				.redirectError(dir.resolve("stderr.txt").toFile())
+				.start();
+		long discarded = 0;
+		byte[] buffer = new byte[65536];
+		try (InputStream stdout = process.getInputStream()) {
+			int n;
+			while ((n = stdout.read(buffer)) >= 0) {
+				discarded += n;
+			}
+		}
+		int exit = process.waitFor();
+		String stderr = new String(Files.readAllBytes(dir.resolve("stderr.txt")), StandardCharsets.UTF_8);
+		assertEquals(0, exit, "import exit code under -Xmx48m; stderr: " + stderr);
+		check(discarded > 0, "import should write statements");
 	}
 	
 	private static void testDatabaseLoad() throws Exception {
@@ -1098,7 +1537,7 @@ public final class TestMain {
 		assertEquals(1L, queryLong(connection, "SELECT COUNT(*) FROM document"), "document count");
 		assertEquals(DB_DOC, queryString(connection, "SELECT iri FROM document"), "document IRI");
 		assertEquals("https://example.com/data.tef",
-				queryString(connection, "SELECT source_url FROM document"), "document source URL");
+				queryString(connection, "SELECT source_uri FROM document"), "document source URI");
 		assertEquals("abc", queryString(connection, "SELECT sha256 FROM document"), "document hash");
 		assertEquals(123L, queryLong(connection, "SELECT byte_length FROM document"),
 				"document byte length");
@@ -1232,7 +1671,7 @@ public final class TestMain {
 				+ "\n"
 				+ DB_IMPORT + " - " + DB_DOC + " rdf:type togetl:Document\n"
 				+ DB_IMPORT + " - " + DB_DOC
-				+ " togetl:sourceUrl data:,https%3A%2F%2Fexample.com%2Fdata.tef\n"
+				+ " togetl:sourceUri data:,https%3A%2F%2Fexample.com%2Fdata.tef\n"
 				+ DB_IMPORT + " - " + DB_DOC + " general:sha256 data:,abc\n"
 				+ DB_IMPORT + " - " + DB_DOC + " general:byteLength data:,123|xsd:integer\n"
 				+ DB_IMPORT + " - " + DB_IMPORT + " rdf:type togetl:DocumentImport\n"
@@ -1330,7 +1769,7 @@ public final class TestMain {
 	
 	private static List<Statement> collect(
 			TEFDialect dialect,
-			TEFDocument document,
+			byte[] bytes,
 			SourceDocument source,
 			ImportReport report
 	) throws Exception {
@@ -1341,9 +1780,12 @@ public final class TestMain {
 				statements.add(statement);
 			}
 		};
-		dialect.map(document, source, consumer, report);
+		TEFDocumentSink sink = dialect.begin(source, consumer, report);
+		TEFReader.read(source.getSourceIri(), new ByteArrayInputStream(bytes), sink);
+		sink.finish(SourceProvenance.of(bytes));
 		return statements;
 	}
+	
 	
 	private static boolean has(List<Statement> statements, String subject, IRI predicate, String object) {
 		for (Statement statement : statements) {
@@ -1394,21 +1836,28 @@ public final class TestMain {
 	}
 	
 	private static TEFDocument readTef(String text) throws Exception {
-		return readTef(text.getBytes(StandardCharsets.UTF_8), Tolerance.WARN);
+		return readTef(text.getBytes(StandardCharsets.UTF_8));
 	}
 	
-	private static TEFDocument readTef(byte[] bytes, Tolerance tolerance) throws Exception {
-		return TEFReader.read(DOC, bytes, tolerance);
+	private static TEFDocument readTef(byte[] bytes) throws Exception {
+		return TEFReader.read(DOC, bytes);
 	}
 	
-	private static void checkThrowsStrict(String text) throws Exception {
+	private static void checkTefError(String text, String fragment) throws Exception {
+		checkTefError(text.getBytes(StandardCharsets.UTF_8), fragment);
+	}
+	
+	private static void checkTefError(byte[] bytes, String fragment) throws Exception {
 		boolean threw = false;
 		try {
-			readTef(text.getBytes(StandardCharsets.UTF_8), Tolerance.STRICT);
+			readTef(bytes);
 		} catch (TEFReadException expected) {
 			threw = true;
+			check(
+					expected.getMessage().contains(fragment),
+					"error should mention '" + fragment + "': " + expected.getMessage());
 		}
-		check(threw, "strict should reject: " + text);
+		check(threw, "syntax error should be fatal: " + fragment);
 	}
 	
 	private static String write(Statement... statements) throws Exception {

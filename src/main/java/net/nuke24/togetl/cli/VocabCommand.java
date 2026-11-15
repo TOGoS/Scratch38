@@ -53,13 +53,13 @@ public final class VocabCommand {
 			System.err.println("togetl vocab: " + e.getMessage());
 			usage(System.err);
 			return 1;
+		} catch (TEFReadException e) {
+			System.err.println("togetl vocab: " + e.getMessage());
+			return 1;
 		} catch (IOException e) {
 			System.err.println("togetl vocab: " + e.getMessage());
 			return 1;
 		} catch (TOGETLTSVParseException e) {
-			System.err.println("togetl vocab: " + e.getMessage());
-			return 1;
-		} catch (TEFReadException e) {
 			System.err.println("togetl vocab: " + e.getMessage());
 			return 1;
 		} catch (IllegalArgumentException e) {

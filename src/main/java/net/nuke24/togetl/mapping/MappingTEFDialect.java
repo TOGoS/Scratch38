@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 import net.nuke24.togetl.dialect.DialectSupport;
+import net.nuke24.togetl.dialect.TEFDocumentSink;
 import net.nuke24.togetl.dialect.TEFDialect;
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
@@ -16,7 +17,6 @@ import net.nuke24.togetl.rdf.Literal;
 import net.nuke24.togetl.rdf.Location;
 import net.nuke24.togetl.rdf.Node;
 import net.nuke24.togetl.rdf.StatementConsumer;
-import net.nuke24.togetl.tef.TEFDocument;
 import net.nuke24.togetl.tef.TEFEntry;
 import net.nuke24.togetl.tef.TEFHeader;
 import net.nuke24.togetl.vocab.Vocab;
@@ -53,22 +53,28 @@ public final class MappingTEFDialect implements TEFDialect {
 	}
 	
 	@Override
-	public void map(
-			TEFDocument document,
+	public TEFDocumentSink begin(
 			SourceDocument source,
 			StatementConsumer out,
 			ImportReport report
 	) throws IOException {
-		DialectSupport.emitDocumentMetadata(document, source, out);
-		DialectSupport.emitDocumentAnnotations(document, source, out, report);
+		return new Session(source, out, report);
+	}
+	
+	private final class Session extends DialectSupport.DocumentSession {
+		private final String documentIri;
+		private final String documentHash;
+		private final ConflictTracker conflicts = new ConflictTracker();
+		private final CardinalityEmitter emitter = new CardinalityEmitter(out, report, conflicts);
 		
-		String documentIri = source.getDocumentIri();
-		String documentHash = Identifiers.documentHash(documentIri);
-		ConflictTracker conflicts = new ConflictTracker();
-		CardinalityEmitter emitter = new CardinalityEmitter(out, report, conflicts);
+		Session(SourceDocument source, StatementConsumer out, ImportReport report) {
+			super(source, out, report);
+			this.documentIri = source.getDocumentIri();
+			this.documentHash = Identifiers.documentHash(documentIri);
+		}
 		
-		for (int entryIndex = 0; entryIndex < document.getEntries().size(); entryIndex++) {
-			TEFEntry entry = document.getEntries().get(entryIndex);
+		@Override
+		protected void mapEntry(TEFEntry entry, int entryIndex) throws IOException {
 			EntryRule entryRule = table.entryRule(entry.getType());
 			String subjectText = entryRule == null
 					? null
@@ -84,7 +90,7 @@ public final class MappingTEFDialect implements TEFDialect {
 					report.unmappedField(
 							entry.getType(), header.getKey(), DialectSupport.locationOf(header.getSpan()));
 				}
-				continue;
+				return;
 			}
 			
 			IRI subject = IRI.of(subjectText);
@@ -133,10 +139,7 @@ public final class MappingTEFDialect implements TEFDialect {
 						emitter);
 				parser.parse(context);
 			}
-			
 		}
-		
-		DialectSupport.emitIssues(document, source, out);
 	}
 	
 	/**

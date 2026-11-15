@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import net.nuke24.togetl.hash.BitprintScheme;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.rdf.IRI;
 import net.nuke24.togetl.rdf.Literal;
@@ -179,7 +180,7 @@ public final class ValueParsers {
 			return (
 				ref.name != null &&
 				!ref.name.isEmpty() &&
-				(ref.uri.startsWith("urn:bitprint:") || ref.uri.startsWith("urn:sha1:"))
+				(ref.uri.startsWith(BitprintScheme.BITPRINTURNPREFIX) || ref.uri.startsWith("urn:sha1:"))
 			) ? (
 				FILE_GATEWAY_PREFIX +
 				Identifiers.encodeKey(ref.uri) +

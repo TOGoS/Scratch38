@@ -56,6 +56,9 @@ public final class LoadCommand {
 			System.err.println("togetl load: " + e.getMessage());
 			usage(System.err);
 			return 1;
+		} catch (TEFReadException e) {
+			System.err.println("togetl load: " + e.getMessage());
+			return 1;
 		} catch (IOException e) {
 			System.err.println("togetl load: " + e.getMessage());
 			return 1;
@@ -63,9 +66,6 @@ public final class LoadCommand {
 			System.err.println("togetl load: " + e.getMessage());
 			return 1;
 		} catch (TOGETLTSVParseException e) {
-			System.err.println("togetl load: " + e.getMessage());
-			return 1;
-		} catch (TEFReadException e) {
 			System.err.println("togetl load: " + e.getMessage());
 			return 1;
 		} catch (IllegalArgumentException e) {

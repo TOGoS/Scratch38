@@ -8,13 +8,14 @@ import java.util.List;
  * The result of reading one TEF document.
  */
 public final class TEFDocument {
+	// TODO: document entity ID. Documents may want an entity ID in addition to the
+	// hash-based ID of a specific snapshot of the file.
 	private final String sourceIri;
 	private final long byteLength;
 	private final boolean bom;
 	private final List<TEFComment> comments;
 	private final List<TEFDirective> directives;
 	private final List<TEFEntry> entries;
-	private final List<TEFIssue> issues;
 	
 	public TEFDocument(
 			String sourceIri,
@@ -22,8 +23,7 @@ public final class TEFDocument {
 			boolean bom,
 			List<TEFComment> comments,
 			List<TEFDirective> directives,
-			List<TEFEntry> entries,
-			List<TEFIssue> issues
+			List<TEFEntry> entries
 	) {
 		this.sourceIri = sourceIri;
 		this.byteLength = byteLength;
@@ -31,7 +31,6 @@ public final class TEFDocument {
 		this.comments = Collections.unmodifiableList(new ArrayList<TEFComment>(comments));
 		this.directives = Collections.unmodifiableList(new ArrayList<TEFDirective>(directives));
 		this.entries = Collections.unmodifiableList(new ArrayList<TEFEntry>(entries));
-		this.issues = Collections.unmodifiableList(new ArrayList<TEFIssue>(issues));
 	}
 	
 	public String getSourceIri() {
@@ -56,10 +55,6 @@ public final class TEFDocument {
 	
 	public List<TEFEntry> getEntries() {
 		return entries;
-	}
-	
-	public List<TEFIssue> getIssues() {
-		return issues;
 	}
 	
 	public TEFDirective getDirective(String name) {

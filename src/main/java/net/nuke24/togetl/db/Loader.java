@@ -200,8 +200,8 @@ public final class Loader {
 				if (meta == null) {
 					continue;
 				}
-				if (Vocab.TOGETL_SOURCE_URL.equals(statement.getPredicate())) {
-					meta.sourceUrl = literalValue(statement.getObject());
+				if (Vocab.TOGETL_SOURCE_URI.equals(statement.getPredicate())) {
+					meta.sourceUri = literalValue(statement.getObject());
 				} else if (Vocab.TOGETL_SHA256.equals(statement.getPredicate())) {
 					meta.sha256 = literalValue(statement.getObject());
 				} else if (Vocab.TOGETL_BYTE_LENGTH.equals(statement.getPredicate())) {
@@ -233,14 +233,14 @@ public final class Loader {
 					continue;
 				}
 				DocumentMeta meta = new DocumentMeta(source);
-				meta.sourceUrl = source;
+				meta.sourceUri = source;
 				documents.put(source, meta);
 			}
 		}
 		
 		for (DocumentMeta meta : documents.values()) {
-			if (meta.sourceUrl == null) {
-				meta.sourceUrl = meta.iri;
+			if (meta.sourceUri == null) {
+				meta.sourceUri = meta.iri;
 			}
 			if (meta.sha256 == null) {
 				meta.sha256 = "";
@@ -302,10 +302,10 @@ public final class Loader {
 	private void insertDocuments(Map<String, DocumentMeta> documents) throws SQLException {
 		PreparedStatement statement = connection.prepareStatement(
 				"INSERT INTO document"
-						+ " (iri, source_url, sha256, byte_length, detected_format, parser_version)"
+						+ " (iri, source_uri, sha256, byte_length, detected_format, parser_version)"
 						+ " VALUES (?, ?, ?, ?, ?, ?)"
 						+ " ON CONFLICT(iri) DO UPDATE SET"
-						+ " source_url = excluded.source_url,"
+						+ " source_uri = excluded.source_uri,"
 						+ " sha256 = excluded.sha256,"
 						+ " byte_length = excluded.byte_length,"
 						+ " detected_format = excluded.detected_format,"
@@ -313,7 +313,7 @@ public final class Loader {
 		try {
 			for (DocumentMeta meta : documents.values()) {
 				statement.setString(1, meta.iri);
-				statement.setString(2, meta.sourceUrl);
+				statement.setString(2, meta.sourceUri);
 				statement.setString(3, meta.sha256);
 				statement.setLong(4, meta.byteLength);
 				setNullableString(statement, 5, meta.format);
@@ -630,7 +630,7 @@ public final class Loader {
 	
 	private static final class DocumentMeta {
 		final String iri;
-		String sourceUrl;
+		String sourceUri;
 		String sha256;
 		long byteLength;
 		String format;
