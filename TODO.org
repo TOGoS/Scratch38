@@ -7,3 +7,7 @@ We can update that in the importers.
 By reviewing and fixing the database schema created by SQLiteDatabase
 I might be able to give the agents a better idea of the shape
 I expect the domain data to be.
+
+** TODO S36CR-014 - Maybe use http://wherever-files.../ to reference source documents
+
+This way you get the hash and the document name at once.
