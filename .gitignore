@@ -1,4 +1,5 @@
 *.class
+*~
 /.available-ticket-ids.txt
 /.toolchain/
 /.worktrees/
