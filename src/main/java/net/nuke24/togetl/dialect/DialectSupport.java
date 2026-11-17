@@ -2,6 +2,7 @@ package net.nuke24.togetl.dialect;
 
 import java.io.IOException;
 
+import net.nuke24.togetl.Namespaces;
 import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.etl.SourceDocument;
 import net.nuke24.togetl.etl.SourceProvenance;
@@ -18,7 +19,6 @@ import net.nuke24.togetl.tef.TEFDirective;
 import net.nuke24.togetl.tef.TEFEntry;
 import net.nuke24.togetl.tef.TEFHeader;
 import net.nuke24.togetl.tef.TEFSpan;
-import net.nuke24.togetl.vocab.Vocab;
 
 /**
  * Statement helpers shared by TEF dialects.
@@ -95,18 +95,18 @@ public final class DialectSupport {
 		IRI doc = IRI.of(source.getDocumentIri());
 		IRI documentImport = IRI.of(source.getDocumentImportIri());
 		Location none = Location.none();
-		emit(source, out, none, doc, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT);
-		emit(source, out, none, doc, Vocab.TOGETL_SOURCE_URI, Literal.of(source.getSourceIri()));
-		emit(source, out, none, doc, Vocab.TOGETL_SHA256, Literal.of(provenance.getSha256()));
-		emit(source, out, none, doc, Vocab.TOGETL_BYTE_LENGTH,
-				Literal.of(Long.toString(provenance.getByteLength()), Vocab.XSD_INTEGER));
-		emit(source, out, none, documentImport, Vocab.RDF_TYPE, Vocab.TOGETL_DOCUMENT_IMPORT);
-		emit(source, out, none, documentImport, Vocab.TOGETL_SOURCE_DOCUMENT, doc);
-		emit(source, out, none, documentImport, Vocab.TOGETL_FORMAT, Literal.of(source.getFormat()));
-		emit(source, out, none, documentImport, Vocab.TOGETL_PARSER_VERSION,
+		emit(source, out, none, doc, Namespaces.RDF_TYPE, Namespaces.TOGETL_DOCUMENT);
+		emit(source, out, none, doc, Namespaces.TOGETL_SOURCE_URI, Literal.of(source.getSourceIri()));
+		emit(source, out, none, doc, Namespaces.GENERAL_SHA256, Literal.of(provenance.getSha256()));
+		emit(source, out, none, doc, Namespaces.GENERAL_BYTE_LENGTH,
+				Literal.of(Long.toString(provenance.getByteLength()), Namespaces.XSD_INTEGER));
+		emit(source, out, none, documentImport, Namespaces.RDF_TYPE, Namespaces.TOGETL_DOCUMENT_IMPORT);
+		emit(source, out, none, documentImport, Namespaces.TOGETL_SOURCE_DOCUMENT, doc);
+		emit(source, out, none, documentImport, Namespaces.TOGETL_FORMAT, Literal.of(source.getFormat()));
+		emit(source, out, none, documentImport, Namespaces.TOGETL_PARSER_VERSION,
 				Literal.of(source.getParserVersion()));
-		emit(source, out, none, documentImport, Vocab.TOGETL_HAS_BOM,
-				Literal.of(provenance.hasBom() ? "true" : "false", Vocab.XSD_BOOLEAN));
+		emit(source, out, none, documentImport, Namespaces.TOGETL_HAS_BOM,
+				Literal.of(provenance.hasBom() ? "true" : "false", Namespaces.XSD_BOOLEAN));
 	}
 	
 	public static void emitDocumentComment(
@@ -119,9 +119,9 @@ public final class DialectSupport {
 		IRI doc = IRI.of(source.getDocumentIri());
 		Location location = locationOf(comment.getSpan());
 		BlankNode node = BlankNode.of("tef-doc-comment-" + scope + "-" + index);
-		emit(source, out, location, doc, Vocab.TEF_COMMENT_LINK, node);
-		emit(source, out, location, node, Vocab.RDF_TYPE, Vocab.TEF_COMMENT);
-		emit(source, out, location, node, Vocab.TEF_TEXT, Literal.of(comment.getText()));
+		emit(source, out, location, doc, Namespaces.TEF_COMMENT_LINK, node);
+		emit(source, out, location, node, Namespaces.RDF_TYPE, Namespaces.TEF_COMMENT);
+		emit(source, out, location, node, Namespaces.TEF_TEXT, Literal.of(comment.getText()));
 	}
 	
 	public static void emitDocumentDirective(
@@ -135,11 +135,11 @@ public final class DialectSupport {
 		IRI doc = IRI.of(source.getDocumentIri());
 		Location location = locationOf(directive.getSpan());
 		BlankNode node = BlankNode.of("tef-doc-directive-" + scope + "-" + index);
-		emit(source, out, location, doc, Vocab.TEF_DIRECTIVE_LINK, node);
-		emit(source, out, location, node, Vocab.RDF_TYPE, Vocab.TEF_DIRECTIVE);
-		emit(source, out, location, node, Vocab.TEF_NAME, Literal.of(directive.getName()));
-		emit(source, out, location, node, Vocab.TEF_VALUE, Literal.of(directive.getValue()));
-		emit(source, out, location, node, Vocab.TEF_RAW, Literal.of(directive.getRaw()));
+		emit(source, out, location, doc, Namespaces.TEF_DIRECTIVE_LINK, node);
+		emit(source, out, location, node, Namespaces.RDF_TYPE, Namespaces.TEF_DIRECTIVE);
+		emit(source, out, location, node, Namespaces.TEF_NAME, Literal.of(directive.getName()));
+		emit(source, out, location, node, Namespaces.TEF_VALUE, Literal.of(directive.getValue()));
+		emit(source, out, location, node, Namespaces.TEF_RAW, Literal.of(directive.getRaw()));
 		if (!"format".equals(directive.getName()) && !"alias".equals(directive.getName())) {
 			report.unmappedDirective(directive.getName(), location);
 		}
@@ -156,19 +156,19 @@ public final class DialectSupport {
 		IRI entryIri = IRI.of(Identifiers.tefEntryIri(source.getDocumentIri(), entryIndex));
 		Location location = locationOf(entry.getSpan());
 		
-		emit(source, out, location, entryIri, Vocab.RDF_TYPE, Vocab.TEF_ENTRY);
-		emit(source, out, location, entryIri, Vocab.TOGETL_DOCUMENT_LINK, IRI.of(source.getDocumentIri()));
-		emit(source, out, location, entryIri, Vocab.TEF_ENTRY_INDEX,
-				Literal.of(Integer.toString(entryIndex), Vocab.XSD_INTEGER));
+		emit(source, out, location, entryIri, Namespaces.RDF_TYPE, Namespaces.TEF_ENTRY);
+		emit(source, out, location, entryIri, Namespaces.TOGETL_DOCUMENT_LINK, IRI.of(source.getDocumentIri()));
+		emit(source, out, location, entryIri, Namespaces.TEF_ENTRY_INDEX,
+				Literal.of(Integer.toString(entryIndex), Namespaces.XSD_INTEGER));
 		if (!entry.getType().isEmpty()) {
-			emit(source, out, location, entryIri, Vocab.TEF_ENTRY_TYPE, Literal.of(entry.getType()));
+			emit(source, out, location, entryIri, Namespaces.TEF_ENTRY_TYPE, Literal.of(entry.getType()));
 			report.unmappedEntryType(entry.getType(), location);
 		}
 		if (!entry.getValue().isEmpty()) {
-			emit(source, out, location, entryIri, Vocab.TEF_ENTRY_VALUE, Literal.of(entry.getValue()));
+			emit(source, out, location, entryIri, Namespaces.TEF_ENTRY_VALUE, Literal.of(entry.getValue()));
 		}
 		if (!entry.getContent().isEmpty()) {
-			emit(source, out, location, entryIri, Vocab.TEF_CONTENT, Literal.of(entry.getContent()));
+			emit(source, out, location, entryIri, Namespaces.TEF_CONTENT, Literal.of(entry.getContent()));
 		}
 		
 		for (int i = 0; i < entry.getHeaders().size(); i++) {
@@ -197,12 +197,12 @@ public final class DialectSupport {
 		Location location = locationOf(header.getSpan());
 		BlankNode node = BlankNode.of(
 				"tef-header-" + scope + "-" + entryIndex + "-" + headerIndex);
-		emit(source, out, location, subject, Vocab.TEF_HEADER_LINK, node);
-		emit(source, out, location, node, Vocab.RDF_TYPE, Vocab.TEF_HEADER);
-		emit(source, out, location, node, Vocab.TEF_KEY, Literal.of(header.getKey()));
-		emit(source, out, location, node, Vocab.TEF_VALUE, Literal.of(header.getValue()));
-		emit(source, out, location, node, Vocab.TEF_INDEX,
-				Literal.of(Integer.toString(headerIndex), Vocab.XSD_INTEGER));
+		emit(source, out, location, subject, Namespaces.TEF_HEADER_LINK, node);
+		emit(source, out, location, node, Namespaces.RDF_TYPE, Namespaces.TEF_HEADER);
+		emit(source, out, location, node, Namespaces.TEF_KEY, Literal.of(header.getKey()));
+		emit(source, out, location, node, Namespaces.TEF_VALUE, Literal.of(header.getValue()));
+		emit(source, out, location, node, Namespaces.TEF_INDEX,
+				Literal.of(Integer.toString(headerIndex), Namespaces.XSD_INTEGER));
 	}
 	
 	public static void emitGenericComment(
@@ -217,9 +217,9 @@ public final class DialectSupport {
 		Location location = locationOf(comment.getSpan());
 		BlankNode node = BlankNode.of(
 				"tef-comment-" + scope + "-" + entryIndex + "-" + commentIndex);
-		emit(source, out, location, subject, Vocab.TEF_COMMENT_LINK, node);
-		emit(source, out, location, node, Vocab.RDF_TYPE, Vocab.TEF_COMMENT);
-		emit(source, out, location, node, Vocab.TEF_TEXT, Literal.of(comment.getText()));
+		emit(source, out, location, subject, Namespaces.TEF_COMMENT_LINK, node);
+		emit(source, out, location, node, Namespaces.RDF_TYPE, Namespaces.TEF_COMMENT);
+		emit(source, out, location, node, Namespaces.TEF_TEXT, Literal.of(comment.getText()));
 	}
 	
 	public static void emitGenericDirective(
@@ -234,10 +234,10 @@ public final class DialectSupport {
 		Location location = locationOf(directive.getSpan());
 		BlankNode node = BlankNode.of(
 				"tef-directive-" + scope + "-" + entryIndex + "-" + directiveIndex);
-		emit(source, out, location, subject, Vocab.TEF_DIRECTIVE_LINK, node);
-		emit(source, out, location, node, Vocab.RDF_TYPE, Vocab.TEF_DIRECTIVE);
-		emit(source, out, location, node, Vocab.TEF_NAME, Literal.of(directive.getName()));
-		emit(source, out, location, node, Vocab.TEF_VALUE, Literal.of(directive.getValue()));
-		emit(source, out, location, node, Vocab.TEF_RAW, Literal.of(directive.getRaw()));
+		emit(source, out, location, subject, Namespaces.TEF_DIRECTIVE_LINK, node);
+		emit(source, out, location, node, Namespaces.RDF_TYPE, Namespaces.TEF_DIRECTIVE);
+		emit(source, out, location, node, Namespaces.TEF_NAME, Literal.of(directive.getName()));
+		emit(source, out, location, node, Namespaces.TEF_VALUE, Literal.of(directive.getValue()));
+		emit(source, out, location, node, Namespaces.TEF_RAW, Literal.of(directive.getRaw()));
 	}
 }

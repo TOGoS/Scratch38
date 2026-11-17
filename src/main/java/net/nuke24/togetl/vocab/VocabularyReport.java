@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import net.nuke24.togetl.Namespaces;
 import net.nuke24.togetl.mapping.EntryRule;
 import net.nuke24.togetl.mapping.FieldRule;
 import net.nuke24.togetl.mapping.MappingTable;
@@ -57,16 +58,16 @@ public final class VocabularyReport {
 				addUse(usedBy, entry.getKey(), source);
 			}
 		}
-		addUse(usedBy, Vocab.RDF_TYPE.toString(), "dialect");
-		addUse(usedBy, Vocab.RDFS_COMMENT.toString(), "dialect");
-		addUse(usedBy, Vocab.TOGETL_DOCUMENT_IMPORT.toString(), "dialect");
-		addUse(usedBy, Vocab.TOGETL_SOURCE_DOCUMENT.toString(), "dialect");
-		addUse(usedBy, Vocab.TOGETL_DOCUMENT_LINK.toString(), "dialect");
-		addUse(usedBy, Vocab.TEF_ENTRY_INDEX.toString(), "dialect");
-		addUse(usedBy, Vocab.TEF_ENTRY_TYPE.toString(), "dialect");
-		addUse(usedBy, Vocab.TOGETL_AS_WRITTEN.toString(), "dialect");
-		addUse(usedBy, Vocab.TOGETL_FILENAME.toString(), "dialect");
-		addUse(usedBy, Vocab.TOGETL_FILE.toString(), "dialect");
+		addUse(usedBy, Namespaces.RDF_TYPE.toString(), "dialect");
+		addUse(usedBy, Namespaces.RDFS_COMMENT.toString(), "dialect");
+		addUse(usedBy, Namespaces.TOGETL_DOCUMENT_IMPORT.toString(), "dialect");
+		addUse(usedBy, Namespaces.TOGETL_SOURCE_DOCUMENT.toString(), "dialect");
+		addUse(usedBy, Namespaces.TOGETL_DOCUMENT_LINK.toString(), "dialect");
+		addUse(usedBy, Namespaces.TEF_ENTRY_INDEX.toString(), "dialect");
+		addUse(usedBy, Namespaces.TEF_ENTRY_TYPE.toString(), "dialect");
+		addUse(usedBy, Namespaces.TOGETL_AS_WRITTEN.toString(), "dialect");
+		addUse(usedBy, Namespaces.GENERAL_FILENAME.toString(), "dialect");
+		addUse(usedBy, Namespaces.TOGETL_FILE.toString(), "dialect");
 		
 		Set<String> allTerms = new TreeSet<String>();
 		allTerms.addAll(usedBy.keySet());
@@ -86,7 +87,7 @@ public final class VocabularyReport {
 				status = DUPLICATE;
 				note = "defined " + term.getDefinedIn().size() + " times";
 			} else if (used && !defined) {
-				status = iri.startsWith(Vocab.TOGETL_NS) ? PROPOSED : UNDEFINED;
+				status = iri.startsWith(Namespaces.TOGETL_NS) ? PROPOSED : UNDEFINED;
 			} else if (defined && !used) {
 				status = UNUSED;
 			} else if (defined && "deprecated".equals(term.getStatus())) {

@@ -5,12 +5,13 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import net.nuke24.togetl.Namespaces;
+import net.nuke24.togetl.etl.ImportReport;
 import net.nuke24.togetl.hash.BitprintScheme;
 import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.rdf.IRI;
 import net.nuke24.togetl.rdf.Literal;
 import net.nuke24.togetl.rdf.Node;
-import net.nuke24.togetl.vocab.Vocab;
 
 /**
  * Value parsers named by mapping tables.
@@ -112,22 +113,22 @@ public final class ValueParsers {
 		if (isAcceptableIri(value)) {
 			context.emit(IRI.of(value));
 		} else {
-			context.report("invalid-iri");
+			context.report(ImportReport.INVALID_IRI);
 			context.emit(Literal.of(value));
-			context.emitRaw(context.getSubject(), Vocab.TOGETL_AS_WRITTEN, Literal.of(value));
+			context.emitRaw(context.getSubject(), Namespaces.TOGETL_AS_WRITTEN, Literal.of(value));
 		}
 	}
 	
 	private static void emitPartRef(ValueParserContext context, String value) throws IOException {
 		String trimmed = value.trim();
 		if (trimmed.isEmpty()) {
-			context.report("empty-value");
+			context.report(ImportReport.EMPTY_VALUE);
 			return;
 		}
 		if (isAcceptableIri(trimmed)) {
 			context.emit(IRI.of(trimmed));
 		} else {
-			context.emit(IRI.of(Identifiers.referenceIri(trimmed)));
+			context.emit(IRI.of(Identifiers.shortNameToUri(trimmed)));
 		}
 	}
 	
@@ -162,14 +163,14 @@ public final class ValueParsers {
 			if (!isCanonicalGatewayResource
 					&& ref.name != null
 					&& !ref.name.isEmpty()) {
-				context.emitRaw(object, Vocab.TOGETL_FILENAME, Literal.of(ref.name));
+				context.emitRaw(object, Namespaces.GENERAL_FILENAME, Literal.of(ref.name));
 			}
 			if (!isCanonicalGatewayResource) {
-				context.emitRaw(object, Vocab.RDF_TYPE, Vocab.TOGETL_FILE);
+				context.emitRaw(object, Namespaces.RDF_TYPE, Namespaces.TOGETL_FILE);
 			}
 			if (ref.uri != null && !isAcceptableIri(ref.uri)) {
-				context.report("invalid-iri");
-				context.emitRaw(context.getSubject(), Vocab.TOGETL_AS_WRITTEN, Literal.of(ref.uri));
+				context.report(ImportReport.INVALID_IRI);
+				context.emitRaw(context.getSubject(), Namespaces.TOGETL_AS_WRITTEN, Literal.of(ref.uri));
 			}
 		}
 		
@@ -225,11 +226,11 @@ public final class ValueParsers {
 		public void parse(ValueParserContext context) throws IOException {
 			String value = context.getHeader().getValue().trim();
 			if (value.matches("-?\\d+")) {
-				context.emit(Literal.of(value, Vocab.XSD_INTEGER));
+				context.emit(Literal.of(value, Namespaces.XSD_INTEGER));
 			} else if (value.matches("-?\\d+\\.\\d+")) {
-				context.emit(Literal.of(value, IRI.of(Vocab.XSD_NS + "decimal")));
+				context.emit(Literal.of(value, Namespaces.XSD_DECIMAL));
 			} else {
-				context.report("unparsed-value");
+				context.report(ImportReport.UNPARSED_VALUE);
 				context.emit(Literal.of(value));
 			}
 		}
@@ -240,11 +241,11 @@ public final class ValueParsers {
 		public void parse(ValueParserContext context) throws IOException {
 			String value = context.getHeader().getValue().trim();
 			if (value.matches("\\d{4}-\\d{2}-\\d{2}")) {
-				context.emit(Literal.of(value, IRI.of(Vocab.XSD_NS + "date")));
+				context.emit(Literal.of(value, Namespaces.XSD_DATE));
 			} else if (value.matches("\\d{4}-\\d{2}-\\d{2}T.*")) {
-				context.emit(Literal.of(value, IRI.of(Vocab.XSD_NS + "dateTime")));
+				context.emit(Literal.of(value, Namespaces.XSD_DATE_TIME));
 			} else {
-				context.report("unparsed-value");
+				context.report(ImportReport.UNPARSED_VALUE);
 				context.emit(Literal.of(value));
 			}
 		}
@@ -255,11 +256,11 @@ public final class ValueParsers {
 		public void parse(ValueParserContext context) throws IOException {
 			String value = context.getHeader().getValue().trim().toLowerCase(Locale.ROOT);
 			if ("true".equals(value) || "yes".equals(value) || "1".equals(value)) {
-				context.emit(Literal.of("true", Vocab.XSD_BOOLEAN));
+				context.emit(Literal.of("true", Namespaces.XSD_BOOLEAN));
 			} else if ("false".equals(value) || "no".equals(value) || "0".equals(value)) {
-				context.emit(Literal.of("false", Vocab.XSD_BOOLEAN));
+				context.emit(Literal.of("false", Namespaces.XSD_BOOLEAN));
 			} else {
-				context.report("unparsed-value");
+				context.report(ImportReport.UNPARSED_VALUE);
 				context.emit(Literal.of(context.getHeader().getValue()));
 			}
 		}

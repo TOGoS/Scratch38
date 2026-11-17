@@ -14,21 +14,6 @@ import java.util.Map;
 public final class AliasTable {
 	private final LinkedHashMap<String, String> aliases = new LinkedHashMap<String, String>();
 	
-	public static AliasTable withDefaults() {
-		AliasTable table = new AliasTable();
-		table.define("rdf:", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-		table.define("rdfs:", "http://www.w3.org/2000/01/rdf-schema#");
-		table.define("xsd:", "http://www.w3.org/2001/XMLSchema#");
-		table.define("togetl:", "tag:nuke24.net,2026-11:togetl:");
-		table.define("general:", "tag:nuke24.net,2026-11:general:");
-		table.define("3dparts:", "tag:nuke24.net,2026-11:3dparts:");
-		table.define("tef:", "tag:nuke24.net,2026-11:togetl:tef:");
-		table.define("cc:", "http://ns.nuke24.net/ContentCouch/");
-		table.define("dc:", "http://purl.org/dc/elements/1.1/");
-		table.define("dcterms:", "http://purl.org/dc/terms/");
-		return table;
-	}
-	
 	public void clear() {
 		aliases.clear();
 	}

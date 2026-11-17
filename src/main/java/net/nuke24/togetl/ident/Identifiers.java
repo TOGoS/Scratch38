@@ -3,18 +3,19 @@ package net.nuke24.togetl.ident;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import net.nuke24.togetl.Namespaces;
 
 /**
  * Mints the tag URIs used for instances and derived records.
  *
- * <p>The date in the authority is fixed. Changing it would silently re-identify
- * every instance, so it is a constant rather than an option.</p>
+ * <p>The namespaces are fixed by {@link Namespaces}. Changing them would
+ * silently re-identify every instance, so they are constants rather than
+ * options.</p>
  */
 public final class Identifiers {
-	public static final String TAG_DATE = "2026-11";
-	public static final String TAG_PREFIX = "tag:nuke24.net," + TAG_DATE + ":togetl:";
-	public static final String DATA_TAG_PREFIX = "tag:nuke24.net," + TAG_DATE + ":3dparts:";
-	
 	private static final char[] HEX = "0123456789abcdef".toCharArray();
 	
 	private Identifiers() {
@@ -26,13 +27,9 @@ public final class Identifiers {
 	 * {@code A-Za-z0-9-._~:}.
 	 */
 	public static String mint(String type, String key) {
-		return mintNamespace(TAG_PREFIX, type, key);
+		return mintNamespace(Namespaces.TOGETL_NS, type, key);
 	}
-	
-	public static String mintData(String type, String key) {
-		return mintNamespace(DATA_TAG_PREFIX, type, key);
-	}
-	
+		
 	public static String mintNamespace(String namespace, String type, String key) {
 		checkType(type);
 		if (namespace == null || namespace.isEmpty()) {
@@ -77,22 +74,36 @@ public final class Identifiers {
 		return documentIri + "#tef-entry-" + ordinal;
 	}
 	
+	static final Pattern   WSWHATEVER_PATTERN = Pattern.compile("^(?:WSBATCH|WSITEM|WSPROJECT|WSTASK|WSTYPE)-(\\d+)$");
+	static final Pattern GFM_PARTNAME_PATTERN = Pattern.compile("^gfm(\\d+)$");
+	static final Pattern  BT_PARTNAME_PATTERN = Pattern.compile( "^bt(\\d+)$");
+	static final Pattern   P_PARTNAME_PATTERN = Pattern.compile(  "^p(\\d+)$");
+	
 	/**
 	 * Interprets a source reference key. This is the single place where the
 	 * provisional identifier scheme for project IDs is decided.
 	 */
-	public static String referenceIri(String key) {
-		if (key == null) {
+	public static String shortNameToUri(String shortName) {
+		if( shortName == null ) {
 			throw new IllegalArgumentException("Reference key must not be null");
 		}
-		String trimmed = key.trim();
-		if (trimmed.startsWith("WSPROJECT-")) {
-			return mintData("project", trimmed);
+		assert( shortName.equals(shortName.trim()) );
+		Matcher m;
+		if( (m = WSWHATEVER_PATTERN.matcher(shortName)).matches() ) {
+			return Namespaces.WSITEM_NS + m.group(1);
 		}
-		if (trimmed.startsWith("WSITEM-")) {
-			return mintData("item", trimmed);
+		// TODO: These should probably only really be assumed within the context of
+		// certain files, since they're such short prefixes.
+		if( (m = GFM_PARTNAME_PATTERN.matcher(shortName)).matches() ) {
+			return Namespaces.PARTS3D_PARTS_NS + (500 + Integer.valueOf(m.group(1)));
 		}
-		return mintData("part", trimmed);
+		if( (m =  BT_PARTNAME_PATTERN.matcher(shortName)).matches() ) {
+			return Namespaces.PARTS3D_PARTS_NS + (600 + Integer.valueOf(m.group(1)));
+		}
+		if( (m =   P_PARTNAME_PATTERN.matcher(shortName)).matches() ) {
+			return Namespaces.PARTS3D_PARTS_NS + (  0 + Integer.valueOf(m.group(1)));
+		}
+		throw new IllegalArgumentException("Don't know how tu URN-ify '"+shortName+"'");
 	}
 	
 	/** The part of a minted IRI after the common prefix, used to scope blank nodes. */

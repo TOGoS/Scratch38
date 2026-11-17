@@ -1,5 +1,6 @@
 package net.nuke24.togetl.mapping;
 
+import net.nuke24.togetl.ident.Identifiers;
 import net.nuke24.togetl.tef.TEFEntry;
 import net.nuke24.togetl.tef.TEFHeader;
 
@@ -36,9 +37,13 @@ public final class EntryRule {
 	}
 	
 	/**
-	 * Expands {@code ${value}}, {@code ${valueEncoded}}, {@code ${ordinal}},
-	 * {@code ${document}}, {@code ${documentHash}}, and
-	 * {@code ${header:name}}.
+	 * Expands {@code ${value}}, {@code ${valueEncoded}},
+	 * {@code ${fullUri}}, {@code ${ordinal}}, {@code ${document}},
+	 * {@code ${documentHash}}, and {@code ${header:name}}.
+	 *
+	 * <p>{@code ${fullUri}} resolves the entry value through
+	 * {@link Identifiers#shortNameToUri(String)}, so that entry subjects use the
+	 * same IRIs as references to those entries.</p>
 	 *
 	 * @return the subject IRI text, or null when the rule cannot produce one.
 	 */
@@ -54,7 +59,17 @@ public final class EntryRule {
 			if (value.isEmpty()) {
 				return null;
 			}
-			result = result.replace("${valueEncoded}", net.nuke24.togetl.ident.Identifiers.encodeKey(value));
+			result = result.replace("${valueEncoded}", Identifiers.encodeKey(value));
+		}
+		if (result.contains("${fullUri}")) {
+			if (value.isEmpty()) {
+				return null;
+			}
+			try {
+				result = result.replace("${fullUri}", Identifiers.shortNameToUri(value));
+			} catch (IllegalArgumentException e) {
+				return null;
+			}
 		}
 		if (result.contains("${value}")) {
 			if (value.isEmpty()) {

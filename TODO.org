@@ -1,0 +1,9 @@
+** DONE S36CR-012 - ~WSITEM-~ maps to ~urn:oid:1.3.6.1.4.1.44848.260.~
+
+We can update that in the importers.
+
+** TODO S36CR-013 - Review database schema
+
+By reviewing and fixing the database schema created by SQLiteDatabase
+I might be able to give the agents a better idea of the shape
+I expect the domain data to be.

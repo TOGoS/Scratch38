@@ -15,13 +15,13 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import net.nuke24.togetl.Namespaces;
 import net.nuke24.togetl.mapping.MappingTable;
 import net.nuke24.togetl.rdf.IRI;
 import net.nuke24.togetl.rdf.Statement;
 import net.nuke24.togetl.tef.TEFReadException;
 import net.nuke24.togetl.togetltsv.TOGETLTSVParseException;
 import net.nuke24.togetl.togetltsv.TOGETLTSVReader;
-import net.nuke24.togetl.vocab.Vocab;
 import net.nuke24.togetl.vocab.Vocabulary;
 import net.nuke24.togetl.vocab.VocabularyLoader;
 import net.nuke24.togetl.vocab.VocabularyReport;
@@ -173,7 +173,7 @@ public final class VocabCommand {
 		String source = path.getFileName().toString();
 		for (Statement statement : statements) {
 			addUse(uses, statement.getPredicate().toString(), source);
-			if (Vocab.RDF_TYPE.equals(statement.getPredicate())
+			if (Namespaces.RDF_TYPE.equals(statement.getPredicate())
 					&& statement.getObject() instanceof IRI) {
 				addUse(uses, statement.getObject().toString(), source);
 			}
