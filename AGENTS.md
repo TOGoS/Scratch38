@@ -85,6 +85,26 @@ in which case it can be worked-around with an `export JAVA_HOME=/usr/lib/jvm/jav
 
 See CONTRIBUTING.md for documentation conventions and design principles.
 
+## Branch names
+
+This project is, for now, the 'S0036' sub-project of 'Scratch38', hence the `subtrees/s0036/` branch name prefix.
+When talking about branches, we usually don't mention that prefix, as it is implied.
+`master` (short branch name) means `subtrees/s0036/master` (full branch name).
+
+## Worktrees
+
+When doing work in a branch, create a worktree in `./.worktrees/` + short branch name.
+
+## IDs for TODO items
+
+When adding new items to a project task queue (e.g. TODO.org),
+remove the first line from `.available-ticket-ids.txt` and use that as the ID.
+This file is not versioned, and different IDs are listed in different checkouts.
+This guarantees each task gets a unique ID,
+races between checkouts notwithstanding (but this should not happen
+given that you will normally only write new tasks in response to a
+conversation with the architect).
+
 ## Commit attribution
 
 When an agent makes a commit entirely on its own, set author identity per commit command
