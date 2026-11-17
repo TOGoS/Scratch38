@@ -32,11 +32,7 @@ may go into DEVLOG.md under a header of the form "## <date> - <title> - <your na
 
 ## Java style
 
-- Use tabs for indentation in Java source files.
-- Use spaces only for alignment after tabs if needed.
-- Preserve indentation on blank lines inside blocks; a blank line should still carry the block's indent.
-- The repository config is in [.editorconfig](./.editorconfig).
-- Run `./scripts/format-java-indent.py` on Java files before committing formatting changes.
+See [JAVASTYLE.md](./JAVASTYLE.md).
 
 ## Project notes and agent handoff
 
