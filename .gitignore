@@ -1,6 +1,7 @@
-out/
-.toolchain/
-fixtures/upstream/
-lib/*.jar
 *.class
-.worktrees/
+/.available-ticket-ids.txt
+/.toolchain/
+/.worktrees/
+/fixtures/upstream/
+/lib/*.jar
+/out/
