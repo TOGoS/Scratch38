@@ -165,6 +165,48 @@ Deno.test("load needs a resource name", async () => {
 	);
 });
 
+const TETRAHEDRON: Triangle[] = [
+	[[0, 0, 0], [0, 1, 0], [1, 0, 0]],
+	[[0, 0, 0], [1, 0, 0], [0, 0, 1]],
+	[[0, 0, 0], [0, 0, 1], [0, 1, 0]],
+	[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+];
+
+Deno.test("validate leaves a manifold object on the stack", async () => {
+	const dir = await Deno.makeTempDir();
+	try {
+		const input = `${dir}/tetra.stl`;
+		await Deno.writeTextFile(input, formatStlText(TETRAHEDRON));
+		const stack = await runOperations([`load/stl:${input}`, "validate"]);
+		assertEquals(stack.length, 1);
+	} finally {
+		await Deno.remove(dir, { recursive: true });
+	}
+});
+
+Deno.test("validate fails on an open surface", async () => {
+	const dir = await Deno.makeTempDir();
+	try {
+		const input = `${dir}/open.stl`;
+		await Deno.writeTextFile(input, formatStlText(TRIANGLES));
+		await assertRejects(
+			() => runOperations([`load/stl:${input}`, "validate"]),
+			Error,
+			"not manifold",
+		);
+	} finally {
+		await Deno.remove(dir, { recursive: true });
+	}
+});
+
+Deno.test("validate needs an object on the stack", async () => {
+	await assertRejects(
+		() => runOperations(["validate"]),
+		Error,
+		"stack is empty",
+	);
+});
+
 Deno.test("prune needs an object on the stack", async () => {
 	await assertRejects(
 		() => runOperations(["prune"]),

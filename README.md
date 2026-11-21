@@ -174,13 +174,17 @@ Shape: `(3DObject --)`
 
 ### `validate`
 
-Shape: `(3DObject --)`
+Shape: `(3DObject -- 3DObject)`
 
-Ensure that the object is manifold.
+Ensures that the object is manifold, and fails otherwise.
+The object is left on the stack unchanged.
+
+Here, an object is manifold if every line of its `default` object is used by exactly two polygon edges,
+one forwards and one backwards. That means the surface is closed, and each edge is shared by two faces.
 
 ### `simplify`
 
-Shape: `(input:3DShape -- output:3DShape)`
+Shape: `(input:3DObject -- output:3DObject)`
 
 Simplifies a shape by:
 - Replacing adjacent coplanar polygons with a single polygon,

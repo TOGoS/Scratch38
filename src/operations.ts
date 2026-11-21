@@ -2,6 +2,7 @@ import { OperationSpec, parseOperationSpec } from "./operation-syntax.ts";
 import { openResource } from "./resource.ts";
 import { formatStlBinary, formatStlText, parseStl, StlFormat } from "./stl.ts";
 import {
+	checkManifold,
 	pruneVector3DObject,
 	trianglesFromVector3DObject,
 	Vector3DObject,
@@ -109,6 +110,24 @@ const definitions: OperationDefinition[] = [
 				? formatStlBinary(triangles)
 				: new TextEncoder().encode(formatStlText(triangles));
 			await openResource(name).write(bytes);
+		},
+	},
+	{
+		name: "validate",
+		params: [],
+		run({ modifiers, stack }) {
+			if (modifiers.length > 0) {
+				throw new Error(
+					`validate takes no modifiers, got ${modifiers.join("/")}`,
+				);
+			}
+			const object = stack[stack.length - 1];
+			if (object === undefined) {
+				throw new Error(
+					"validate needs a 3DObject on the stack, but the stack is empty",
+				);
+			}
+			checkManifold(object);
 		},
 	},
 	{

@@ -53,14 +53,16 @@ Kept out of README.md, which describes the tool and its spec.
 - Store writes only the `default` group. Non-triangular polygons are an error on store.
 - `prune` keeps only what the main object references, renumbers each index array in its original order,
   and makes the main object the `default`. Its default name is `default`.
-  Choosing the main object as the new `default` is my reading of the README, and is worth confirming.
+  The main object becomes `default` (user's decision). Keeping several named objects is a future extension.
+- `validate` peeks: it checks the object on top of the stack and leaves it there (user's decision).
+  "Manifold" is defined in README as: every line of the `default` object is used by exactly two polygon edges,
+  one forwards and one backwards. That definition is mine, so confirm it.
+- The name for the type is `3DObject` everywhere (user's decision). The README's simplify shape is updated to match.
+- Leftover stack values at the end of a run are silently discarded (user's decision).
+- `tools/fix-blank-lines.ts` is run by `deno task fmt`. Its tests are in `tools/fix-blank-lines_test.ts`.
+- `src/cli_test.ts` runs `stlmod` as a subprocess. It needs `--allow-run`, which is in the test task.
 
 ## Open questions (waiting on the user)
 
-- `3DShape` (simplify) and `3DObject` (load/store/prune) are used for the same type. Which name should be used?
-- Behavior when operations leave values on the stack at the end of a run is unspecified.
-  Currently leftover values are silently discarded.
-- `validate` is specified as `(3DObject --)`, which consumes the object. Is that intended?
-  That would make `load ... validate store` impossible.
-- `prune`: should the result's `default` be the main object (as implemented), or should the main object keep its name?
 - OBJ winding order has not been checked. Check it before implementing OBJ.
+- Is the manifold definition for `validate` right? See Decisions.
