@@ -35,8 +35,9 @@ may go into AGENT-DEVLOG.md under a header of the form "## <date> - <title> - <y
 - Indent with one tab per level of nesting. Do not indent with spaces.
 - Blank lines inside indented code are indented too, to the same depth as the line before them.
   Do not leave a blank line completely empty inside a block.
-- Do not run `deno fmt` over the project. It removes indentation from blank lines,
-  so it undoes the rule above. Format by hand.
+- Format with `deno task fmt`. It runs `deno fmt`, which removes indentation from blank lines,
+  and then `tools/fix-blank-lines.ts`, which restores it using the indentation of the line before.
+  Do not run `deno fmt` on its own.
 
 ## Project notes and agent handoff
 

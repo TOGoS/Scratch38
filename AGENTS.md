@@ -10,7 +10,7 @@ The main rules for code you write:
 
 - Indent with one tab per level. Blank lines inside indented code are indented to the same depth.
 - Use LF line endings, UTF-8, and a final newline.
-- Do not run `deno fmt` over the project, because it removes indentation from blank lines.
+- Format with `deno task fmt`, not plain `deno fmt`. Plain `deno fmt` removes indentation from blank lines.
 
 ## Validation
 
