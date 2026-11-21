@@ -40,7 +40,7 @@ export default Plugin.define({
           const stdout = await new Response(proc.stdout).text();
           const stderr = await new Response(proc.stderr).text();
           const exitCode = await proc.exited;
-          return { stdout, stderr, exitCode };
+          return { output: { stdout, stderr, exitCode } };
         },
       });
     });
