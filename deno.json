@@ -9,7 +9,8 @@
 		"exclude": ["*.md"]
 	},
 	"tasks": {
+		"fmt": "deno fmt && deno run --allow-read --allow-write tools/fix-blank-lines.ts src tools stlmod",
 		"test": "deno test --allow-read --allow-write",
-		"check": "deno check stlmod src"
+		"check": "deno check stlmod src tools"
 	}
 }

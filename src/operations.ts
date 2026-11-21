@@ -1,7 +1,11 @@
 import { OperationSpec, parseOperationSpec } from "./operation-syntax.ts";
 import { readResource, writeResource } from "./resource.ts";
 import { formatStlBinary, formatStlText, parseStl, StlFormat } from "./stl.ts";
-import { trianglesFromVector3DObject, Vector3DObject, vector3DObjectFromTriangles } from "./vector3d-object.ts";
+import {
+	trianglesFromVector3DObject,
+	Vector3DObject,
+	vector3DObjectFromTriangles,
+} from "./vector3d-object.ts";
 
 export type StackValue = Vector3DObject;
 
@@ -24,18 +28,33 @@ export interface OperationDefinition {
  * Returns the STL format named by the modifiers.
  * `stl` alone means "auto": load detects the format from the content, store writes text.
  */
-function stlFormatModifier(operation: string, modifiers: string[]): "auto" | StlFormat {
+function stlFormatModifier(
+	operation: string,
+	modifiers: string[],
+): "auto" | StlFormat {
 	const key = modifiers.join("/");
 	if (key === "stl") return "auto";
 	if (key === "stl/bin") return "binary";
 	if (key === "stl/text") return "text";
 	if (modifiers[0] !== undefined && modifiers[0] !== "stl") {
-		throw new Error(`${operation} does not support format ${modifiers[0]} yet; only stl is supported`);
+		throw new Error(
+			`${operation} does not support format ${
+				modifiers[0]
+			} yet; only stl is supported`,
+		);
 	}
-	throw new Error(`${operation} takes stl, stl/bin, or stl/text, got ${key === "" ? "no format" : key}`);
+	throw new Error(
+		`${operation} takes stl, stl/bin, or stl/text, got ${
+			key === "" ? "no format" : key
+		}`,
+	);
 }
 
-function requiredParam(operation: string, params: ReadonlyMap<string, string>, name: string): string {
+function requiredParam(
+	operation: string,
+	params: ReadonlyMap<string, string>,
+	name: string,
+): string {
 	const value = params.get(name);
 	if (value === undefined) {
 		throw new Error(`${operation} needs a ${name}`);
@@ -50,7 +69,9 @@ const definitions: OperationDefinition[] = [
 		defaultParam: "message",
 		run({ modifiers, params }) {
 			if (modifiers.length > 0) {
-				throw new Error(`crash takes no modifiers, got ${modifiers.join("/")}`);
+				throw new Error(
+					`crash takes no modifiers, got ${modifiers.join("/")}`,
+				);
 			}
 			throw new Error(params.get("message") ?? "Crash operation invoked");
 		},
@@ -62,7 +83,10 @@ const definitions: OperationDefinition[] = [
 		async run({ modifiers, params, stack }) {
 			const format = stlFormatModifier("load", modifiers);
 			const name = requiredParam("load", params, "resource-name");
-			const triangles = parseStl(await readResource(name), format === "auto" ? undefined : format);
+			const triangles = parseStl(
+				await readResource(name),
+				format === "auto" ? undefined : format,
+			);
 			stack.push(vector3DObjectFromTriangles(triangles));
 		},
 	},
@@ -75,7 +99,9 @@ const definitions: OperationDefinition[] = [
 			const name = requiredParam("store", params, "resource-name");
 			const object = stack.pop();
 			if (object === undefined) {
-				throw new Error("store needs a 3DObject on the stack, but the stack is empty");
+				throw new Error(
+					"store needs a 3DObject on the stack, but the stack is empty",
+				);
 			}
 			const triangles = trianglesFromVector3DObject(object);
 			const bytes = format === "binary"
@@ -102,7 +128,9 @@ function prepareOperation(spec: OperationSpec): PreparedOperation {
 	const params = new Map(spec.namedParams);
 	for (const name of params.keys()) {
 		if (!definition.params.includes(name)) {
-			throw new Error(`${definition.name} does not take parameter ${name}`);
+			throw new Error(
+				`${definition.name} does not take parameter ${name}`,
+			);
 		}
 	}
 	if (spec.defaultValue !== undefined) {
@@ -111,7 +139,9 @@ function prepareOperation(spec: OperationSpec): PreparedOperation {
 			throw new Error(`${definition.name} does not take a default value`);
 		}
 		if (params.has(defaultParam)) {
-			throw new Error(`${definition.name} parameter ${defaultParam} given both by name and as default value`);
+			throw new Error(
+				`${definition.name} parameter ${defaultParam} given both by name and as default value`,
+			);
 		}
 		params.set(defaultParam, spec.defaultValue);
 	}
@@ -128,7 +158,9 @@ export async function runOperations(args: string[]): Promise<StackValue[]> {
 	if (args.length === 0) {
 		throw new Error("No operations given");
 	}
-	const prepared = args.map((arg) => prepareOperation(parseOperationSpec(arg)));
+	const prepared = args.map((arg) =>
+		prepareOperation(parseOperationSpec(arg))
+	);
 	
 	const stack: StackValue[] = [];
 	for (const { definition, context } of prepared) {
