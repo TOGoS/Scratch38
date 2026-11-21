@@ -1,12 +1,15 @@
 {
-  "imports": {
-    "@std/assert": "jsr:@std/assert@^1"
-  },
-  "fmt": {
-    "exclude": ["*.md"]
-  },
-  "tasks": {
-    "test": "deno test",
-    "check": "deno check stlmod src"
-  }
+	"imports": {
+		"@std/assert": "jsr:@std/assert@^1",
+		"@std/path": "jsr:@std/path@^1"
+	},
+	"fmt": {
+		"useTabs": true,
+		"newLineKind": "lf",
+		"exclude": ["*.md"]
+	},
+	"tasks": {
+		"test": "deno test --allow-read --allow-write",
+		"check": "deno check stlmod src"
+	}
 }

@@ -1,6 +1,25 @@
 # AGENTS.md
 
-The following sections are copied verbatim from `../Scratch38-S0036/AGENTS.md`.
+The Worktrees, IDs for TODO items, and Commit attribution sections are copied verbatim from `../Scratch38-S0036/AGENTS.md`.
+The other sections were written for this project.
+
+## Coding style
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for design principles, documentation rules, and code style.
+The main rules for code you write:
+
+- Indent with one tab per level. Blank lines inside indented code are indented to the same depth.
+- Use LF line endings, UTF-8, and a final newline.
+- Do not run `deno fmt` over the project, because it removes indentation from blank lines.
+
+## Validation
+
+Run these after code changes:
+
+```sh
+deno test
+deno task check
+```
 
 ## Worktrees
 
