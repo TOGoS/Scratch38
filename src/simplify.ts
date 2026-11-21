@@ -1,7 +1,6 @@
 import type { Vertex } from "./stl.ts";
 import {
-	defaultPolyhedrons,
-	polygonVertexIndexes,
+	loopsFromVector3DObject,
 	Vector3DObject,
 	vector3DObjectFromPolyhedrons,
 } from "./vector3d-object.ts";
@@ -312,17 +311,8 @@ export function simplifyVector3DObject(
 	object: Vector3DObject,
 	keepUnused: boolean,
 ): Vector3DObject {
-	const polyhedrons = defaultPolyhedrons(object).map((faces) =>
-		faces.map((face) => {
-			const loop = polygonVertexIndexes(object, face.polygon).map((i) =>
-				object.vertexes[i]
-			);
-			// IMPLIED WINDING ORDER APPLIES HERE
-			return face.side === "front" ? loop : reverseLoop(loop);
-		})
-	);
 	const simplified = vector3DObjectFromPolyhedrons(
-		simplifyPolyhedrons(polyhedrons),
+		simplifyPolyhedrons(loopsFromVector3DObject(object)),
 	);
 	return keepUnused ? appendVector3DObject(object, simplified) : simplified;
 }

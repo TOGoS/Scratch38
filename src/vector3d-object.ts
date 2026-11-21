@@ -37,9 +37,11 @@ const CLASS_REF = "tag:nuke24.net,2026-11:s38s39:Vector3DObject-v1" as const;
  * Builds a Vector3DObject from polyhedrons, each a list of polygon loops whose vertexes
  * are counter-clockwise when viewed from outside. Shared vertexes and edges are stored once.
  * All polyhedrons go in one group, which is the `default` object.
+ * `names[i]`, if given, names polyhedron `i` as a top-level object of its own.
  */
 export function vector3DObjectFromPolyhedrons(
 	polyhedrons: Vertex[][][],
+	names: (string | undefined)[] = [],
 ): Vector3DObject {
 	const vertexes: Vertex[] = [];
 	const vertexIndexes = new Map<string, number>();
@@ -87,14 +89,26 @@ export function vector3DObjectFromPolyhedrons(
 		loops.map(() => ({ polygon: polygonCount++, side: "front" as const }))
 	);
 	
+	const polyhedronGroups: number[][] = [polyhedronFaces.map((_, i) => i)];
+	const namedGroups: Record<string, number> = { default: 0 };
+	polyhedronFaces.forEach((_, i) => {
+		const name = names[i];
+		if (name === undefined) return;
+		if (name === "default") {
+			throw new Error(`An object cannot be named default`);
+		}
+		namedGroups[name] = polyhedronGroups.length;
+		polyhedronGroups.push([i]);
+	});
+	
 	return {
 		classRef: CLASS_REF,
 		vertexes,
 		lines,
 		polygons,
 		polyhedrons: polyhedronFaces,
-		polyhedronGroups: [polyhedronFaces.map((_, i) => i)],
-		namedGroups: { default: 0 },
+		polyhedronGroups,
+		namedGroups,
 	};
 }
 
@@ -127,6 +141,48 @@ export function defaultPolyhedrons(object: Vector3DObject): Polyhedron[] {
 /** The faces of the `default` object, in the order they are listed in its polyhedrons. */
 function defaultFaces(object: Vector3DObject): PolyhedronFace[] {
 	return defaultPolyhedrons(object).flat();
+}
+
+/**
+ * The names of the default polyhedrons, aligned with `defaultPolyhedrons`.
+ * A polyhedron has a name if it is the only member of a named group.
+ */
+export function defaultPolyhedronNames(
+	object: Vector3DObject,
+): (string | undefined)[] {
+	const nameOf = new Map<number, string>();
+	for (const [name, groupIndex] of Object.entries(object.namedGroups)) {
+		if (name === "default") continue;
+		const group = itemAt(
+			object.polyhedronGroups,
+			groupIndex,
+			"polyhedron group",
+		);
+		if (group.length === 1) nameOf.set(group[0], name);
+	}
+	return itemAt(
+		object.polyhedronGroups,
+		object.namedGroups.default,
+		"polyhedron group",
+	)
+		.map((polyhedronIndex) => nameOf.get(polyhedronIndex));
+}
+
+/**
+ * The polygon loops of the `default` object, one list per polyhedron, each loop
+ * as vertex coordinates counter-clockwise when viewed from outside. Faces on the `back`
+ * side are reversed. Throws if a polygon is not closed.
+ */
+export function loopsFromVector3DObject(object: Vector3DObject): Vertex[][][] {
+	return defaultPolyhedrons(object).map((faces) =>
+		faces.map((face) => {
+			const loop = polygonVertexIndexes(object, face.polygon).map((i) =>
+				object.vertexes[i]
+			);
+			// IMPLIED WINDING ORDER APPLIES HERE
+			return face.side === "front" ? loop : loop.reverse();
+		})
+	);
 }
 
 /**
