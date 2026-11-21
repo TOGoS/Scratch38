@@ -18,7 +18,7 @@ Kept out of README.md, which describes the tool and its spec.
   and `deno task fmt` restores it with `tools/fix-blank-lines.ts`.
   Plain `deno fmt` also once rewrapped AGENTS.md (which must stay verbatim) and README.md.
   `deno.json` excludes `*.md` from formatting, so that should not happen again.
-- Unit tests exist: `src/*_test.ts` and `tools/*_test.ts`, 59 tests as of this entry.
+- Unit tests exist: `src/*_test.ts` and `tools/*_test.ts`, 94 tests as of the OBJ entry.
 
 ## Decisions
 
@@ -63,6 +63,28 @@ Kept out of README.md, which describes the tool and its spec.
 - `tools/fix-blank-lines.ts` is run by `deno task fmt`. Its tests are in `tools/fix-blank-lines_test.ts`.
 - `src/cli_test.ts` runs `stlmod` as a subprocess. It needs `--allow-run`, which is in the test task.
 
+- `simplify` (src/simplify.ts) works in coordinate space: each polygon is an outward-facing loop of coordinates,
+  so vertexes with equal coordinates are merged automatically. Passes, in order:
+  1. Merge polyhedrons that share a polygon with opposite orientation, dropping that polygon.
+  2. Within each merged group, merge coplanar loops sharing an edge (skipping merges that would repeat a vertex).
+  3. Remove vertexes with exactly two neighbours on a straight line (tolerance 1e-6).
+  4. Rebuild the object. `simplify/keep-unused` appends the result after the original parts, which are kept;
+     plain `simplify` then prunes to `default`.
+  Known limitation: simplify drops object names (merged polyhedrons have no single name).
+- HTTP and HTTPS URIs are loaded with `fetch` (`resource.ts`). Storing to them is an error.
+  The shebang and the test task have `--allow-net`, and tests use a local `Deno.serve` on 127.0.0.1.
+- OBJ (`src/obj.ts`): winding was checked against the Wavefront spec (https://paulbourke.net/dataformats/obj/).
+  Faces are counter-clockwise when viewed from the front, the same as this project, so no reversal is needed
+  (marked `IMPLIED WINDING ORDER APPLIES HERE`).
+  Each `o` becomes a named polyhedron, which gets its own named group. `default` holds all of them.
+  The builder accepts names, and the OBJ writer emits `o` before every polyhedron (bare when unnamed), so names
+  round-trip. `prune;main-object-name=X` keeps the named polyhedron, but it becomes `default` and loses its name.
+  `obj/bin` is rejected (I took OBJ to be text only). Free-form curves/surfaces, `l`, and `p` are errors.
+- `validate` and `checkManifold`: a simplified definition from the user. Every polygon is closed, and every line is
+  used by exactly two polygon edges in opposite directions.
+
 ## Open questions (waiting on the user)
 
-- OBJ winding order has not been checked. Check it before implementing OBJ.
+- `obj/bin`: the README listed it. Keep it as unsupported, or implement the Wavefront binary `.mod` format?
+- Simplify drops object names. Should it keep names where the merged polyhedrons still correspond to one?
+
