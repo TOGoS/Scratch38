@@ -198,8 +198,11 @@ Same as `simplify`, but retains unused sub-objects (vertexes, lines, polygons, p
 Optional parameters:
 - `main-object-name` - name of main object to keep; default is `default`.
 
+Shape: `(input:3DObject -- output:3DObject)`
+
 Removes all sub-objects not referenced by the top level polyhedron group,
-rewriting indexes accordingly.
+rewriting indexes accordingly. Indexes keep their relative order.
+The output's `default` object is the main object; other top-level objects are removed.
 
 e.g. a shape with 10 vertexes, the first two of which are unused by the main polyhedron group
 would be transformed to one with 8 vertexes, and all the vertex indexes 2 lower than

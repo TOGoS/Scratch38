@@ -165,6 +165,45 @@ Deno.test("load needs a resource name", async () => {
 	);
 });
 
+Deno.test("prune needs an object on the stack", async () => {
+	await assertRejects(
+		() => runOperations(["prune"]),
+		Error,
+		"stack is empty",
+	);
+});
+
+Deno.test("prune rejects modifiers", async () => {
+	await assertRejects(
+		() => runOperations(["prune/x"]),
+		Error,
+		"takes no modifiers",
+	);
+});
+
+Deno.test("load, prune, and store round-trips a file", async () => {
+	const dir = await Deno.makeTempDir();
+	try {
+		const input = `${dir}/in.stl`;
+		const output = `${dir}/out.stl`;
+		await Deno.writeTextFile(input, formatStlText(TRIANGLES));
+		await runOperations([
+			`load/stl:${input}`,
+			"prune",
+			`store/stl/text:${output}`,
+		]);
+		assertEquals(
+			parseStl(
+				new TextEncoder().encode(await Deno.readTextFile(output)),
+				"text",
+			),
+			TRIANGLES,
+		);
+	} finally {
+		await Deno.remove(dir, { recursive: true });
+	}
+});
+
 Deno.test("store needs an object on the stack", async () => {
 	await assertRejects(
 		() => runOperations(["store/stl/bin:x.stl"]),

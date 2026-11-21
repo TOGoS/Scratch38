@@ -2,6 +2,7 @@ import { OperationSpec, parseOperationSpec } from "./operation-syntax.ts";
 import { openResource } from "./resource.ts";
 import { formatStlBinary, formatStlText, parseStl, StlFormat } from "./stl.ts";
 import {
+	pruneVector3DObject,
 	trianglesFromVector3DObject,
 	Vector3DObject,
 	vector3DObjectFromTriangles,
@@ -108,6 +109,29 @@ const definitions: OperationDefinition[] = [
 				? formatStlBinary(triangles)
 				: new TextEncoder().encode(formatStlText(triangles));
 			await openResource(name).write(bytes);
+		},
+	},
+	{
+		name: "prune",
+		params: ["main-object-name"],
+		run({ modifiers, params, stack }) {
+			if (modifiers.length > 0) {
+				throw new Error(
+					`prune takes no modifiers, got ${modifiers.join("/")}`,
+				);
+			}
+			const object = stack.pop();
+			if (object === undefined) {
+				throw new Error(
+					"prune needs a 3DObject on the stack, but the stack is empty",
+				);
+			}
+			stack.push(
+				pruneVector3DObject(
+					object,
+					params.get("main-object-name") ?? "default",
+				),
+			);
 		},
 	},
 ];
