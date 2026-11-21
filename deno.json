@@ -10,7 +10,7 @@
 	},
 	"tasks": {
 		"fmt": "deno fmt && deno run --allow-read --allow-write tools/fix-blank-lines.ts src tools stlmod",
-		"test": "deno test --allow-read --allow-write --allow-run",
+		"test": "deno test --allow-read --allow-write --allow-run --allow-net=127.0.0.1,example.com",
 		"check": "deno check stlmod src tools"
 	}
 }

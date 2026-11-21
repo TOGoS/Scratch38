@@ -57,6 +57,8 @@ default parameter (whatever the operator calls it) without having to percent-enc
 
 Some operators work on a named resource.
 If the name starts with a URI scheme and a colon, it will be treated as a URI.
+The supported schemes are `file:`, `http:`, and `https:`.
+`http:` and `https:` resources can only be loaded, not stored.
 If it is `-`, that stands for standard input or output (depending on whether the operation is to read or write to it).
 Empty string should be considered an error.
 Otherwise, it's a file path.

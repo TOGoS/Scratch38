@@ -8,7 +8,14 @@ async function runStlmod(
 	stdin?: Uint8Array,
 ): Promise<Deno.CommandOutput> {
 	const child = new Deno.Command(Deno.execPath(), {
-		args: ["run", "--allow-read", "--allow-write", STLMOD, ...args],
+		args: [
+			"run",
+			"--allow-read",
+			"--allow-write",
+			"--allow-net",
+			STLMOD,
+			...args,
+		],
 		stdin: stdin ? "piped" : "null",
 		stdout: "piped",
 		stderr: "piped",

@@ -1,4 +1,4 @@
-import { assertEquals, assertThrows } from "@std/assert";
+import { assertEquals, assertRejects, assertThrows } from "@std/assert";
 import { openResource, parseResourceName } from "./resource.ts";
 
 Deno.test("- means stdin or stdout", () => {
@@ -28,11 +28,56 @@ Deno.test("file: URIs become paths", () => {
 	});
 });
 
-Deno.test("other URI schemes are rejected for now", () => {
+Deno.test("http and https URIs are URL resources", () => {
+	assertEquals(parseResourceName("http://example.com/a.stl"), {
+		kind: "url",
+		href: "http://example.com/a.stl",
+	});
+	assertEquals(parseResourceName("https://example.com/a.stl"), {
+		kind: "url",
+		href: "https://example.com/a.stl",
+	});
+});
+
+Deno.test("other URI schemes are rejected", () => {
 	assertThrows(
-		() => parseResourceName("http://example.com/a.stl"),
+		() => parseResourceName("ftp://example.com/a.stl"),
 		Error,
 		"Unsupported URI scheme",
+	);
+});
+
+Deno.test("reads http resources and reports HTTP errors", async () => {
+	const server = Deno.serve(
+		{ port: 0, hostname: "127.0.0.1", onListen() {} },
+		(request) => {
+			if (new URL(request.url).pathname === "/missing.stl") {
+				return new Response("nope", { status: 404 });
+			}
+			return new Response(new Uint8Array([1, 2, 3]));
+		},
+	);
+	try {
+		const base = `http://127.0.0.1:${server.addr.port}`;
+		assertEquals(
+			await openResource(`${base}/a.stl`).read(),
+			new Uint8Array([1, 2, 3]),
+		);
+		await assertRejects(
+			() => openResource(`${base}/missing.stl`).read(),
+			Error,
+			"HTTP 404",
+		);
+	} finally {
+		await server.shutdown();
+	}
+});
+
+Deno.test("http resources cannot be written", async () => {
+	await assertRejects(
+		() => openResource("https://example.com/a.stl").write(new Uint8Array()),
+		Error,
+		"Cannot store to",
 	);
 });
 
