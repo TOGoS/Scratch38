@@ -1,5 +1,6 @@
 import { OperationSpec, parseOperationSpec } from "./operation-syntax.ts";
 import { openResource } from "./resource.ts";
+import { formatObj, parseObj } from "./obj.ts";
 import { formatStlBinary, formatStlText, parseStl, StlFormat } from "./stl.ts";
 import { simplifyVector3DObject } from "./simplify.ts";
 import {
@@ -7,6 +8,7 @@ import {
 	pruneVector3DObject,
 	trianglesFromVector3DObject,
 	Vector3DObject,
+	vector3DObjectFromPolyhedrons,
 	vector3DObjectFromTriangles,
 } from "./vector3d-object.ts";
 
@@ -27,27 +29,31 @@ export interface OperationDefinition {
 	run(context: OperationContext): void | Promise<void>;
 }
 
+type FileFormat =
+	| { kind: "stl"; variant: "auto" | StlFormat }
+	| { kind: "obj" };
+	
 /**
- * Returns the STL format named by the modifiers.
- * `stl` alone means "auto": load detects the format from the content, store writes text.
+ * Returns the file format named by the modifiers.
+ * `stl` alone means "auto": load detects binary or text from the content, store writes text.
  */
-function stlFormatModifier(
-	operation: string,
-	modifiers: string[],
-): "auto" | StlFormat {
+function formatModifier(operation: string, modifiers: string[]): FileFormat {
 	const key = modifiers.join("/");
-	if (key === "stl") return "auto";
-	if (key === "stl/bin") return "binary";
-	if (key === "stl/text") return "text";
-	if (modifiers[0] !== undefined && modifiers[0] !== "stl") {
-		throw new Error(
-			`${operation} does not support format ${
-				modifiers[0]
-			} yet; only stl is supported`,
-		);
+	switch (key) {
+		case "stl":
+			return { kind: "stl", variant: "auto" };
+		case "stl/bin":
+			return { kind: "stl", variant: "binary" };
+		case "stl/text":
+			return { kind: "stl", variant: "text" };
+		case "obj":
+		case "obj/text":
+			return { kind: "obj" };
+		case "obj/bin":
+			throw new Error(`${operation} does not support binary OBJ`);
 	}
 	throw new Error(
-		`${operation} takes stl, stl/bin, or stl/text, got ${
+		`${operation} takes stl, stl/bin, stl/text, obj, or obj/text, got ${
 			key === "" ? "no format" : key
 		}`,
 	);
@@ -84,13 +90,24 @@ const definitions: OperationDefinition[] = [
 		params: ["resource-name"],
 		defaultParam: "resource-name",
 		async run({ modifiers, params, stack }) {
-			const format = stlFormatModifier("load", modifiers);
+			const format = formatModifier("load", modifiers);
 			const name = requiredParam("load", params, "resource-name");
-			const triangles = parseStl(
-				await openResource(name).read(),
-				format === "auto" ? undefined : format,
-			);
-			stack.push(vector3DObjectFromTriangles(triangles));
+			const bytes = await openResource(name).read();
+			if (format.kind === "obj") {
+				const objects = parseObj(new TextDecoder().decode(bytes));
+				stack.push(
+					vector3DObjectFromPolyhedrons(
+						objects.map((o) => o.loops),
+						objects.map((o) => o.name),
+					),
+				);
+			} else {
+				const triangles = parseStl(
+					bytes,
+					format.variant === "auto" ? undefined : format.variant,
+				);
+				stack.push(vector3DObjectFromTriangles(triangles));
+			}
 		},
 	},
 	{
@@ -98,7 +115,7 @@ const definitions: OperationDefinition[] = [
 		params: ["resource-name"],
 		defaultParam: "resource-name",
 		async run({ modifiers, params, stack }) {
-			const format = stlFormatModifier("store", modifiers);
+			const format = formatModifier("store", modifiers);
 			const name = requiredParam("store", params, "resource-name");
 			const object = stack.pop();
 			if (object === undefined) {
@@ -106,10 +123,15 @@ const definitions: OperationDefinition[] = [
 					"store needs a 3DObject on the stack, but the stack is empty",
 				);
 			}
-			const triangles = trianglesFromVector3DObject(object);
-			const bytes = format === "binary"
-				? formatStlBinary(triangles)
-				: new TextEncoder().encode(formatStlText(triangles));
+			let bytes: Uint8Array;
+			if (format.kind === "obj") {
+				bytes = new TextEncoder().encode(formatObj(object));
+			} else {
+				const triangles = trianglesFromVector3DObject(object);
+				bytes = format.variant === "binary"
+					? formatStlBinary(triangles)
+					: new TextEncoder().encode(formatStlText(triangles));
+			}
 			await openResource(name).write(bytes);
 		},
 	},

@@ -158,14 +158,22 @@ Modifiers:
 - `stl` - STL as the format. `load` detects binary or text from the content; `store` writes text.
 - `stl/bin` - binary STL
 - `stl/text` - text STL
-- `obj`
-- `obj/bin`
-- `obj/text`
+- `obj` - OBJ as the format (text)
+- `obj/text` - same as `obj`
+- `obj/bin` is not supported, since OBJ is a text format here.
 
 Parameters:
 - `resource-name` (default) - name of resource to load
 
 Shape: `(-- 3DObject)`
+
+OBJ details:
+- Each `o name` statement becomes a named top-level object, and each unnamed group of faces becomes an unnamed object.
+  The `default` object contains all of them.
+- Faces may have any number of vertexes. Negative vertex references are relative to the vertexes read so far.
+- Texture and normal references, and `g`, `s`, `mtllib`, and `usemtl` statements, are ignored.
+- Other statements, such as `l`, `p`, and free-form curves and surfaces, are errors.
+- Faces are counter-clockwise when viewed from the front, as in this project.
 
 ### `store`
 

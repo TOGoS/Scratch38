@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from "@std/assert";
+import { assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
 import { runOperations } from "./operations.ts";
 import { formatStlBinary, formatStlText, parseStl, Triangle } from "./stl.ts";
 
@@ -145,16 +145,42 @@ Deno.test("load requires a format modifier", async () => {
 	await assertRejects(
 		() => runOperations(["load:x.stl"]),
 		Error,
-		"takes stl, stl/bin, or stl/text",
+		"takes stl, stl/bin, stl/text, obj, or obj/text",
 	);
 });
 
-Deno.test("only stl is supported", async () => {
+Deno.test("unknown formats are rejected", async () => {
 	await assertRejects(
-		() => runOperations(["load/obj:x.obj"]),
+		() => runOperations(["load/xyz:x"]),
 		Error,
-		"does not support format obj",
+		"takes stl, stl/bin, stl/text, obj, or obj/text, got xyz",
 	);
+});
+
+Deno.test("binary OBJ is rejected", async () => {
+	await assertRejects(
+		() => runOperations(["load/obj/bin:x.mod"]),
+		Error,
+		"does not support binary OBJ",
+	);
+});
+
+Deno.test("load, prune, and store round-trips a file in OBJ", async () => {
+	const dir = await Deno.makeTempDir();
+	try {
+		const input = `${dir}/in.obj`;
+		const output = `${dir}/out.obj`;
+		await Deno.writeTextFile(
+			input,
+			"o tri\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n",
+		);
+		await runOperations([`load/obj:${input}`, `store/obj:${output}`]);
+		const written = await Deno.readTextFile(output);
+		assertStringIncludes(written, "o tri\n");
+		assertStringIncludes(written, "f 1 2 3\n");
+	} finally {
+		await Deno.remove(dir, { recursive: true });
+	}
 });
 
 Deno.test("load needs a resource name", async () => {
