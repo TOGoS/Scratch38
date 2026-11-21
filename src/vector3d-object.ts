@@ -34,12 +34,12 @@ export type Polyhedron = PolyhedronFace[];
 const CLASS_REF = "tag:nuke24.net,2026-11:s38s39:Vector3DObject-v1" as const;
 
 /**
- * Builds a Vector3DObject from triangles, whose vertexes are counter-clockwise
- * when viewed from outside. Shared vertexes and edges are stored once.
- * All triangles become one polyhedron, which is the `default` object.
+ * Builds a Vector3DObject from polyhedrons, each a list of polygon loops whose vertexes
+ * are counter-clockwise when viewed from outside. Shared vertexes and edges are stored once.
+ * All polyhedrons go in one group, which is the `default` object.
  */
-export function vector3DObjectFromTriangles(
-	triangles: Triangle[],
+export function vector3DObjectFromPolyhedrons(
+	polyhedrons: Vertex[][][],
 ): Vector3DObject {
 	const vertexes: Vertex[] = [];
 	const vertexIndexes = new Map<string, number>();
@@ -75,28 +75,41 @@ export function vector3DObjectFromTriangles(
 	};
 	
 	// IMPLIED WINDING ORDER APPLIES HERE
-	const polygons: Polygon[] = triangles.map((triangle) => {
-		const indexes = triangle.map(vertexIndex);
-		return [0, 1, 2].map((i) =>
-			lineIndex(indexes[i], indexes[(i + 1) % 3])
+	const polygons: Polygon[] = polyhedrons.flat().map((loop) => {
+		const indexes = loop.map(vertexIndex);
+		return indexes.map((from, i) =>
+			lineIndex(from, indexes[(i + 1) % indexes.length])
 		);
 	});
+	
+	let polygonCount = 0;
+	const polyhedronFaces: Polyhedron[] = polyhedrons.map((loops) =>
+		loops.map(() => ({ polygon: polygonCount++, side: "front" as const }))
+	);
 	
 	return {
 		classRef: CLASS_REF,
 		vertexes,
 		lines,
 		polygons,
-		polyhedrons: [
-			polygons.map((_, polygon) => ({ polygon, side: "front" as const })),
-		],
-		polyhedronGroups: [[0]],
+		polyhedrons: polyhedronFaces,
+		polyhedronGroups: [polyhedronFaces.map((_, i) => i)],
 		namedGroups: { default: 0 },
 	};
 }
 
-/** The faces of the `default` object, in the order they are listed in its polyhedrons. */
-function defaultFaces(object: Vector3DObject): PolyhedronFace[] {
+/**
+ * Builds a Vector3DObject from triangles, whose vertexes are counter-clockwise
+ * when viewed from outside. All triangles become one polyhedron, which is the `default` object.
+ */
+export function vector3DObjectFromTriangles(
+	triangles: Triangle[],
+): Vector3DObject {
+	return vector3DObjectFromPolyhedrons([triangles]);
+}
+
+/** The polyhedrons of the `default` object, in the order its group lists them. */
+export function defaultPolyhedrons(object: Vector3DObject): Polyhedron[] {
 	const groupIndex = object.namedGroups.default;
 	if (groupIndex === undefined) {
 		throw new Error("Object has no default group");
@@ -106,16 +119,21 @@ function defaultFaces(object: Vector3DObject): PolyhedronFace[] {
 		groupIndex,
 		"polyhedron group",
 	);
-	return group.flatMap((polyhedronIndex) =>
+	return group.map((polyhedronIndex) =>
 		itemAt(object.polyhedrons, polyhedronIndex, "polyhedron")
 	);
+}
+
+/** The faces of the `default` object, in the order they are listed in its polyhedrons. */
+function defaultFaces(object: Vector3DObject): PolyhedronFace[] {
+	return defaultPolyhedrons(object).flat();
 }
 
 /**
  * Returns the vertex indexes at the start of each edge of a polygon, in order.
  * Throws unless every edge ends where the next one starts, so that the polygon is closed.
  */
-function polygonVertexIndexes(
+export function polygonVertexIndexes(
 	object: Vector3DObject,
 	polygonIndex: number,
 ): number[] {
