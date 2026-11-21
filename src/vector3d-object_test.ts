@@ -1,6 +1,7 @@
 import { assertEquals, assertThrows } from "@std/assert";
 import { Triangle } from "./stl.ts";
 import {
+	checkManifold,
 	pruneVector3DObject,
 	trianglesFromVector3DObject,
 	Vector3DObject,
@@ -130,5 +131,33 @@ Deno.test("prune rejects an unknown object name", () => {
 		() => pruneVector3DObject(object, "missing"),
 		Error,
 		"no top-level object named missing",
+	);
+});
+
+Deno.test("a closed surface is manifold", () => {
+	checkManifold(vector3DObjectFromTriangles(TETRAHEDRON));
+});
+
+Deno.test("an open surface is not manifold", () => {
+	const object = vector3DObjectFromTriangles(TETRAHEDRON);
+	object.polyhedrons[0].pop();
+	assertThrows(
+		() => checkManifold(object),
+		Error,
+		"not manifold",
+	);
+});
+
+// IMPLIED WINDING ORDER APPLIES HERE
+Deno.test("a face with the wrong winding is not manifold", () => {
+	const object = vector3DObjectFromTriangles(TETRAHEDRON);
+	object.polygons[0] = object.polygons[0].map((edge) => ({
+		line: edge.line,
+		direction: edge.direction === "forwards" ? "backwards" : "forwards",
+	}));
+	assertThrows(
+		() => checkManifold(object),
+		Error,
+		"not manifold",
 	);
 });

@@ -95,6 +95,22 @@ export function vector3DObjectFromTriangles(
 	};
 }
 
+/** The faces of the `default` object, in the order they are listed in its polyhedrons. */
+function defaultFaces(object: Vector3DObject): PolyhedronFace[] {
+	const groupIndex = object.namedGroups.default;
+	if (groupIndex === undefined) {
+		throw new Error("Object has no default group");
+	}
+	const group = itemAt(
+		object.polyhedronGroups,
+		groupIndex,
+		"polyhedron group",
+	);
+	return group.flatMap((polyhedronIndex) =>
+		itemAt(object.polyhedrons, polyhedronIndex, "polyhedron")
+	);
+}
+
 /**
  * Lists the triangles of the `default` object, with vertexes counter-clockwise when viewed from outside.
  * Faces on the `back` side are reversed.
@@ -103,59 +119,69 @@ export function vector3DObjectFromTriangles(
 export function trianglesFromVector3DObject(
 	object: Vector3DObject,
 ): Triangle[] {
-	const groupIndex = object.namedGroups.default;
-	if (groupIndex === undefined) {
-		throw new Error("Object has no default group");
-	}
-	const group = object.polyhedronGroups[groupIndex];
-	if (group === undefined) {
-		throw new Error(`Default group index ${groupIndex} does not exist`);
-	}
-	
 	const triangles: Triangle[] = [];
-	for (const polyhedronIndex of group) {
-		const polyhedron = object.polyhedrons[polyhedronIndex];
-		if (polyhedron === undefined) {
-			throw new Error(`Polyhedron ${polyhedronIndex} does not exist`);
+	for (const { polygon: polygonIndex, side } of defaultFaces(object)) {
+		const polygon = itemAt(object.polygons, polygonIndex, "polygon");
+		if (polygon.length !== 3) {
+			throw new Error(
+				`Polygon ${polygonIndex} has ${polygon.length} edges; only triangles can be written as STL`,
+			);
 		}
-		for (const { polygon: polygonIndex, side } of polyhedron) {
-			const polygon = object.polygons[polygonIndex];
-			if (polygon === undefined) {
-				throw new Error(`Polygon ${polygonIndex} does not exist`);
-			}
-			if (polygon.length !== 3) {
+		const starts = polygon.map((edge) => {
+			const [a, b] = object.lines[edge.line];
+			return edge.direction === "forwards" ? a : b;
+		});
+		const ends = polygon.map((edge) => {
+			const [a, b] = object.lines[edge.line];
+			return edge.direction === "forwards" ? b : a;
+		});
+		for (let i = 0; i < 3; i++) {
+			if (ends[i] !== starts[(i + 1) % 3]) {
 				throw new Error(
-					`Polygon ${polygonIndex} has ${polygon.length} edges; only triangles can be written as STL`,
+					`Polygon ${polygonIndex} edges do not form a closed loop`,
 				);
 			}
-			const starts = polygon.map((edge) => {
-				const [a, b] = object.lines[edge.line];
-				return edge.direction === "forwards" ? a : b;
-			});
-			const ends = polygon.map((edge) => {
-				const [a, b] = object.lines[edge.line];
-				return edge.direction === "forwards" ? b : a;
-			});
-			for (let i = 0; i < 3; i++) {
-				if (ends[i] !== starts[(i + 1) % 3]) {
-					throw new Error(
-						`Polygon ${polygonIndex} edges do not form a closed loop`,
-					);
-				}
+		}
+		// IMPLIED WINDING ORDER APPLIES HERE
+		const vertexes = starts.map((index) =>
+			object.vertexes[index]
+		) as Triangle;
+		// IMPLIED WINDING ORDER APPLIES HERE
+		triangles.push(
+			side === "front"
+				? vertexes
+				: [vertexes[0], vertexes[2], vertexes[1]],
+		);
+	}
+	return triangles;
+}
+
+/**
+ * Throws unless the `default` object is manifold, which here means that every line
+ * is used by exactly two polygon edges, one forwards and one backwards.
+ * That makes the surface closed, with every edge shared by exactly two faces.
+ */
+export function checkManifold(object: Vector3DObject): void {
+	const uses = new Map<number, { forwards: number; backwards: number }>();
+	for (const { polygon: polygonIndex } of defaultFaces(object)) {
+		for (const edge of itemAt(object.polygons, polygonIndex, "polygon")) {
+			const count = uses.get(edge.line) ?? { forwards: 0, backwards: 0 };
+			if (edge.direction === "forwards") {
+				count.forwards++;
+			} else {
+				count.backwards++;
 			}
-			// IMPLIED WINDING ORDER APPLIES HERE
-			const vertexes = starts.map((index) =>
-				object.vertexes[index]
-			) as Triangle;
-			// IMPLIED WINDING ORDER APPLIES HERE
-			triangles.push(
-				side === "front"
-					? vertexes
-					: [vertexes[0], vertexes[2], vertexes[1]],
+			uses.set(edge.line, count);
+		}
+	}
+	for (const [line, count] of uses) {
+		if (count.forwards !== 1 || count.backwards !== 1) {
+			const [a, b] = itemAt(object.lines, line, "line");
+			throw new Error(
+				`Object is not manifold: line ${line} (vertexes ${a} and ${b}) is used ${count.forwards} time(s) forwards and ${count.backwards} time(s) backwards; each should be used once`,
 			);
 		}
 	}
-	return triangles;
 }
 
 function sortedUnique(indexes: number[]): number[] {
