@@ -23,6 +23,9 @@ Kept out of README.md, which describes the tool and its spec.
 - AGENTS.md: verbatim copies of the Worktrees, IDs for TODO items, and Commit attribution sections from S0036.
   The other S0036 sections are specific to that project.
 - Stack values are placeholders (`unknown`) until the 3DObject type exists.
+- Winding: counter-clockwise viewed from outside, same as STL (user's decision, 2026-11-21).
+  My earlier note that the user's premise was wrong was confirmed: STL is counter-clockwise,
+  OpenSCAD's manual says clockwise. README's Winding Order section records this.
 - Operation syntax is parsed by splitting on the first unencoded `:` (default value, literal),
   then on `;` (named params, percent-decoded), then on `/` (name and modifiers).
 - Operations declare their accepted named parameters and default parameter, so unknown names are errors.
@@ -33,9 +36,6 @@ Kept out of README.md, which describes the tool and its spec.
 
 ## Open questions (waiting on the user)
 
-- Face winding: README says clockwise when viewed from the front. Wikipedia's STL article says
-  right-hand rule, counter-clockwise when viewed from outside. OpenSCAD's manual says clockwise
-  when viewed from outside. Which convention does the internal model use?
 - simplify: the bullet list ends with an unfinished "Rewriting" item.
 - `3DShape` (simplify) and `3DObject` (load/store) are used for the same type. Which name should be used?
 - Behavior when operations leave values on the stack at the end of a run is unspecified.

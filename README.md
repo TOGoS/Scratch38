@@ -98,7 +98,7 @@ or `Vector3DObject`, consists of:
   we want to support rational numbers later or something).
 - A list of lines between vertexes, each of which is a pair of vertex indices
 - A list of polygons, each of which is made of a series of (line index, direction)
-  such that the vertexes are visited in clockwise order when viewed
+  such that the vertexes are visited in counter-clockwise order when viewed
   from 'the front' of the polygon.
   Direction is 'forwards' or 'backwards', since each line segment is re-used
   for two polygons.
@@ -124,6 +124,19 @@ once they are constructed, and it is allowed for `Vector3DObject`s
 to contain components that are not used by any named top-level object.
 Operations that transform one `Vector3DObject` to another may therefore
 simply copy or reference (if using tree-based list structures) the first's data.
+
+## Winding Order
+
+Polygon vertexes are listed counter-clockwise when viewed from the front of the polygon,
+i.e. from outside the solid, following the right-hand rule.
+
+This matches STL, whose facet vertexes are counter-clockwise when viewed from outside
+and whose facet normals point outward by the right-hand rule.
+We chose it purely because STL is the first format we support.
+Other formats do not all agree:
+- OpenSCAD's `polyhedron` expects points clockwise when viewed from outside (per its manual),
+  so importing or exporting OpenSCAD polyhedrons requires reversing each face's vertex order.
+- OBJ's winding order has not been checked yet; check before implementing OBJ.
 
 ## Lazy Object Representations
 
