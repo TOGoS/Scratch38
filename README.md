@@ -153,7 +153,7 @@ an input and output object.  Objects are actually immutable.
 ### `load`
 
 Modifiers:
-- `stl` - explicitly indicate STL as the format
+- `stl` - STL as the format. `load` detects binary or text from the content; `store` writes text.
 - `stl/bin` - binary STL
 - `stl/text` - text STL
 - `obj`
@@ -168,6 +168,7 @@ Shape: `(-- 3DObject)`
 ### `store`
 
 Same modifiers and parameters as load, but stores the result instead of loading it.
+Removes the object from the stack.
 
 Shape: `(3DObject --)`
 
