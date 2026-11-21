@@ -186,7 +186,6 @@ Simplifies a shape by:
 - Replacing adjacent coplanar polygons with a single polygon,
 - Consolidating collinear lines that meet at a vertex with no other lines
 - Discarding lines and vertexes that are unused after the simplification
-- Rewriting 
 
 Equivalent to `simplify/keep-unused` followed by `prune`.
 
