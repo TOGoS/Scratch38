@@ -93,6 +93,16 @@ Deno.test("refuses objects without a default group", () => {
 	);
 });
 
+Deno.test("a polygon that is not closed is not manifold", () => {
+	const object = vector3DObjectFromTriangles(TETRAHEDRON);
+	object.polygons[0] = object.polygons[0].slice(0, 2);
+	assertThrows(
+		() => checkManifold(object),
+		Error,
+		"do not form a closed loop",
+	);
+});
+
 Deno.test("prune removes unused vertexes and renumbers the rest", () => {
 	const object = vector3DObjectFromTriangles(TETRAHEDRON);
 	object.vertexes.unshift([9, 9, 9]);
@@ -151,7 +161,7 @@ Deno.test("an open surface is not manifold", () => {
 // IMPLIED WINDING ORDER APPLIES HERE
 Deno.test("a face with the wrong winding is not manifold", () => {
 	const object = vector3DObjectFromTriangles(TETRAHEDRON);
-	object.polygons[0] = object.polygons[0].map((edge) => ({
+	object.polygons[0] = object.polygons[0].slice().reverse().map((edge) => ({
 		line: edge.line,
 		direction: edge.direction === "forwards" ? "backwards" : "forwards",
 	}));

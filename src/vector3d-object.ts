@@ -112,6 +112,33 @@ function defaultFaces(object: Vector3DObject): PolyhedronFace[] {
 }
 
 /**
+ * Returns the vertex indexes at the start of each edge of a polygon, in order.
+ * Throws unless every edge ends where the next one starts, so that the polygon is closed.
+ */
+function polygonVertexIndexes(
+	object: Vector3DObject,
+	polygonIndex: number,
+): number[] {
+	const polygon = itemAt(object.polygons, polygonIndex, "polygon");
+	const starts = polygon.map((edge) => {
+		const [a, b] = itemAt(object.lines, edge.line, "line");
+		return edge.direction === "forwards" ? a : b;
+	});
+	const ends = polygon.map((edge) => {
+		const [a, b] = itemAt(object.lines, edge.line, "line");
+		return edge.direction === "forwards" ? b : a;
+	});
+	for (let i = 0; i < polygon.length; i++) {
+		if (ends[i] !== starts[(i + 1) % polygon.length]) {
+			throw new Error(
+				`Polygon ${polygonIndex} edges do not form a closed loop`,
+			);
+		}
+	}
+	return starts;
+}
+
+/**
  * Lists the triangles of the `default` object, with vertexes counter-clockwise when viewed from outside.
  * Faces on the `back` side are reversed.
  * Only triangular polygons are supported.
@@ -127,21 +154,7 @@ export function trianglesFromVector3DObject(
 				`Polygon ${polygonIndex} has ${polygon.length} edges; only triangles can be written as STL`,
 			);
 		}
-		const starts = polygon.map((edge) => {
-			const [a, b] = object.lines[edge.line];
-			return edge.direction === "forwards" ? a : b;
-		});
-		const ends = polygon.map((edge) => {
-			const [a, b] = object.lines[edge.line];
-			return edge.direction === "forwards" ? b : a;
-		});
-		for (let i = 0; i < 3; i++) {
-			if (ends[i] !== starts[(i + 1) % 3]) {
-				throw new Error(
-					`Polygon ${polygonIndex} edges do not form a closed loop`,
-				);
-			}
-		}
+		const starts = polygonVertexIndexes(object, polygonIndex);
 		// IMPLIED WINDING ORDER APPLIES HERE
 		const vertexes = starts.map((index) =>
 			object.vertexes[index]
@@ -157,13 +170,14 @@ export function trianglesFromVector3DObject(
 }
 
 /**
- * Throws unless the `default` object is manifold, which here means that every line
- * is used by exactly two polygon edges, one forwards and one backwards.
- * That makes the surface closed, with every edge shared by exactly two faces.
+ * Throws unless the `default` object is manifold, a simplified definition:
+ * every polygon is closed, and every line is used by exactly two polygon edges,
+ * which go in different directions.
  */
 export function checkManifold(object: Vector3DObject): void {
 	const uses = new Map<number, { forwards: number; backwards: number }>();
 	for (const { polygon: polygonIndex } of defaultFaces(object)) {
+		polygonVertexIndexes(object, polygonIndex);
 		for (const edge of itemAt(object.polygons, polygonIndex, "polygon")) {
 			const count = uses.get(edge.line) ?? { forwards: 0, backwards: 0 };
 			if (edge.direction === "forwards") {

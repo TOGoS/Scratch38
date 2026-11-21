@@ -179,8 +179,9 @@ Shape: `(3DObject -- 3DObject)`
 Ensures that the object is manifold, and fails otherwise.
 The object is left on the stack unchanged.
 
-Here, an object is manifold if every line of its `default` object is used by exactly two polygon edges,
-one forwards and one backwards. That means the surface is closed, and each edge is shared by two faces.
+This is a simplified definition, to be refined later.
+An object is manifold if every polygon of its `default` object is closed (each edge ends where the next one starts),
+and every line is used by exactly two polygon edges, which go in different directions.
 
 ### `simplify`
 
