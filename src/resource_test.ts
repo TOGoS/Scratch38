@@ -1,5 +1,5 @@
 import { assertEquals, assertThrows } from "@std/assert";
-import { parseResourceName } from "./resource.ts";
+import { openResource, parseResourceName } from "./resource.ts";
 
 Deno.test("- means stdin or stdout", () => {
 	assertEquals(parseResourceName("-"), { kind: "stdio" });
@@ -34,4 +34,31 @@ Deno.test("other URI schemes are rejected for now", () => {
 		Error,
 		"Unsupported URI scheme",
 	);
+});
+
+Deno.test("file resources can be written and read back", async () => {
+	const dir = await Deno.makeTempDir();
+	try {
+		const path = `${dir}/data.bin`;
+		const bytes = new Uint8Array([0, 1, 2, 255]);
+		await openResource(path).write(bytes);
+		assertEquals(await openResource(`file://${path}`).read(), bytes);
+	} finally {
+		await Deno.remove(dir, { recursive: true });
+	}
+});
+
+Deno.test("reading a missing file is an error", async () => {
+	const dir = await Deno.makeTempDir();
+	try {
+		let failed = false;
+		try {
+			await openResource(`${dir}/missing.stl`).read();
+		} catch {
+			failed = true;
+		}
+		assertEquals(failed, true);
+	} finally {
+		await Deno.remove(dir, { recursive: true });
+	}
 });

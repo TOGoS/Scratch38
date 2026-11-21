@@ -1,5 +1,5 @@
 import { OperationSpec, parseOperationSpec } from "./operation-syntax.ts";
-import { readResource, writeResource } from "./resource.ts";
+import { openResource } from "./resource.ts";
 import { formatStlBinary, formatStlText, parseStl, StlFormat } from "./stl.ts";
 import {
 	trianglesFromVector3DObject,
@@ -84,7 +84,7 @@ const definitions: OperationDefinition[] = [
 			const format = stlFormatModifier("load", modifiers);
 			const name = requiredParam("load", params, "resource-name");
 			const triangles = parseStl(
-				await readResource(name),
+				await openResource(name).read(),
 				format === "auto" ? undefined : format,
 			);
 			stack.push(vector3DObjectFromTriangles(triangles));
@@ -107,7 +107,7 @@ const definitions: OperationDefinition[] = [
 			const bytes = format === "binary"
 				? formatStlBinary(triangles)
 				: new TextEncoder().encode(formatStlText(triangles));
-			await writeResource(name, bytes);
+			await openResource(name).write(bytes);
 		},
 	},
 ];

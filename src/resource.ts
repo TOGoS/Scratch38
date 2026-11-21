@@ -5,6 +5,12 @@ export type ResourceLocation = { kind: "stdio" } | {
 	path: string;
 };
 
+/** Something that bytes can be read from and written to. */
+export interface Resource {
+	read(): Promise<Uint8Array>;
+	write(bytes: Uint8Array): Promise<void>;
+}
+
 const URI_SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
 
 /**
@@ -30,27 +36,33 @@ export function parseResourceName(name: string): ResourceLocation {
 	return { kind: "file", path: name };
 }
 
-export async function readResource(name: string): Promise<Uint8Array> {
+export function openResource(name: string): Resource {
 	const location = parseResourceName(name);
-	if (location.kind === "stdio") {
+	switch (location.kind) {
+		case "stdio":
+			return stdioResource;
+		case "file":
+			return fileResource(location.path);
+	}
+}
+
+const stdioResource: Resource = {
+	async read() {
 		return new Uint8Array(
 			await new Response(Deno.stdin.readable).arrayBuffer(),
 		);
-	}
-	return await Deno.readFile(location.path);
-}
+	},
+	async write(bytes) {
+		let offset = 0;
+		while (offset < bytes.length) {
+			offset += await Deno.stdout.write(bytes.subarray(offset));
+		}
+	},
+};
 
-export async function writeResource(
-	name: string,
-	bytes: Uint8Array,
-): Promise<void> {
-	const location = parseResourceName(name);
-	if (location.kind === "file") {
-		await Deno.writeFile(location.path, bytes);
-		return;
-	}
-	let offset = 0;
-	while (offset < bytes.length) {
-		offset += await Deno.stdout.write(bytes.subarray(offset));
-	}
+function fileResource(path: string): Resource {
+	return {
+		read: () => Deno.readFile(path),
+		write: (bytes) => Deno.writeFile(path, bytes),
+	};
 }
