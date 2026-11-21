@@ -207,6 +207,22 @@ Deno.test("validate needs an object on the stack", async () => {
 	);
 });
 
+Deno.test("simplify needs an object on the stack", async () => {
+	await assertRejects(
+		() => runOperations(["simplify"]),
+		Error,
+		"stack is empty",
+	);
+});
+
+Deno.test("simplify accepts only the keep-unused modifier", async () => {
+	await assertRejects(
+		() => runOperations(["simplify/x"]),
+		Error,
+		"except keep-unused",
+	);
+});
+
 Deno.test("prune needs an object on the stack", async () => {
 	await assertRejects(
 		() => runOperations(["prune"]),

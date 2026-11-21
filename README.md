@@ -187,10 +187,15 @@ and every line is used by exactly two polygon edges, which go in different direc
 
 Shape: `(input:3DObject -- output:3DObject)`
 
-Simplifies a shape by:
-- Replacing adjacent coplanar polygons with a single polygon,
+Simplifies a shape, without changing its shape, on a best-effort basis:
+- Merging polyhedrons that share a polygon, which is on opposite sides of each, into one polyhedron without that polygon
+- Replacing adjacent coplanar polygons with a single polygon
 - Consolidating collinear lines that meet at a vertex with no other lines
+- Merging vertexes with identical coordinates, and lines between the same two vertexes
 - Discarding lines and vertexes that are unused after the simplification
+
+A merge is skipped if it would leave a polygon that is not simple, or with fewer than three vertexes.
+Coplanarity and collinearity are checked with a small tolerance.
 
 Equivalent to `simplify/keep-unused` followed by `prune`.
 

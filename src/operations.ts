@@ -1,6 +1,7 @@
 import { OperationSpec, parseOperationSpec } from "./operation-syntax.ts";
 import { openResource } from "./resource.ts";
 import { formatStlBinary, formatStlText, parseStl, StlFormat } from "./stl.ts";
+import { simplifyVector3DObject } from "./simplify.ts";
 import {
 	checkManifold,
 	pruneVector3DObject,
@@ -128,6 +129,32 @@ const definitions: OperationDefinition[] = [
 				);
 			}
 			checkManifold(object);
+		},
+	},
+	{
+		name: "simplify",
+		params: [],
+		run({ modifiers, stack }) {
+			const keepUnused = modifiers.join("/") === "keep-unused";
+			if (modifiers.length > 0 && !keepUnused) {
+				throw new Error(
+					`simplify takes no modifiers except keep-unused, got ${
+						modifiers.join("/")
+					}`,
+				);
+			}
+			const object = stack.pop();
+			if (object === undefined) {
+				throw new Error(
+					"simplify needs a 3DObject on the stack, but the stack is empty",
+				);
+			}
+			const simplified = simplifyVector3DObject(object, true);
+			stack.push(
+				keepUnused
+					? simplified
+					: pruneVector3DObject(simplified, "default"),
+			);
 		},
 	},
 	{
