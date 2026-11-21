@@ -64,6 +64,7 @@ Deno.test("ignores the name on the solid line and the stored normal", () => {
 });
 
 Deno.test("facet normal follows the right-hand rule for counter-clockwise vertexes", () => {
+	// IMPLIED WINDING ORDER APPLIES HERE
 	const [nx, ny, nz] = facetNormal(TRIANGLES[0]);
 	assertAlmostEquals(nx, 0);
 	assertAlmostEquals(ny, 0);

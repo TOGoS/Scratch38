@@ -7,6 +7,7 @@ import {
 } from "./vector3d-object.ts";
 
 // A tetrahedron with outward-facing, counter-clockwise triangles.
+// IMPLIED WINDING ORDER APPLIES HERE
 const TETRAHEDRON: Triangle[] = [
 	[
 		[0, 0, 0],
@@ -58,6 +59,7 @@ Deno.test("round-trips triangles through Vector3DObject", () => {
 	assertEquals(trianglesFromVector3DObject(object), TETRAHEDRON);
 });
 
+// IMPLIED WINDING ORDER APPLIES HERE
 Deno.test("back-side faces are written reversed", () => {
 	const object: Vector3DObject = vector3DObjectFromTriangles(TETRAHEDRON);
 	object.polyhedrons[0][0] = { polygon: 0, side: "back" };

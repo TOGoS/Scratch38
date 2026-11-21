@@ -74,6 +74,7 @@ export function vector3DObjectFromTriangles(
 		};
 	};
 	
+	// IMPLIED WINDING ORDER APPLIES HERE
 	const polygons: Polygon[] = triangles.map((triangle) => {
 		const indexes = triangle.map(vertexIndex);
 		return [0, 1, 2].map((i) =>
@@ -142,9 +143,11 @@ export function trianglesFromVector3DObject(
 					);
 				}
 			}
+			// IMPLIED WINDING ORDER APPLIES HERE
 			const vertexes = starts.map((index) =>
 				object.vertexes[index]
 			) as Triangle;
+			// IMPLIED WINDING ORDER APPLIES HERE
 			triangles.push(
 				side === "front"
 					? vertexes

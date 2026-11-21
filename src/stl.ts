@@ -135,6 +135,7 @@ function parseTextStl(text: string): Triangle[] {
 
 /** Computes the unit normal of a triangle by the right-hand rule. */
 export function facetNormal(triangle: Triangle): Vertex {
+	// IMPLIED WINDING ORDER APPLIES HERE
 	const [a, b, c] = triangle;
 	const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
 	const v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
@@ -151,6 +152,7 @@ export function facetNormal(triangle: Triangle): Vertex {
 export function formatStlText(triangles: Triangle[]): string {
 	const lines = ["solid "];
 	for (const triangle of triangles) {
+		// IMPLIED WINDING ORDER APPLIES HERE
 		const [nx, ny, nz] = facetNormal(triangle);
 		lines.push(
 			`  facet normal ${nx.toExponential()} ${ny.toExponential()} ${nz.toExponential()}`,
@@ -176,6 +178,7 @@ export function formatStlBinary(triangles: Triangle[]): Uint8Array {
 	view.setUint32(80, triangles.length, true);
 	triangles.forEach((triangle, i) => {
 		const base = BINARY_HEADER_SIZE + BINARY_TRIANGLE_SIZE * i;
+		// IMPLIED WINDING ORDER APPLIES HERE
 		const normal = facetNormal(triangle);
 		normal.forEach((c, k) => view.setFloat32(base + 4 * k, c, true));
 		triangle.forEach((vertex, j) => {
