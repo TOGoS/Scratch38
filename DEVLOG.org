@@ -134,6 +134,8 @@ What a TUI!  It even knows about the mouse cursor.
 bootdev run -s ef186775-c596-455e-84e8-bc53f1a55f91
 #+end_src
 
+** Using OpenCode
+
 *** 1.4. [[https://www.boot.dev/lessons/710f43a7-c8e5-4139-8633-e760960da12c][OpenCode Console]]
 
 Blah blah, it had me run ~/models~ and look at the list.
@@ -268,3 +270,279 @@ In summary:
 - clients auto-spawn a ~--service~ server only when the registry is empty or stale
 - ~pair~ bridges a browser to whatever is registered.
 #+end_quote
+
+*** Tangent: how do sessions work?
+
+#+begin_quote
+How do sessions work?
+Is it just sort of a transcript, so when I hand it over to 'the model',
+it re-reads everything that has happened and takes that into account in the next response?
+In which case changing models halfway through a session would be fine.
+Or is there some kind of caching mechanism, possibly behind the scenes?
+#+end_quote
+
+DeepSeek V4.1 Flash Free, in my 'meaning of life' session, did some digging
+(including spelunking in its own database and running some python), and said
+(translation to orgdown by me):
+
+#+begin_quote
+Both, and the distinction is exactly where your intuition is fuzzy:
+**the transcript is re-sent, and the caching is provider-side.**
+There is no OpenCode-side "the model remembers."
+
+**** What's actually stored
+
+From exporting your own session (~ses_e33bd35c0ffe...~):
+
+#+begin_src json
+"info": { "model": {...}, "tokens": {"input":16716,"output":5174,
+          "reasoning":10933,"cache":{"read":303104,"write":0}} }
+"messages": [
+  { "type":"user", "text":"What's the meaning of life?" },
+  { "type":"assistant", "content":[
+      { "type":"reasoning", "text":"The user asks a philosophical...",
+        "native":{"reasoningField":"reasoning_content"} },
+      { "type":"text", "text":"42, according to Douglas Adams..." } ],
+    "snapshot":{"start":"36f6161...","end":"36f6161..."},
+    "tokens":{"input":3619,"output":192,"cache":{"read":1792,"write":0}} },
+  { "type":"idle" }
+]
+#+end_src
+
+So a session is ~session -> messages -> content parts~ (text, reasoning, tool calls, files), plus per-message usage and a git snapshot for undo. Messages are never destroyed by compaction -- only stopped from being *sent*.
+
+**** What happens each turn
+
+The server rebuilds the request from scratch: system prompt + instructions + tool schemas + the whole visible conversation, re-serialized into whatever the current provider's API wants. Stateless from the provider's point of view, except where it uses native compaction.
+
+Look at your session totals: **16,716 fresh input tokens but 303,104 cache-read tokens.** That's the whole story in two numbers -- the conversation is being resent every turn, and the shared prefix is being served from the provider's prompt cache instead of being re-billed.
+
+**** The cache is a prefix cache, not a session cache
+
+- Breakpoints are placed on the system prompt, the last tool
+  definition, and the latest message (Anthropic-style
+  ~cache_control~); other providers cache automatically.
+- It keys on the **exact token prefix**. Append to the end ->
+  cheap. Change something early (a system prompt edit, a model switch,
+  an instruction file change) -> everything after it misses.
+- Lifetime is provider-default (5 min on Anthropic) unless you set
+  ~settings.cache.ttl~; ~warming: true~ sends throwaway requests to
+  keep it alive across pauses.
+- Compaction deliberately reuses the cache: it sends the full
+  conversation for the summary so the summary request hits the same
+  prefix.
+
+**** Compaction is where "it re-reads everything" stops being true
+
+Near the context limit, older turns get replaced by a summary plus ~15k of recent conversation:
+
+#+begin_example
+before   [ system ][ older conversation .......... ][ recent 15k ][ pending ]
+after    [ system ][ summary + recent 15k ][ pending ]
+#+end_example
+
+So pre-compaction, yes, the model sees the literal transcript.
+Post-compaction it sees a *summary* -- and the originals are still in the DB, just not in the request.
+This is lossy and it's the main reason very long sessions drift.
+
+**** So is switching models mid-session fine?
+
+**Supported, yes. Free, no.** The stored format is provider-neutral, so ~/models~ re-serializes history for the new provider. But:
+
+| What breaks                   | Consequence                                                                                                                                                                                   |
+|-------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Prefix cache                  | Keyed by model/provider -> first turn after switch is a cold read; you pay full input price for the whole history once                                                                        |
+| Native compaction checkpoints | Documented as provider+model-bound: switching "continues from the original conversation instead" -- i.e. the compacted checkpoint is discarded and you're back to a possibly-too-long history |
+| Reasoning blocks              | Stored with provider-specific ~native~ metadata; foreign reasoning gets dropped or must be re-fitted (~reasoningField~, ~requireReasoning~) -- some fidelity is lost                          |
+| Context window                | ~buffer~ is a *percentage* of each model's window, so a smaller model compacts sooner than you expect                                                                                         |
+| Tool capabilities             | ~capabilities.freeform~/~tools~ differ per model; the same tools may not round-trip identically                                                                                               |
+
+Warming also restarts after a switch, and background compaction is explicitly skipped "right after a model switch."
+
+Practical upshot: switch at natural boundaries (before a big task, not mid-debugging-loop),
+and expect the first turn to be the expensive one.
+For same-provider same-family switches you mostly just pay the cold cache;
+cross-provider is where the reasoning/compaction fidelity loss shows up.
+#+end_quote
+
+** [2026-11-20] Where'd we leave off?
+
+*** 2.1. [[https://www.boot.dev/lessons/856a221d-7487-4d04-b2dc-8dd4848835a6][Providers And Models]]
+
+OpenCode reviers to proivider/model pairs as e.g. ~opencode/big-pickle~.
+
+Run ~opencode models~ to see a list.
+I'm not sure how to show the names from the TUI;
+~/model~ shows some 'nice display names'.
+
+Set a default model by adding ~"model": "opencode/big-pickle"~ to ~~/proj/learn-ai-coding-starter/opencode.jsonc~.
+
+*** 2.2. [[https://www.boot.dev/lessons/756386d6-06b3-453b-9b8d-57fdf4e46d7c][Model Costs]]
+
+Input tokens tend to be a significant factor for coding agents
+because they have to load your program as input in order to work on it.
+
+*** 2.3. [[https://www.boot.dev/lessons/736f2b55-f331-4129-8f5a-32f20b504eb2][Open-weight models]]
+
+The 'weights' are the encoding of the neural network.
+
+Training that network is the expensive part.
+Hundreds of millions of dollars for some current 'frontier' ones.
+
+*** 2.4. [[https://www.boot.dev/lessons/f4d7d2e6-88d4-4f41-94e0-4a237550417c][Self-Hosting]]
+
+A GPU with several GB is sufficient for running some weaker models.
+
+You'd probably want to dedicate a physical server to the job,
+and put something like [[https://lmstudio.ai/][LM Studio]], [[https://ollama.com/][Ollama]], or [[https://github.com/ggml-org/llama.cpp][llama.cpp]] on it.
+That server would expose an API which you could use as
+just another provider from OpenCode or other harness.
+
+*** 2.5. [[https://www.boot.dev/lessons/565947ae-d096-44ac-bf84-47cb64cd8c08][Reasoning Models]]
+
+It turns out that if you tell an LLM to ramble a bit before giving the answer,
+it'll give way better answers.
+
+OpenCode's API includes named configurations ('variants') for each model
+that indicate how much thinking to do.  Different providers have different
+APIs so how this is passed in differs from provider/model to provider/model.
+How it is actually implemented also differs, but (according to Beam Free)
+a common implementation is to simply stop the pre-answer rambling after
+a certain amount of processing (time anr/or output, I suppose).
+
+Beam Free assures me that the models are trained to handle
+the truncation in a graceful way, whatever that means.
+
+*** 2.6. [[https://www.boot.dev/lessons/3943ee97-b7dd-4021-a09a-437013e30d13][Payment Strategies]]
+
+Paying per-token might also be a reasonable way to go,
+especially if you only use the thing occasionally.
+
+** 3. Tools
+
+*** 3.1. [[https://www.boot.dev/lessons/f2a3b77c-c4ca-4822-a9d5-e7cc582274f0][Tools]]
+
+LLM calls tools by generating responses like
+
+#+begin_src json
+{
+  "tool": "read",
+  "args": {
+    "path": "internal/api/handlers.go"
+  }
+}
+#+end_src
+
+The agent harness interprets that, runs the tool,
+and provides the result back to the LLM for its next turn.
+
+*** 3.3. [[https://www.boot.dev/lessons/cf0cfd45-64dc-46a5-9958-3ac1d0aeda7d][Specialized Tools]]
+
+Here's what the OpenCode TUI reported the agent was doing in order to
+find a specific misspelling:
+
+#+begin_example
+→Explored: 1 search
+✱Grep "charcter" in .
+#+end_example
+
+So it used the 'grep' tool I suppose.
+
+*** 3.4. [[https://www.boot.dev/lessons/882bde6d-f2bc-4d31-96d8-f24330416ca3][Custom Tools]]
+
+You can make custom tools, which is useful when you need the agent to have
+repeated, consistent access to an action.
+
+For one-off things maybe just have it shell out.
+
+Once a custom tool is set up, it participates in the same tool system as the built-ins.
+
+*** 3.5. [[https://www.boot.dev/lessons/8d8e80aa-2598-40ff-9659-3e2553025c14][Creating Custom Tools]]
+
+They're written as TypeScript modules.
+
+They export 'a plugin definition', looks like.
+That object is created using ~Plugin.define~ where ~Plugin~ is defined in ~@opencode/plugin~,
+which is passed a string ~id~ and an async ~setup(ctx)~ function that in turn
+registers tools using ~ctx.tool.transform(tools) => { ... tools.add({...tool definition...}) ... }~.
+
+Your tool has a ~name~, ~description~, ~input~ [schema], some ~options~, an ~execute~ function,
+and, optionally, an ~output~ schema.  If no output schema, then the model can only
+read a single ~content~ string of the output object.
+
+If ~options: { codemode: true }~ (this is the default) then the agent will generate JavaScript to call
+the tool and then execute this, which allows it to chain tool calls together.
+~options: { codemode: false }~ forces the LLM to deal with the tool directly.
+
+This exercise makes us install bun.
+
+#+begin_src sh
+sudo apt install unzip
+curl -fsSL https://bun.com/install | bash
+#+end_src
+
+Quite a bit of hemming and hawing was required to get the new tool to work.
+
+The example did not make it obvious that the [Promise returned by the]
+~execute~ method should always return a ~Tool.Result~ object which
+in turn wraps the object whose shape is described by ~output~,
+not that wrapped object directly.
+
+In its final form, our ~.opencode/plugins/run-slop.ts~ looks like this:
+
+#+begin_src typescript
+import { Plugin } from "@opencode/plugin";
+
+export default Plugin.define({
+  id: "applymaxxing.run-slop-tool",
+  setup: async (ctx) => {
+    const cwd = ctx.location.directory;
+    await ctx.tool.transform((tools) => {
+      tools.add({
+        name: "run_slop",
+        description: "Run a SlopLang script with sloperator",
+        input: {
+          type: "object",
+          properties: {
+            path: { type: "string" },
+          },
+          required: ["path"],
+          additionalProperties: false,
+        },
+        output: {
+          type: "object",
+          properties: {
+            stdout: { type: "string" },
+            stderr: { type: "string" },
+            exitCode: { type: "number" },
+          },
+          required: ["stdout", "stderr", "exitCode"],
+          additionalProperties: false,
+        },
+        options: { codemode: false },
+        execute: async (input) => {
+          const { path } = input as { path: string };
+          const proc = Bun.spawn(
+            ["uv", "run", "--no-active", "sloperator.py", path],
+            {
+              cwd,
+              stdout: "pipe",
+              stderr: "pipe",
+            },
+          );
+          const stdout = await new Response(proc.stdout).text();
+          const stderr = await new Response(proc.stderr).text();
+          const exitCode = await proc.exited;
+          return { output: { stdout, stderr, exitCode } };
+        },
+      });
+    });
+  },
+});
+#+end_src
+
+Made [[x-git-object:ed03a3d5f7c01c2a57b88564fdaf05d73c6483b7][a merge commit]] to group the three commits done for this task.
+
+*** Pushed the slop project to Scratch38-S0037-slop
+
+i.e. the ~subtrees/s0037-slop/master~ branch of Scratch38.
