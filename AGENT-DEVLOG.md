@@ -55,8 +55,9 @@ Kept out of README.md, which describes the tool and its spec.
   and makes the main object the `default`. Its default name is `default`.
   The main object becomes `default` (user's decision). Keeping several named objects is a future extension.
 - `validate` peeks: it checks the object on top of the stack and leaves it there (user's decision).
-  "Manifold" is defined in README as: every line of the `default` object is used by exactly two polygon edges,
-  one forwards and one backwards. That definition is mine, so confirm it.
+  "Manifold" is the simplified definition the user gave: every polygon of the `default` object is closed,
+  and every line is used by exactly two polygon edges going in different directions.
+  `checkManifold` implements it, and README says it is provisional.
 - The name for the type is `3DObject` everywhere (user's decision). The README's simplify shape is updated to match.
 - Leftover stack values at the end of a run are silently discarded (user's decision).
 - `tools/fix-blank-lines.ts` is run by `deno task fmt`. Its tests are in `tools/fix-blank-lines_test.ts`.
@@ -65,4 +66,3 @@ Kept out of README.md, which describes the tool and its spec.
 ## Open questions (waiting on the user)
 
 - OBJ winding order has not been checked. Check it before implementing OBJ.
-- Is the manifold definition for `validate` right? See Decisions.
