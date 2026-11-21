@@ -10,6 +10,9 @@ It's 'concatenative', see.
 ./stlmod load/stl:<URI, filename, or "-" for stdin> some-op:params some-other-op:more-params store/stl/bin:<output filename or "-" for stdout> 
 ```
 
+Exit status is 0 if every operation succeeds.
+If an operation fails, its error message is written to standard error and the exit status is 1.
+
 ## Grammar used in examples
 
 The following grammars are specified using the following pseudocode syntax:
@@ -188,3 +191,14 @@ rewriting indexes accordingly.
 e.g. a shape with 10 vertexes, the first two of which are unused by the main polyhedron group
 would be transformed to one with 8 vertexes, and all the vertex indexes 2 lower than
 the corresponding indexes of the input.
+
+### `crash`
+
+Always fails, for testing error handling.
+
+Parameters:
+- `message` (default) - text written to standard error. Default: `Crash operation invoked`.
+
+Shape: `(--)`
+
+The program writes the message to standard error and exits with status 1.

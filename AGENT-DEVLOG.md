@@ -11,6 +11,12 @@ Kept out of README.md, which describes the tool and its spec.
   so PATH was not modified. Use `~/.deno/bin/deno` or add that directory to PATH.
 - Deno agent skills (`dx skills add denoland/skills --skill deno`): skipped.
   `dx` is not shipped with this Deno build, and `deno x` would run unvetted npm code, so I did not use it.
+- `./stlmod` uses the shebang `#!/usr/bin/env -S deno run`, so `deno` must be on PATH.
+  Without that, it fails with "env: 'deno': No such file or directory".
+- Test command: `deno test`. Type check: `deno task check`. Format: `deno fmt`.
+  `deno.json` excludes `*.md` from formatting. Before that was in place, a bare `deno fmt`
+  rewrapped AGENTS.md (which must stay verbatim) and README.md. Those were restored from git.
+  Do not run `deno fmt` without limiting it to code paths.
 
 ## Decisions
 
@@ -20,7 +26,10 @@ Kept out of README.md, which describes the tool and its spec.
 - Operation syntax is parsed by splitting on the first unencoded `:` (default value, literal),
   then on `;` (named params, percent-decoded), then on `/` (name and modifiers).
 - Operations declare their accepted named parameters and default parameter, so unknown names are errors.
+- All operation arguments are parsed and checked before any runs, so a bad argument late on the
+  command line cannot leave partial side effects.
 - `crash` throws. The top level catches the error, writes it to stderr, and exits with status 1.
+  It prints only the message, not a stack trace, to match the other errors.
 
 ## Open questions (waiting on the user)
 
