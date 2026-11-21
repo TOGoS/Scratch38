@@ -1,6 +1,7 @@
 import { assertEquals, assertThrows } from "@std/assert";
 import { Triangle } from "./stl.ts";
 import {
+	pruneVector3DObject,
 	trianglesFromVector3DObject,
 	Vector3DObject,
 	vector3DObjectFromTriangles,
@@ -88,5 +89,46 @@ Deno.test("refuses objects without a default group", () => {
 		() => trianglesFromVector3DObject(object),
 		Error,
 		"no default group",
+	);
+});
+
+Deno.test("prune removes unused vertexes and renumbers the rest", () => {
+	const object = vector3DObjectFromTriangles(TETRAHEDRON);
+	object.vertexes.unshift([9, 9, 9]);
+	object.lines = object.lines.map((
+		[a, b],
+	): [number, number] => [a + 1, b + 1]);
+	const pruned = pruneVector3DObject(object, "default");
+	assertEquals(pruned.vertexes.length, 4);
+	assertEquals(trianglesFromVector3DObject(pruned), TETRAHEDRON);
+});
+
+Deno.test("prune removes objects other than the main one", () => {
+	const object = vector3DObjectFromTriangles(TETRAHEDRON);
+	object.polygons.push(object.polygons[0]);
+	object.polyhedrons.push([{ polygon: 4, side: "front" }]);
+	object.polyhedronGroups.push([1]);
+	object.namedGroups.other = 1;
+	const pruned = pruneVector3DObject(object, "default");
+	assertEquals(Object.keys(pruned.namedGroups), ["default"]);
+	assertEquals(pruned.polygons.length, 4);
+	assertEquals(pruned.polyhedrons.length, 1);
+	assertEquals(trianglesFromVector3DObject(pruned), TETRAHEDRON);
+});
+
+Deno.test("prune makes the named object the default", () => {
+	const object = vector3DObjectFromTriangles(TETRAHEDRON);
+	object.namedGroups = { main: 0 };
+	const pruned = pruneVector3DObject(object, "main");
+	assertEquals(pruned.namedGroups, { default: 0 });
+	assertEquals(trianglesFromVector3DObject(pruned), TETRAHEDRON);
+});
+
+Deno.test("prune rejects an unknown object name", () => {
+	const object = vector3DObjectFromTriangles(TETRAHEDRON);
+	assertThrows(
+		() => pruneVector3DObject(object, "missing"),
+		Error,
+		"no top-level object named missing",
 	);
 });

@@ -157,3 +157,76 @@ export function trianglesFromVector3DObject(
 	}
 	return triangles;
 }
+
+function sortedUnique(indexes: number[]): number[] {
+	return [...new Set(indexes)].sort((a, b) => a - b);
+}
+
+function itemAt<T>(items: T[], index: number, what: string): T {
+	const item = items[index];
+	if (item === undefined) {
+		throw new Error(`${what} ${index} does not exist`);
+	}
+	return item;
+}
+
+/**
+ * Removes everything not referenced by the named top-level object, and renumbers
+ * the rest, keeping their relative order. The result's `default` is that object.
+ */
+export function pruneVector3DObject(
+	object: Vector3DObject,
+	mainName: string,
+): Vector3DObject {
+	if (!Object.hasOwn(object.namedGroups, mainName)) {
+		throw new Error(`Object has no top-level object named ${mainName}`);
+	}
+	const groupIndex = object.namedGroups[mainName];
+	
+	const polyhedronIndexes = sortedUnique(
+		itemAt(object.polyhedronGroups, groupIndex, "polyhedron group"),
+	);
+	const polyhedrons = polyhedronIndexes.map((i) =>
+		itemAt(object.polyhedrons, i, "polyhedron")
+	);
+	const polygonIndexes = sortedUnique(
+		polyhedrons.flatMap((p) => p.map((face) => face.polygon)),
+	);
+	const polygons = polygonIndexes.map((i) =>
+		itemAt(object.polygons, i, "polygon")
+	);
+	const lineIndexes = sortedUnique(
+		polygons.flatMap((p) => p.map((edge) => edge.line)),
+	);
+	const lines = lineIndexes.map((i) => itemAt(object.lines, i, "line"));
+	const vertexIndexes = sortedUnique(lines.flat());
+	
+	const newIndexes = (indexes: number[]) =>
+		new Map(indexes.map((old, i) => [old, i]));
+	const vertexMap = newIndexes(vertexIndexes);
+	const lineMap = newIndexes(lineIndexes);
+	const polygonMap = newIndexes(polygonIndexes);
+	
+	return {
+		classRef: CLASS_REF,
+		vertexes: vertexIndexes.map((i) => object.vertexes[i]),
+		lines: lines.map(([a, b]): [number, number] => [
+			vertexMap.get(a)!,
+			vertexMap.get(b)!,
+		]),
+		polygons: polygons.map((polygon) =>
+			polygon.map((edge) => ({
+				line: lineMap.get(edge.line)!,
+				direction: edge.direction,
+			}))
+		),
+		polyhedrons: polyhedrons.map((polyhedron) =>
+			polyhedron.map((face) => ({
+				polygon: polygonMap.get(face.polygon)!,
+				side: face.side,
+			}))
+		),
+		polyhedronGroups: [polyhedrons.map((_, i) => i)],
+		namedGroups: { default: 0 },
+	};
+}
