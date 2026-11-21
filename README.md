@@ -7,12 +7,12 @@ Loading and saving are just more operations.
 It's 'concatenative', see.
 
 ```
-./stlmod load/stl:<URI, filename, or "-" for stdin> some-op:params some-other-op:more-params write/stl/bin:<output filename or "-" for stdout> 
+./stlmod load/stl:<URI, filename, or "-" for stdin> some-op:params some-other-op:more-params store/stl/bin:<output filename or "-" for stdout> 
 ```
 
 ## Grammar used in examples
 
-The following grammares are specified using the following pseudocode syntax:
+The following grammars are specified using the following pseudocode syntax:
 - `<foo>` - named substring
 - `"xyz"` - literal string
 - `(foo bar baz)` - group
@@ -116,23 +116,23 @@ keep the rewritten versions.
 
 That said, we should usually try to keep the vertexes and lines unique.
 
-`Vector3DObject` instances should generally be considrered immutable
+`Vector3DObject` instances should generally be considered immutable
 once they are constructed, and it is allowed for `Vector3DObject`s
 to contain components that are not used by any named top-level object.
 Operations that transform one `Vector3DObject` to another may therefore
-simplly copy or reference (if using tree-based list structures) the first's data.
+simply copy or reference (if using tree-based list structures) the first's data.
 
 ## Lazy Object Representations
 
 Internally, this might lazily represent objects that have been transformed.
 e.g. there could be a `PrunedVector3DObject` type that simply wraps
-another `Vector3DObject`.  The runtime would not need to caclculate
+another `Vector3DObject`.  The runtime would not need to calculate
 the pruning until specific data (like what's the actual coordinate of vertex #0) is actually needed.
 
 ## Operators
 
 Note: 'modify' is used to mean the transformation between
-an input and ouput object.  Objects are actually immutable.
+an input and output object.  Objects are actually immutable.
 
 ### `load`
 
@@ -167,7 +167,7 @@ Shape: `(input:3DShape -- output:3DShape)`
 
 Simplifies a shape by:
 - Replacing adjacent coplanar polygons with a single polygon,
-- Consolidating colinear lines that meet at a vertex with no other lines
+- Consolidating collinear lines that meet at a vertex with no other lines
 - Discarding lines and vertexes that are unused after the simplification
 - Rewriting 
 
