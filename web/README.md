@@ -5,11 +5,11 @@ Read-only PHP browser over the SQLite database produced by `togetl load`.
 ## Run
 
 ```sh
-./togetl load --db out/togetl.sqlite3 \
+./togetl load --db out/thedb.sqlite3 \
     --input out/3dparts-data.togetltsv \
-    --report out/3dparts-data-report.tsv
+    --report out/3dparts-data-load.report.tsv
 
-TOGETL_DB=out/togetl.sqlite3 php -S localhost:8080 web/router.php
+TOGETL_DB=out/thedb.sqlite3 php -S localhost:8080 web/router.php
 ```
 
 Then open <http://localhost:8080/>.

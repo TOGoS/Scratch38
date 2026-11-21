@@ -40,3 +40,20 @@ out/.tests-ran: out/.test-classes-built
 .PHONY: run-tests
 run-tests: out/.test-classes-built
 	${RUN_TESTS}
+
+out/3dparts-data.togetltsv: fixtures/upstream/3DPrintingData.tef out/.main-classes-built 
+	./togetl import --dialect=parts \
+		--input="$<" \
+		--derive-source-uri=bitprint \
+		--output="$@" \
+		--report=out/3dparts-data-import.report.tev
+
+.PHONY: load-3dparts-data
+load-3dparts-data: out/3dparts-data.togetltsv out/.main-classes-built 
+	./togetl load --db out/thedb.sqlite3 \
+		--input out/3dparts-data.togetltsv \
+		--report out/3dparts-data-load.report.tsv
+
+.PHONY: run-web-server
+run-web-server: load-3dparts-data
+	TOGETL_DB=out/thedb.sqlite3 php -S localhost:8080 web/router.php
