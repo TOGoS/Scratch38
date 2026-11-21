@@ -174,7 +174,12 @@ class Interpreter:
             case TokenType.STAR:
                 return left * right
             case TokenType.SLASH:
-                return left // right
+                if right == 0:
+                    raise SlopRuntimeError(operator.line, "division by zero")
+                quotient = abs(left) // abs(right)
+                if (left < 0) != (right < 0):
+                    quotient = -quotient
+                return quotient
             case TokenType.LESS:
                 return left < right
             case TokenType.LESS_EQUAL:
