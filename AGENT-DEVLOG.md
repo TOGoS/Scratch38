@@ -7,20 +7,23 @@ Kept out of README.md, which describes the tool and its spec.
 
 - 2026-11-21: Deno was not installed. Installed Deno 2.9.8 into the home directory
   (`~/.deno/bin/deno`) with the official `https://deno.land/install.sh`, after reading the script.
-  The installer only prompts for shell setup when run in an interactive terminal,
+  The installer only prompts for shell setup in an interactive terminal,
   so PATH was not modified. Use `~/.deno/bin/deno` or add that directory to PATH.
 - Deno agent skills (`dx skills add denoland/skills --skill deno`): skipped.
   `dx` is not shipped with this Deno build, and `deno x` would run unvetted npm code, so I did not use it.
-- `./stlmod` uses the shebang `#!/usr/bin/env -S deno run --allow-read --allow-write`, so `deno` must be on PATH.
-  Without that, it fails with "env: 'deno': No such file or directory".
+- `./stlmod` uses the shebang `#!/usr/bin/env -S deno run --allow-read --allow-write --allow-net`, so `deno` must be
+  on PATH. Without that, it fails with "env: 'deno': No such file or directory".
 - Tasks: `deno task test`, `deno task check`, `deno task fmt`.
   Use `deno task fmt`, not plain `deno fmt`: plain `deno fmt` removes blank-line indentation,
   and `deno task fmt` restores it with `tools/fix-blank-lines.ts`.
   Plain `deno fmt` also once rewrapped AGENTS.md (which must stay verbatim) and README.md.
   `deno.json` excludes `*.md` from formatting, so that should not happen again.
 - Unit tests exist: `src/*_test.ts` and `tools/*_test.ts`, 94 tests as of the OBJ entry.
+  The tests describe the architecture before 2026-11-21; see Known divergences.
 
-## Decisions
+## Decisions (2026-11-21)
+
+### General
 
 - AGENTS.md: verbatim copies of the Worktrees, IDs for TODO items, and Commit attribution sections from S0036.
   The other sections are project-specific. CONTRIBUTING.md holds the copied design and documentation
@@ -30,61 +33,121 @@ Kept out of README.md, which describes the tool and its spec.
   inside multi-line template strings, and there are none in this codebase.
 - Operation syntax is parsed by splitting on the first unencoded `:` (default value, literal),
   then on `;` (named params, percent-decoded), then on `/` (name and modifiers).
+  A default value may contain `;`, because the colon split happens first; the named-parameter form of the
+  same value must be percent-encoded.
 - Operations declare their accepted named parameters and default parameter, so unknown names are errors.
 - All operation arguments are parsed and checked before any runs, so a bad argument late on the
   command line cannot leave partial side effects.
+- Terminology: an *operator* is the function that static parameters are passed to in order to create an
+  *operation*; an operation is what runs against the stack. One operator may produce operations with different
+  stack shapes, depending on its parameters. Parameters cannot refer to stack values, so stack effects are
+  statically analyzable. There is no `foo:${stack-value}`-style syntax for operator parameters.
+- *Type* is what TypeScript can infer from a value in isolation (`classRef`); *role* is what a context expects
+  of that value. Meaning comes from type plus role. `role:Foo` and `type:Foo` are related but separate concepts.
+  Role applies to the place, type to the actual data structure. (In a language with ADTs, a role would be an ADT
+  whose variants are the types that can fill it.) Prefer one type per type/role combination unless a type is
+  genuinely valid in several roles.
+- Naming: "3D" goes right after the word it qualifies, e.g. `Object3D`, `Polyhedron3DData`, and `UnionObject3D`. Type names put "how it is represented" before "what it represents".
 - `crash` throws. The top level catches the error, writes it to stderr, and exits with status 1.
   It prints only the message, not a stack trace, to match the other errors.
-- Stack values are `Vector3DObject` (src/vector3d-object.ts). Built from triangles: each shared
-  vertex and edge is stored once, and all faces form one polyhedron in the `default` group.
-- Winding: counter-clockwise viewed from outside, same as STL (user's decision).
-  The premise for the earlier clockwise choice was wrong: STL is counter-clockwise,
-  and OpenSCAD's manual says clockwise. README's Winding Order section records this.
-  Code that depends on the convention is marked with `// IMPLIED WINDING ORDER APPLIES HERE`.
-  Find them with `grep -rn "IMPLIED WINDING ORDER" .`.
-- `load/stl` without a binary/text modifier detects the format from the content.
-  A file is binary if its size matches the triangle count in its header, otherwise ASCII.
-- `store/stl` without a modifier writes ASCII (README says store takes load's modifiers, so the default had to be chosen).
-- Only `stl`, `stl/bin`, and `stl/text` are implemented; `obj` gives an unsupported-format error.
-- Resources: `openResource(name)` returns a `Resource` with `read()` and `write()`.
-  Stdin/stdout and `file:`/plain-path resources are implemented. Other URI schemes give an error.
-  To add http/https, add a case to `parseResourceName` and `openResource`. Operations don't change.
+- Winding: counter-clockwise viewed from outside, same as STL. OBJ faces are counter-clockwise viewed from the
+  front, the same convention, so no reversal is needed. OpenSCAD's manual says clockwise; that premise was wrong.
+  README's Winding Order section records this. Code that depends on the convention is marked
+  `// IMPLIED WINDING ORDER APPLIES HERE`; find them with `grep -rn "IMPLIED WINDING ORDER" .`.
+- `load/stl` without a binary/text modifier detects the format from the content: a file is binary if its size
+  matches the triangle count in its header, otherwise ASCII.
+- `store/stl` without a modifier writes ASCII.
 - Facet normals are ignored on load and recomputed on store from the winding order.
-- Store writes only the `default` group. Non-triangular polygons are an error on store.
-- `prune` keeps only what the main object references, renumbers each index array in its original order,
-  and makes the main object the `default`. Its default name is `default`.
-  The main object becomes `default` (user's decision). Keeping several named objects is a future extension.
-- `validate` peeks: it checks the object on top of the stack and leaves it there (user's decision).
-  "Manifold" is the simplified definition the user gave: every polygon of the `default` object is closed,
-  and every line is used by exactly two polygon edges going in different directions.
-  `checkManifold` implements it, and README says it is provisional.
-- The name for the type is `3DObject` everywhere (user's decision). The README's simplify shape is updated to match.
-- Leftover stack values at the end of a run are silently discarded (user's decision).
+- Resources: `openResource(name)` returns a `Resource` with `read()` and `write()`. Stdin/stdout, plain paths,
+  `file:`, `http:`, and `https:` are supported; storing to an HTTP(S) URL is an error. Other URI schemes error.
+- `validate` peeks: it checks the object on top of the stack and leaves it there.
+  "Manifold" is the simplified definition from the user: every polygon in a polyhedron group is closed, and every
+  line is used by exactly two polygon edges in opposite directions.
+- Leftover stack values at the end of a run are silently discarded.
 - `tools/fix-blank-lines.ts` is run by `deno task fmt`. Its tests are in `tools/fix-blank-lines_test.ts`.
 - `src/cli_test.ts` runs `stlmod` as a subprocess. It needs `--allow-run`, which is in the test task.
+- Wavefront `.mod` binary support is out of scope until needed; `obj/bin` remains unsupported.
 
-- `simplify` (src/simplify.ts) works in coordinate space: each polygon is an outward-facing loop of coordinates,
-  so vertexes with equal coordinates are merged automatically. Passes, in order:
-  1. Merge polyhedrons that share a polygon with opposite orientation, dropping that polygon.
-  2. Within each merged group, merge coplanar loops sharing an edge (skipping merges that would repeat a vertex).
-  3. Remove vertexes with exactly two neighbours on a straight line (tolerance 1e-6).
-  4. Rebuild the object. `simplify/keep-unused` appends the result after the original parts, which are kept;
-     plain `simplify` then prunes to `default`.
-  Known limitation: simplify drops object names (merged polyhedrons have no single name).
-- HTTP and HTTPS URIs are loaded with `fetch` (`resource.ts`). Storing to them is an error.
-  The shebang and the test task have `--allow-net`, and tests use a local `Deno.serve` on 127.0.0.1.
-- OBJ (`src/obj.ts`): winding was checked against the Wavefront spec (https://paulbourke.net/dataformats/obj/).
-  Faces are counter-clockwise when viewed from the front, the same as this project, so no reversal is needed
-  (marked `IMPLIED WINDING ORDER APPLIES HERE`).
-  Each `o` becomes a named polyhedron, which gets its own named group. `default` holds all of them.
-  The builder accepts names, and the OBJ writer emits `o` before every polyhedron (bare when unnamed), so names
-  round-trip. `prune;main-object-name=X` keeps the named polyhedron, but it becomes `default` and loses its name.
-  `obj/bin` is rejected (I took OBJ to be text only). Free-form curves/surfaces, `l`, and `p` are errors.
-- `validate` and `checkManifold`: a simplified definition from the user. Every polygon is closed, and every line is
-  used by exactly two polygon edges in opposite directions.
+### Architecture
+
+- `Object3D` is the role of anything on the stack that represents one 3D object.
+  In TypeScript the role is written `type Object3D = Polyhedron3D | UnionObject3D;` (user's decision).
+  The alias lists the types that currently play the role, and it is what makes `UnionObject3D`'s member list describable (`Object3D[]`).
+  Adding a new implementation means editing the alias, as with any closed union.
+  - `Polyhedron3D`: a reference to one polyhedron within a `Polyhedron3DData`.
+  - `UnionObject3D`: a union of a list of `Object3D`s, whatever their representation.
+    Several polyhedrons together are a `UnionObject3D` of `Polyhedron3D`s.
+    It is abstract: whether the interpreter can handle a given member is a separate question.
+- `Polyhedron3DData` holds the geometry that these refer to: vertexes, lines, polygons, and polyhedrons.
+  It has no polyhedron groups and no names. A polyhedron group is a `UnionObject3D` of `Polyhedron3D`s.
+- `Polyhedron3DData` and the objects that refer to it are effectively immutable. An operation that changes geometry
+  makes a new `Polyhedron3DData` by copying the old lists and appending to the copies. The old data is the base, so
+  unchanged parts are referenced rather than rewritten. Structural sharing (e.g. a persistent tree list) is deferred.
+  - Idea: A list type that is simply a reference to a shared, append-only array, and a length,
+    may be a suitable 'effectively immutable even while the backing list is shared' data structure!
+- `simplify` and `validate` accept any polyhedron-based `Object3D`: one whose leaves are all `Polyhedron3D`s,
+  however they are nested in `UnionObject3D`s (user's decision). The leaves are treated as one set, so nested unions
+  do not separate them. Polyhedrons from anywhere in the object may be merged.
+  Passes: merge polyhedrons sharing an oppositely oriented polygon; merge coplanar loops sharing an edge; remove
+  vertexes with exactly two collinear neighbours; rebuild. The output's new data includes the whole old data as its
+  base. `simplify/keep-unused` stops there; plain `simplify` also prunes (kept as in the README).
+- `prune` writes a new `Polyhedron3DData` containing only what the object refers to, unless the data is already pruned.
+  `prune` works on the whole object, however its unions are nested.
+- `validate` checks the leaves together, as one set, however they are nested.
+- OBJ: `load/obj` produces one `UnionObject3D` of `Polyhedron3D`s, one per `o` section, plus one for
+  faces before the first `o`. Object names are not kept, since names only matter once there are dictionaries.
+- OBJ: `store/obj` writes each polyhedron as an unnamed object (a bare `o` line).
+  STL: `store/stl` writes every polyhedron of the object as one solid.
+- Storing a collection is not part of this work (see Punted).
+- `obj/bin` remains unsupported; free-form curves/surfaces, `l`, and `p` in OBJ are errors.
+- Deduplicate only obvious results: keep the original when a simplification changes nothing, and reuse one index
+  for identical results.
+
+### Punted to future
+
+- Collections: `Dictionary<string, Object3D>` (represented by `Map<string, Object3D>`), named OBJ objects, `extract`,
+  `prune/collection`, `rename-entries`, `default-name-prefix`, and mapping grammar. Thought experiment only, not to be
+  implemented yet. Notes so far:
+  - Loading OBJ into a collection (`load/obj/collection`) would need names; a collection entry would be a
+    `UnionObject3D` of that name's polyhedrons, sharing one `Polyhedron3DData`.
+  - Unnamed groups cannot go into a collection without a prefix; with a prefix (`anonymous-1`, ...) they can.
+    Any mapping or generated name that collides with an existing name is an error.
+  - Writing a collection to a format with one object is an error. Writing a single object to OBJ is a list of
+    unnamed objects, so a collection could be written to OBJ with names only if each entry is one polyhedron.
+  - Duplicate `o name` in a file would be an error for a collection.
+- Role-aware parsing, which would let `/collection` become optional where the role is obvious.
+- Whether `simplify` on a collection simplifies the whole collection or one extracted object.
+- A better naming system for identifiers that start with a digit (see To-do).
+
+### Known divergences in current code
+
+The following describe the code as it is now, before the architecture change above. Code and tests change in the
+next step.
+
+- `Vector3DObject` combines data, polyhedron groups, and names with a `default` group. It becomes `Polyhedron3DData`
+  plus `UnionObject3D`/`Polyhedron3D`, with no `default` and no groups in the data.
+- `prune;main-object-name=...` still exists. It goes away; `prune` takes the object on the stack as given.
+- `store`, `validate`, `simplify`, and `trianglesFromVector3DObject` use the `default` group. They work on objects.
+- OBJ load produces one combined object with names and `default`. It should produce one `UnionObject3D` of `Polyhedron3D`s.
+- `simplify` merges across all polyhedrons of `default`. It should accept any polyhedron-based object (leaves flattened).
+- `rename-entries` and `extract` are not implemented; leave them until collections are wanted.
+- Tests still describe the old architecture: they use `default`, `namedGroups`, and names.
 
 ## Open questions (waiting on the user)
 
+- Resolved: `Polyhedron3DUnion` is dropped. A polyhedron group is a `UnionObject3D` of `Polyhedron3D`s (user's decision).
+- Resolved: nested unions are flattened for `simplify` and `validate`; the leaves form one set (user's decision).
+  Still open: whether a union of leaves from different `Polyhedron3DData`s is valid for `simplify`, and which data it uses as base.
+- Does plain `simplify` also prune, as the README still says? Or does it stop after keep-unused, which the user's
+  description ("includes all the old data as the base") could also mean?
 - `obj/bin`: the README listed it. Keep it as unsupported, or implement the Wavefront binary `.mod` format?
-- Simplify drops object names. Should it keep names where the merged polyhedrons still correspond to one?
 
+## To-do
+
+Keep this section at the end of the devlog until we have a more formal task list.
+
+- Refactor the model into `Polyhedron3DData`, `Polyhedron3D`, and `UnionObject3D`, as described above.
+  Update the code and tests to match, then the classRef tags.
+- Update `load/obj`, `store/obj`, `store/stl`, `validate`, `simplify`, and `prune` to the new model.
+- Remove `prune;main-object-name`.
+- Collections are deferred; see Punted.
