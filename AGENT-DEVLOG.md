@@ -50,10 +50,11 @@ Kept out of README.md, which describes the tool and its spec.
 - Naming: "3D" goes right after the word it qualifies, e.g. `Object3D`, `Polyhedron3DData`, and `UnionObject3D`. Type names put "how it is represented" before "what it represents".
 - `crash` throws. The top level catches the error, writes it to stderr, and exits with status 1.
   It prints only the message, not a stack trace, to match the other errors.
-- Winding: counter-clockwise viewed from outside, same as STL. OBJ faces are counter-clockwise viewed from the
-  front, the same convention, so no reversal is needed. OpenSCAD's manual says clockwise; that premise was wrong.
-  README's Winding Order section records this. Code that depends on the convention is marked
-  `// IMPLIED WINDING ORDER APPLIES HERE`; find them with `grep -rn "IMPLIED WINDING ORDER" .`.
+- Winding: a polygon's interior is on the left of each directed edge, so outer boundaries run counter-clockwise
+  and hole boundaries clockwise viewed from outside. This matches STL; OBJ agrees, so no reversal is needed.
+  OpenSCAD's manual says clockwise; that premise was wrong. README's Winding Order section records this.
+  Code that depends on the convention is marked `// IMPLIED WINDING ORDER APPLIES HERE`; find them with
+  `grep -rn "IMPLIED WINDING ORDER" .`.
 - `load/stl` without a binary/text modifier detects the format from the content: a file is binary if its size
   matches the triangle count in its header, otherwise ASCII.
 - `store/stl` without a modifier writes ASCII.
@@ -61,8 +62,8 @@ Kept out of README.md, which describes the tool and its spec.
 - Resources: `openResource(name)` returns a `Resource` with `read()` and `write()`. Stdin/stdout, plain paths,
   `file:`, `http:`, and `https:` are supported; storing to an HTTP(S) URL is an error. Other URI schemes error.
 - `validate` peeks: it checks the object on top of the stack and leaves it there.
-  "Manifold" is the simplified definition from the user: every loop of every polygon in a polyhedron group is closed,
-  and every line is used by exactly two polygon edges in opposite directions.
+  "Manifold" is the simplified definition from the user: each polygon's edges form closed boundaries (no branching
+  or dangling ends), and every line is used by exactly two polygon edges in opposite directions.
 - Leftover stack values at the end of a run are silently discarded.
 - `tools/fix-blank-lines.ts` is run by `deno task fmt`. Its tests are in `tools/fix-blank-lines_test.ts`.
 - `src/cli_test.ts` runs `stlmod` as a subprocess. It needs `--allow-run`, which is in the test task.
@@ -105,8 +106,9 @@ Kept out of README.md, which describes the tool and its spec.
   Other shared runs stay. `splitSharedLines` then removes each line used twice in opposite directions and splits the
   outline into the outer and hole loops of one polygon. Spurs (a vertex whose two neighbours are the same) are removed
   by `removeSpurs`. The old rejection of repeated vertexes is gone.
-- Face matching across polyhedrons uses `canonicalLoop`, the smallest rotation over all starts. Comparing only from the
-  smallest vertex's first occurrence failed when a loop repeats a vertex, so equal faces were missed.
+- Face matching across polyhedrons uses `faceKey`, a sorted multiset of directed edges. Sorting makes it independent
+  of where a loop starts and handles repeated vertexes; the earlier `canonicalLoop` missed equal faces whose loop
+  repeated a vertex.
 - Deterministic order: polyhedron faces are matched in input order (first unmatched partner), and coplanar merges
   scan loops by index. A polyhedron sharing several faces with another loses all of those shared faces.
 - Deduplicate only obvious results: keep the original when a simplification changes nothing, and reuse one index
@@ -133,10 +135,11 @@ Kept out of README.md, which describes the tool and its spec.
 Implemented in `src/object3d.ts`, which replaces `vector3d-object.ts`:
 - `Polyhedron3DData`, `Polyhedron3D`, `UnionObject3D`, and `type Object3D = Polyhedron3D | UnionObject3D`,
   with `readonly` fields so the compiler enforces immutability.
-- `makeObject3dFromPolygonLoops(polyhedra, base?)`: one builder. Each polygon is a list of loops, outer first.
-  Without a base it creates fresh data. With a base it copies the base's lists, reuses base vertexes and lines whose
-  coordinates or endpoints match, and appends. A single polyhedron gives a `Polyhedron3D`; more than one gives a
-  `UnionObject3D` of them. `makeObject3d` is the convenience form where each polygon has one loop.
+- `makeObject3dFromPolygonLoops(polyhedra, base?)`: one builder. Each polygon is given as loops of vertexes;
+  these are flattened into one unordered list of directed edges in the stored data. Without a base it creates fresh
+  data. With a base it copies the base's lists, reuses base vertexes and lines whose coordinates or endpoints match,
+  and appends. A single polyhedron gives a `Polyhedron3D`; more than one gives a `UnionObject3D` of them.
+  `makeObject3d` is the convenience form where each polygon has one loop.
 - `pruneObject3d`: writes a new data per source data, containing only what the leaves use, renumbered in order.
   The union structure is kept.
 - `checkManifold`: works on coordinates, so leaves from different data are checked together. Each directed edge must
@@ -163,17 +166,18 @@ The old `default`, `namedGroups`, `polyhedronGroups`, `prune;main-object-name`, 
 
 ## 2026-11-22 - Polygons with holes - Master Pickle
 
-A polygon is now a list of boundary loops: the outer loop first, then any holes.
-Each loop is still a closed cycle of directed lines; the outer loop is counter-clockwise
-and holes are clockwise when viewed from the front.
+A polygon's boundary is now a flat, unordered list of directed edges, not a list of loops.
+Grouping edges into loops is a separate concern (`loopsOfEdges`), used by OBJ/STL output and
+by coplanar merging. A polygon may have several boundaries (an outer boundary and holes);
+its interior is always on the left of each directed edge, so holes run clockwise when viewed
+from outside.
 
-`simplify` now removes every line a polygon shares with itself. After a coplanar merge,
+`simplify` removes every line a polygon shares with itself. After a coplanar merge,
 a line used twice in opposite directions is a cut between an outer boundary and a hole.
-`splitSharedLines` drops both uses and reconnects the remaining paths into separate loops
-of one polygon, so donuts no longer leave doubled lines behind.
+`splitSharedLines` drops both uses and groups the remaining edges into loops with `loopsOfEdges`.
 
 Splitting a polygon back into single-loop polygons for export is still not implemented.
-OBJ output writes each loop as its own face, and STL still rejects non-triangular polygons.
+OBJ output writes each reconstructed loop as its own face, and STL still rejects non-triangular polygons.
 
 ## 2026-11-22 - Lower-camel-case names ending in 3D - Master Pickle
 

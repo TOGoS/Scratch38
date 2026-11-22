@@ -117,10 +117,9 @@ type Object3D = Polyhedron3D | UnionObject3D;
   (probably `number` in TypeScript, but let's parameterize it as `D` in case
   we want to support rational numbers later or something).
 - A list of lines between vertexes, each of which is a pair of vertex indices.
-- A list of polygons, each of which is made of one or more closed loops of (line index, direction) edges.
-  The first loop is the outer boundary of the polygon; any further loops are holes.
-  The outer loop visits vertexes counter-clockwise when viewed from 'the front' of the polygon,
-  and hole loops visit them clockwise.
+- A list of polygons, each of which is a flat, unordered list of (line index, direction) edges.
+  Together the edges form one or more closed boundaries; grouping them into loops is left to
+  algorithms that need that order. The polygon's interior is on the left of each directed edge.
   Direction is 'forwards' or 'backwards', since each line segment is re-used
   for two (or some multiple of two) polygons.
 - A list of polyhedrons, each of which is a list of (polygon index, side),
@@ -145,13 +144,12 @@ The new data may still contain parts that nothing refers to.
 
 ## Winding Order
 
-Polygon vertexes are listed counter-clockwise when viewed from the front of the polygon,
-i.e. from outside the solid, following the right-hand rule.
+A polygon's interior is on the left of each of its directed edges when viewed from outside the
+solid, following the right-hand rule. So an outer boundary runs counter-clockwise and a hole
+boundary runs clockwise. The same rule applies to the vertex sequence of a `Loop`.
 
 This matches STL, whose facet vertexes are counter-clockwise when viewed from outside
 and whose facet normals point outward by the right-hand rule.
-For a polygon with holes, the outer loop is counter-clockwise and each hole loop is clockwise
-when viewed from the front.
 We chose it purely because STL is the first format we support.
 Other formats do not all agree:
 - OpenSCAD's `polyhedron` expects points clockwise when viewed from outside (per its manual),
@@ -218,8 +216,8 @@ Ensures that the object is 'manifold' (or at least not obviously problematic), a
 The object is left on the stack unchanged.
 
 This is a simplified definition, to be refined later.
-A polyhedron-based object is manifold if every loop of every polygon
-in it is closed (each edge ends where the next one starts),
+A polyhedron-based object is manifold if the edges of every polygon
+in it form closed boundaries (no branching or dangling ends),
 and every line is used by two polygon edges,
 which go in different directions (or some multiple of these pairs).
 Polygons with holes are accepted.

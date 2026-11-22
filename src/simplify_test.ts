@@ -10,7 +10,7 @@ import {
 	pruneObject3d,
 } from "./object3d.ts";
 import {
-	canonicalLoop,
+	faceKey,
 	removeSpurs,
 	simplifyObject3d,
 	simplifyPolyhedrons,
@@ -115,15 +115,19 @@ Deno.test("leaves from different data are simplified together", () => {
 	checkManifold(simplified);
 });
 
-Deno.test("canonicalLoop ignores where a loop starts, even when a vertex repeats", () => {
+Deno.test("faceKey ignores where a loop starts and handles repeated vertexes", () => {
 	const a: Vertex = [-1, -1, 0];
 	const b: Vertex = [1, 0, 0];
 	const c: Vertex = [1, 1, 0];
 	const d: Vertex = [0, 1, 0];
 	const e: Vertex = [-1, 0, 0];
 	assertEquals(
-		canonicalLoop([a, b, c, a, d, e]),
-		canonicalLoop([a, d, e, a, b, c]),
+		faceKey([a, b, c, a, d, e]),
+		faceKey([a, d, e, a, b, c]),
+	);
+	assertEquals(
+		faceKey([a, b, c, a, d, e], true),
+		faceKey([e, d, a, c, b, a]),
 	);
 });
 
@@ -193,31 +197,26 @@ Deno.test("simplify splits a line shared with itself into outer and hole loops",
 
 // IMPLIED WINDING ORDER APPLIES HERE
 Deno.test("simplify removes every line a polygon shares with itself", () => {
-	// A square plate with a square hole, with its top and bottom cut open along a-e.
-	const top: Vertex[] = [
+	// A square plate with a square hole. Each horizontal face is split into two coplanar
+	// polygons sharing two cuts (corner to corner), so merging leaves one cut doubled.
+	const topUpper: Vertex[] = [
+		[4, 4, 1],
+		[0, 4, 1],
+		[1, 3, 1],
+		[3, 3, 1],
+	];
+	const topLower: Vertex[] = [
 		[0, 0, 1],
 		[4, 0, 1],
 		[4, 4, 1],
-		[0, 4, 1],
-		[0, 0, 1],
-		[1, 1, 1],
-		[1, 3, 1],
 		[3, 3, 1],
 		[3, 1, 1],
 		[1, 1, 1],
+		[1, 3, 1],
+		[0, 4, 1],
 	];
-	const bottom: Vertex[] = [
-		[1, 1, 0],
-		[3, 1, 0],
-		[3, 3, 0],
-		[1, 3, 0],
-		[1, 1, 0],
-		[0, 0, 0],
-		[0, 4, 0],
-		[4, 4, 0],
-		[4, 0, 0],
-		[0, 0, 0],
-	];
+	const below = (loop: Vertex[]): Vertex[] =>
+		loop.map(([x, y]): Vertex => [x, y, 0]).reverse();
 	const walls: Vertex[][] = [
 		[[0, 0, 0], [0, 0, 1], [0, 4, 1], [0, 4, 0]],
 		[[0, 4, 0], [0, 4, 1], [4, 4, 1], [4, 4, 0]],
@@ -229,8 +228,10 @@ Deno.test("simplify removes every line a polygon shares with itself", () => {
 		[[1, 3, 0], [1, 3, 1], [1, 1, 1], [1, 1, 0]],
 	];
 	const plate = [
-		[top],
-		[bottom],
+		[topUpper],
+		[topLower],
+		[below(topUpper)],
+		[below(topLower)],
 		...walls.map((wall) => [wall]),
 	];
 	const object = makeObject3dFromPolygonLoops([plate]);
@@ -239,11 +240,11 @@ Deno.test("simplify removes every line a polygon shares with itself", () => {
 	checkManifold(simplified);
 	const [leaf] = leavesOf(simplified);
 	assertEquals(
-		leaf.data.polygons.some((polygon) => polygon.length === 2),
-		true,
+		leaf.data.polygons.filter((polygon) => polygon.length === 8).length,
+		2,
 	);
 	for (const polygon of leaf.data.polygons) {
-		const lines = polygon.flat().map((edge) => edge.line);
+		const lines = polygon.map((edge) => edge.line);
 		assertEquals(new Set(lines).size, lines.length);
 	}
 });

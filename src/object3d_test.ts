@@ -132,7 +132,7 @@ Deno.test("validate accepts a donut-shaped polygon", () => {
 		...walls.map((wall) => [wall]),
 	];
 	const object = makeObject3dFromPolygonLoops([plate]);
-	assertEquals(polyhedronLeaves(object)[0].data.polygons[0].length, 2);
+	assertEquals(polyhedronLeaves(object)[0].data.polygons[0].length, 8);
 	checkManifold(object);
 });
 

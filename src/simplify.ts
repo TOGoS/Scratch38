@@ -2,12 +2,13 @@ import type { Vertex } from "./stl.ts";
 import {
 	Loop,
 	loopOfPolyhedron,
+	loopsOfEdges,
 	makeObject3dFromPolygonLoops,
 	Object3D,
 	Polyhedron3D,
 	Polyhedron3DData,
 	polyhedronLeaves,
-	PolyhedronPolygons,
+	PolyhedronLoops,
 } from "./object3d.ts";
 
 /** Tolerance for coplanarity and collinearity checks, which are only approximate. */
@@ -57,23 +58,21 @@ function cleanLoop(loop: Loop): Loop {
 }
 
 /**
- * The same loop regardless of where it starts. Every rotation is compared, so this also holds for loops
- * that visit a vertex more than once, where the smallest vertex does not identify a single start.
+ * A key for a face, as its multiset of directed edges. Sorting makes the key independent of where
+ * a loop starts, and repeated vertexes need no special handling. With `reversed`, each edge is
+ * reversed, giving the key of the same face viewed from the other side.
  */
-export function canonicalLoop(loop: Loop): string {
-	const keys = loop.map(keyOf);
-	let best: string | undefined;
-	for (let start = 0; start < keys.length; start++) {
-		const candidate = [...keys.slice(start), ...keys.slice(0, start)].join(
-			"|",
-		);
-		if (best === undefined || candidate < best) best = candidate;
-	}
-	return best ?? "";
-}
-
-function rotate(loop: Loop, start: number): Loop {
-	return [...loop.slice(start), ...loop.slice(0, start)];
+// IMPLIED WINDING ORDER APPLIES HERE
+export function faceKey(loop: Loop, reversed = false): string {
+	return loop
+		.map((v, i) => {
+			const next = loop[(i + 1) % loop.length];
+			return reversed
+				? `${keyOf(next)}>${keyOf(v)}`
+				: `${keyOf(v)}>${keyOf(next)}`;
+		})
+		.sort()
+		.join("|");
 }
 
 /** Area-weighted normal of a loop, pointing out of the front of the polygon. */
@@ -103,10 +102,6 @@ function isBetweenCollinear(p: Vertex, v: Vertex, q: Vertex): boolean {
 	const vq = sub(q, v);
 	const bound = EPSILON * length(vp) * length(vq);
 	return length(cross(vp, vq)) <= bound && dot(vp, vq) < 0;
-}
-
-function reverseLoop(loop: Loop): Loop {
-	return loop.slice().reverse();
 }
 
 /**
@@ -184,26 +179,32 @@ function mergeAcross(f: Loop, g: Loop): Loop | undefined {
 /**
  * Splits a loop that uses a line twice in opposite directions into loops that do not share lines.
  * Such a doubled line is a cut between a polygon's outer boundary and a hole; dropping both uses
- * leaves the boundaries as separate loops of one polygon. Returns one loop if there is no such line.
+ * leaves the boundaries as separate loops. The remaining edges are then grouped into loops by
+ * `loopsOfEdges`. Returns one loop if there is no such line.
  */
 export function splitSharedLines(loop: Loop): Loop[] {
-	const n = loop.length;
-	if (n < 4) return [loop];
-	const keys = loop.map(keyOf);
+	const edges: [Vertex, Vertex][] = loop.map((
+		v,
+		i,
+	) => [v, loop[(i + 1) % loop.length]]);
+	const undirect = ([from, to]: readonly [Vertex, Vertex]) => {
+		const a = keyOf(from);
+		const b = keyOf(to);
+		return a < b ? `${a}|${b}` : `${b}|${a}`;
+	};
 	const uses = new Map<string, number[]>();
-	for (let i = 0; i < n; i++) {
-		const a = keys[i];
-		const b = keys[(i + 1) % n];
-		const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+	edges.forEach((edge, i) => {
+		const key = undirect(edge);
 		uses.set(key, [...(uses.get(key) ?? []), i]);
-	}
+	});
 	const removed = new Set<number>();
 	for (const positions of uses.values()) {
 		const unmatched = [...positions];
 		while (unmatched.length >= 2) {
 			const i = unmatched.shift()!;
 			const partner = unmatched.findIndex((j) =>
-				keys[i] === keys[(j + 1) % n] && keys[(i + 1) % n] === keys[j]
+				keyOf(edges[i][0]) === keyOf(edges[j][1]) &&
+				keyOf(edges[i][1]) === keyOf(edges[j][0])
 			);
 			if (partner < 0) continue;
 			removed.add(i);
@@ -211,42 +212,7 @@ export function splitSharedLines(loop: Loop): Loop[] {
 		}
 	}
 	if (removed.size === 0) return [loop];
-	
-	const remaining = keys.map((_, i) => i).filter((i) => !removed.has(i));
-	const outgoing = new Map<string, number[]>();
-	for (const i of remaining) {
-		const from = keys[i];
-		outgoing.set(from, [...(outgoing.get(from) ?? []), i]);
-	}
-	const vertexOf = new Map(keys.map((key, i) => [key, loop[i]]));
-	const visited = new Set<number>();
-	const result: Loop[] = [];
-	for (const start of remaining) {
-		if (visited.has(start)) continue;
-		const vertices: Loop = [];
-		let current = start;
-		for (let step = 0; step <= remaining.length; step++) {
-			visited.add(current);
-			vertices.push(vertexOf.get(keys[current])!);
-			const to = keys[(current + 1) % n];
-			const candidates = outgoing.get(to) ?? [];
-			const ordered = [
-				...candidates.filter((i) => i > current),
-				...candidates,
-			];
-			const next = ordered.find((i) => i === start || !visited.has(i));
-			if (next === undefined) break;
-			current = next;
-			if (current === start) break;
-		}
-		if (current !== start) {
-			throw new Error(
-				"Could not split a loop that shares lines with itself",
-			);
-		}
-		result.push(vertices);
-	}
-	return result;
+	return loopsOfEdges(edges.filter((_, i) => !removed.has(i)), keyOf);
 }
 
 /**
@@ -258,11 +224,11 @@ function mergePolyhedrons(polyhedrons: Loop[][]): Loop[][] {
 	const find = (i: number): number =>
 		parent[i] === i ? i : (parent[i] = find(parent[i]));
 		
-	const byCanonical = new Map<string, { p: number; f: number }[]>();
+	const byFace = new Map<string, { p: number; f: number }[]>();
 	polyhedrons.forEach((faces, p) =>
 		faces.forEach((loop, f) => {
-			const key = canonicalLoop(loop);
-			byCanonical.set(key, [...(byCanonical.get(key) ?? []), { p, f }]);
+			const key = faceKey(loop);
+			byFace.set(key, [...(byFace.get(key) ?? []), { p, f }]);
 		})
 	);
 	
@@ -271,9 +237,8 @@ function mergePolyhedrons(polyhedrons: Loop[][]): Loop[][] {
 		faces.forEach((loop, f) => {
 			const id = `${p}:${f}`;
 			if (matched.has(id)) return;
-			const partner =
-				(byCanonical.get(canonicalLoop(reverseLoop(loop))) ?? [])
-					.find((o) => o.p !== p && !matched.has(`${o.p}:${o.f}`));
+			const partner = (byFace.get(faceKey(loop, true)) ?? [])
+				.find((o) => o.p !== p && !matched.has(`${o.p}:${o.f}`));
 			if (partner === undefined) return;
 			matched.add(id);
 			matched.add(`${partner.p}:${partner.f}`);
@@ -362,13 +327,14 @@ function removeCollinearVertexes(loops: Loop[]): void {
 
 /**
  * Simplifies polyhedrons given as loops. Returns one list of polygons per polyhedron,
- * each polygon being one or more loops.
+ * each polygon being one or more loops. The caller groups those loops into the flat
+ * edges stored in `Polyhedron3DData`.
  */
-export function simplifyPolyhedrons(polyhedra: Loop[][]): PolyhedronPolygons[] {
+export function simplifyPolyhedrons(polyhedra: Loop[][]): PolyhedronLoops[] {
 	const cleaned = polyhedra.map((loops) =>
 		loops.map(cleanLoop).filter((loop) => loop.length >= 3)
 	);
-	const groups: PolyhedronPolygons[] = mergePolyhedrons(cleaned).map(
+	const groups: PolyhedronLoops[] = mergePolyhedrons(cleaned).map(
 		(loops) => mergeCoplanar(loops).map(splitSharedLines),
 	);
 	removeCollinearVertexes(groups.flat(2));
@@ -390,7 +356,7 @@ function commonData(leaves: Polyhedron3D[]): Polyhedron3DData | undefined {
 }
 
 /** Whether simplification changed nothing, judged by the number of polyhedrons, loops, and vertexes. */
-function sameCounts(before: Loop[][], after: PolyhedronPolygons[]): boolean {
+function sameCounts(before: Loop[][], after: PolyhedronLoops[]): boolean {
 	const beforeCounts = [
 		before.length,
 		before.flat().length,
