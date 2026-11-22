@@ -178,6 +178,10 @@ Perhaps Master Haiku could figure it out (or look up an algorithm).
 
 Keep this section at the end of the devlog until we have a more formal task list.
 
+- Fix casing of some variable/field/method names
+  - `fooBar3D` should be `fooBar3d`; `3D` is treated as one word,
+    so becomes `3d` before the squishing-together step;
+    see naming convention in [CONTRIBUTING.md](./CONTRIBUTING.md).
 - Allow for polygons with holes (i.e. inner loops in addition to the outer one)
   - We could simply allow for the lines that make up a polygon's edges to be specified
     in any order and not be contiguous--then holes can be represented!

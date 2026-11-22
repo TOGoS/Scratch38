@@ -10,14 +10,9 @@ The only change is that the devlog is named `AGENT-DEVLOG.md` here.
 
 Aim for simplicity in API, then simplicity in implementation. Specifically,
 recovering from badly-formed input is a non-goal. Known typos should be errors.
-Other unrecognized terms should be warnings. Erroneous syntax (malformed TEF
-headers, unclosed tags in Org/JSON/XML, etc.) are definitely errors. Continue
-parsing only when doing so does not complicate the parser implementation.
 
 **Do** make an effort to provide clear and specific error messages
-so that problems in the source material can be easily identified and corrected
-(this is one reason we go out of our way to track line/column numbers through the entire process)
-or parser rules can be adjusted to accomodate intentional variations.
+so that problems in the source material can be easily identified and corrected.
 
 ## Documentation
 
@@ -38,6 +33,9 @@ may go into AGENT-DEVLOG.md under a header of the form "## <date> - <title> - <y
 - Format with `deno task fmt`. It runs `deno fmt`, which removes indentation from blank lines,
   and then `tools/fix-blank-lines.ts`, which restores it using the indentation of the line before.
   Do not run `deno fmt` on its own.
+- Upper camel case (e.g. for types): Upper-case first letter of each word, then squish words together.
+- Lower camel case (e.g. fields): Lower-case all words, then upper-case first letter of all but the first, then squish words together.
+- Following this convention, "XML HTTP request" becomes `XMLHTTPRequest` (upper), or `xmlHttpRequest` (lower).
 
 ## Project notes and agent handoff
 
