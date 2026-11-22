@@ -157,10 +157,38 @@ The old `default`, `namedGroups`, `polyhedronGroups`, `prune;main-object-name`, 
   (no base). Confirm this.
 - `obj/bin`: the README listed it. Keep it as unsupported, or implement the Wavefront binary `.mod` format?
 
+## How To Handle Donuts?
+
+Currently (3e5f2479b1cccfbd75617f3129c0a752de7ec9a0) the simplification algorithm removes
+spur linees that a polygon shares with itself, but leaves other shared-with-selflines since
+removing them would lead to polygons that cannot be represented by a single loop of lines.
+
+Does a polygon need to be representable by a single loop of lines?
+If not, we could just remove all the shared-with-self lines.
+
+Whether the resulting polyhedron can be directly exported to OBJ or STL is another matter!
+
+Splitting polygons back up into single-loop polygons or donuts may require
+a bit of math that I'm not ready to think about at the moment.
+For candidate splitting lines, you'd probably want to pick pairs of vertexes that are close in euclidean space,
+but that don't have any other lines between them.
+Perhaps Master Haiku could figure it out (or look up an algorithm).
+
 ## To-do
 
 Keep this section at the end of the devlog until we have a more formal task list.
 
-- Consider a shared, append-only list type so appending to a base does not copy it.
+- Allow for polygons with holes (i.e. inner loops in addition to the outer one)
+  - We could simply allow for the lines that make up a polygon's edges to be specified
+    in any order and not be contiguous--then holes can be represented!
+  - Operations like 'simplify' may need to sort lines or group into separate loops
+    as part of their inner workings, but this requirement does not necessarily apply
+    to the data structure in `Polyhedron3DData`
+- STL can only represent triangles.
+  - Currently we just throw an error when attempting to export a shape to STL that contains non-triangular faces.
+  - To make it work we'll have to split them back up again!
+  - But this means that, internally, we can probably support polygons with holes,
+    since we won't be exporting them directly anyway.
+- Consider a shared, append-only list type so appending to a base does not need to copy the backing array.
 - Collections are deferred; see Punted.
 - Figure out a better system for names that start with digits (for example `Object3D` versus `ThreeDObject`).
