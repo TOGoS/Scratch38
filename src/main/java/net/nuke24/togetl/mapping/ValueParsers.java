@@ -91,6 +91,20 @@ public final class ValueParsers {
 		return false;
 	}
 	
+	/**
+	 * The reference part of a header value. A semicolon preceded by whitespace starts
+	 * an annotation (e.g. {@code p2326 ; shorter and slimmer}), which is not part of the
+	 * reference. A semicolon without preceding whitespace is part of the value.
+	 */
+	private static String referenceValue(String value) {
+		for (int i = 1; i < value.length(); ++i) {
+			if (value.charAt(i) == ';' && Character.isWhitespace(value.charAt(i - 1))) {
+				return value.substring(0, i).trim();
+			}
+		}
+		return value;
+	}
+	
 	private static String[] splitCsv(String value) {
 		String[] raw = value.split(",");
 		int count = 0;
@@ -142,14 +156,14 @@ public final class ValueParsers {
 	private static final class IriParser implements ValueParser {
 		@Override
 		public void parse(ValueParserContext context) throws IOException {
-			emitIriOrAsWritten(context, context.getHeader().getValue().trim());
+			emitIriOrAsWritten(context, referenceValue(context.getHeader().getValue()).trim());
 		}
 	}
 	
 	private static final class FileRefParser implements ValueParser {
 		@Override
 		public void parse(ValueParserContext context) throws IOException {
-			FileRef ref = parseFileRef(context.getHeader().getValue());
+			FileRef ref = parseFileRef(referenceValue(context.getHeader().getValue()));
 			Node object;
 			if (ref.uri != null && isAcceptableIri(ref.uri)) {
 				object = IRI.of(canonicalFileResourceIri(ref));
@@ -208,7 +222,7 @@ public final class ValueParsers {
 	private static final class CsvPartRefParser implements ValueParser {
 		@Override
 		public void parse(ValueParserContext context) throws IOException {
-			for (String value : splitCsv(context.getHeader().getValue())) {
+			for (String value : splitCsv(referenceValue(context.getHeader().getValue()))) {
 				emitPartRef(context, value);
 			}
 		}
@@ -217,7 +231,7 @@ public final class ValueParsers {
 	private static final class PartRefParser implements ValueParser {
 		@Override
 		public void parse(ValueParserContext context) throws IOException {
-			emitPartRef(context, context.getHeader().getValue());
+			emitPartRef(context, referenceValue(context.getHeader().getValue()));
 		}
 	}
 	
@@ -269,7 +283,7 @@ public final class ValueParsers {
 	private static final class XRdfSubjectParser implements ValueParser {
 		@Override
 		public void parse(ValueParserContext context) throws IOException {
-			String value = context.getHeader().getValue().trim();
+			String value = referenceValue(context.getHeader().getValue()).trim();
 			String prefix = "x-rdf-subject:";
 			if (value.startsWith(prefix)) {
 				value = value.substring(prefix.length()).trim();

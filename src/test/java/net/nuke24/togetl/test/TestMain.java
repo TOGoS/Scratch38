@@ -157,6 +157,7 @@ public final class TestMain {
 		run("generic dialect round trip", TestMain::testGenericDialectRoundTrip);
 		run("parts mapping", TestMain::testPartsMapping);
 		run("parts conflicts and duplicates", TestMain::testPartsConflicts);
+		run("parts reference annotations", TestMain::testPartsReferenceAnnotations);
 		run("import report tsv", TestMain::testImportReportTsv);
 		run("namespaces mapping", TestMain::testNamespacesMapping);
 		run("vocabulary report", TestMain::testVocabularyReport);
@@ -895,6 +896,41 @@ public final class TestMain {
 				"unknown field is not emitted as TEF structure in mapped dialect");
 		check(!has(statements, part, Namespaces.TEF_ENTRY_TYPE, Literal.of("part").toString()),
 				"mapped subject does not get TEF entry metadata");
+	}
+	
+	private static void testPartsReferenceAnnotations() throws Exception {
+		String text =
+				"=part p2700\n"
+				+ "short-description: cap for cans; 3-inch OD\n"
+				+ "see-also: p2326 ; shorter and slimmer\n"
+				+ "member-of: p2 ;\n"
+				+ "obsoleted-by: p2199 ; unless you like the asymmetry\n"
+				+ "stl-file: p2700.stl\turn:bitprint:ABC ; printed in PETG\n"
+				+ "image-ref: http://example.com/p2700.png ; back view\n"
+				+ "\n";
+		byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+		SourceDocument source = SourceDocument.of("https://example.com/annotations.tef", "tef", "test/1");
+		ImportReport report = new ImportReport();
+		MappingTEFDialect dialect = new MappingTEFDialect(
+				"parts", MappingTable.load("parts"));
+
+		List<Statement> statements = collect(dialect, bytes, source, report);
+		String part = Namespaces.PARTS3D_PARTS_NS + "2700";
+
+		check(has(statements, part, Namespaces.GENERAL_SHORT_DESCRIPTION,
+				Literal.of("cap for cans; 3-inch OD").toString()),
+				"plain field keeps its semicolon");
+		check(has(statements, part, Namespaces.GENERAL_SEE_ALSO,
+				Identifiers.shortNameToUri("p2326")), "see-also annotation is not part of the reference");
+		check(has(statements, part, Namespaces.GENERAL_IS_MEMBER_OF,
+				Identifiers.shortNameToUri("p2")), "member-of with empty annotation");
+		check(has(statements, part, Namespaces.GENERAL_OBSOLETED_BY,
+				Identifiers.shortNameToUri("p2199")), "obsoleted-by annotation is not part of the reference");
+		check(has(statements, part, Namespaces.PARTS3D_STL_FILE,
+				"http://wherever-files.nuke24.net/uri-res/raw/urn:bitprint:ABC/p2700.stl"),
+				"file annotation is not part of the file reference");
+		check(has(statements, part, Namespaces.GENERAL_IMAGE,
+				"http://example.com/p2700.png"), "iri annotation is not part of the IRI");
 	}
 	
 	private static void testPartsConflicts() throws Exception {
