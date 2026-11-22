@@ -7,12 +7,12 @@ Kept out of README.md, which describes the tool and its spec.
 
 - 2026-11-21: Deno was not installed. Installed Deno 2.9.8 into the home directory
   (`~/.deno/bin/deno`) with the official `https://deno.land/install.sh`, after reading the script.
-  The installer only prompts for shell setup when run in an interactive terminal,
+  The installer only prompts for shell setup in an interactive terminal,
   so PATH was not modified. Use `~/.deno/bin/deno` or add that directory to PATH.
 - Deno agent skills (`dx skills add denoland/skills --skill deno`): skipped.
   `dx` is not shipped with this Deno build, and `deno x` would run unvetted npm code, so I did not use it.
-- `./stlmod` uses the shebang `#!/usr/bin/env -S deno run --allow-read --allow-write`, so `deno` must be on PATH.
-  Without that, it fails with "env: 'deno': No such file or directory".
+- `./stlmod` uses the shebang `#!/usr/bin/env -S deno run --allow-read --allow-write --allow-net`, so `deno` must be
+  on PATH. Without that, it fails with "env: 'deno': No such file or directory".
 - Tasks: `deno task test`, `deno task check`, `deno task fmt`.
   Use `deno task fmt`, not plain `deno fmt`: plain `deno fmt` removes blank-line indentation,
   and `deno task fmt` restores it with `tools/fix-blank-lines.ts`.
@@ -22,6 +22,8 @@ Kept out of README.md, which describes the tool and its spec.
 
 ## Decisions
 
+### General
+
 - AGENTS.md: verbatim copies of the Worktrees, IDs for TODO items, and Commit attribution sections from S0036.
   The other sections are project-specific. CONTRIBUTING.md holds the copied design and documentation
   principles, plus the code style rules.
@@ -30,6 +32,8 @@ Kept out of README.md, which describes the tool and its spec.
   inside multi-line template strings, and there are none in this codebase.
 - Operation syntax is parsed by splitting on the first unencoded `:` (default value, literal),
   then on `;` (named params, percent-decoded), then on `/` (name and modifiers).
+  A default value may contain `;`, because the colon split happens first; the named-parameter form of the
+  same value must be percent-encoded.
 - Operations declare their accepted named parameters and default parameter, so unknown names are errors.
 - All operation arguments are parsed and checked before any runs, so a bad argument late on the
   command line cannot leave partial side effects.
@@ -39,112 +43,93 @@ Kept out of README.md, which describes the tool and its spec.
   statically analyzable. There is no `foo:${stack-value}`-style syntax for operator parameters.
 - *Type* is what TypeScript can infer from a value in isolation (`classRef`); *role* is what a context expects
   of that value. Meaning comes from type plus role. Prefer one type per type/role combination unless a type is
-  genuinely valid in several roles; role-specific TypeScript aliases are optional until used. In particular,
-  do not reuse `Vector3DObject` as both a single object and a collection just because role-checking allows it.
+  genuinely valid in several roles; role-specific TypeScript aliases are optional until used.
 - `crash` throws. The top level catches the error, writes it to stderr, and exits with status 1.
   It prints only the message, not a stack trace, to match the other errors.
-- Stack values are currently `Vector3DObject` (src/vector3d-object.ts). Built from triangles: each shared
-  vertex and edge is stored once, and all faces form one polyhedron in the `default` group. The role/type and
-  single-object/collection decisions below supersede this; it will be split into separate types.
-- Winding: counter-clockwise viewed from outside, same as STL (user's decision).
-  The premise for the earlier clockwise choice was wrong: STL is counter-clockwise,
-  and OpenSCAD's manual says clockwise. README's Winding Order section records this.
-  Code that depends on the convention is marked with `// IMPLIED WINDING ORDER APPLIES HERE`.
-  Find them with `grep -rn "IMPLIED WINDING ORDER" .`.
-- `load/stl` without a binary/text modifier detects the format from the content.
-  A file is binary if its size matches the triangle count in its header, otherwise ASCII.
-- `store/stl` without a modifier writes ASCII (README says store takes load's modifiers, so the default had to be chosen).
-- Only `stl`, `stl/bin`, and `stl/text` are implemented; `obj` gives an unsupported-format error.
-- Resources: `openResource(name)` returns a `Resource` with `read()` and `write()`.
-  Stdin/stdout and `file:`/plain-path resources are implemented. Other URI schemes give an error.
-  To add http/https, add a case to `parseResourceName` and `openResource`. Operations don't change.
+- Winding: counter-clockwise viewed from outside, same as STL. OBJ faces are counter-clockwise viewed from the
+  front, the same convention, so no reversal is needed. OpenSCAD's manual says clockwise; that premise was wrong.
+  README's Winding Order section records this. Code that depends on the convention is marked
+  `// IMPLIED WINDING ORDER APPLIES HERE`; find them with `grep -rn "IMPLIED WINDING ORDER" .`.
+- `load/stl` without a binary/text modifier detects the format from the content: a file is binary if its size
+  matches the triangle count in its header, otherwise ASCII.
+- `store/stl` without a modifier writes ASCII.
 - Facet normals are ignored on load and recomputed on store from the winding order.
-- Store writes only the `default` group. Non-triangular polygons are an error on store.
-- `prune` keeps only the groups named by its `mapping` parameter, plus what they reference, and renumbers
-  each index array in its original order. See "Agreed decisions after the first implementation round" below.
-- `validate` peeks: it checks the object on top of the stack and leaves it there (user's decision).
-  "Manifold" is the simplified definition the user gave: every polygon of the `default` object is closed,
-  and every line is used by exactly two polygon edges going in different directions.
-  `checkManifold` implements it, and README says it is provisional.
-- The name for the type is `3DObject` everywhere (user's decision). The README's simplify shape is updated to match.
-- Leftover stack values at the end of a run are silently discarded (user's decision).
+- Resources: `openResource(name)` returns a `Resource` with `read()` and `write()`. Stdin/stdout, plain paths,
+  `file:`, `http:`, and `https:` are supported; storing to an HTTP(S) URL is an error. Other URI schemes error.
+- `validate` peeks: it checks the object on top of the stack and leaves it there. "Manifold" is the simplified
+  definition from the user: every polygon is closed, and every line is used by exactly two polygon edges in
+  opposite directions.
+- Leftover stack values at the end of a run are silently discarded.
 - `tools/fix-blank-lines.ts` is run by `deno task fmt`. Its tests are in `tools/fix-blank-lines_test.ts`.
 - `src/cli_test.ts` runs `stlmod` as a subprocess. It needs `--allow-run`, which is in the test task.
+- Wavefront `.mod` binary support is out of scope until needed; `obj/bin` remains unsupported.
 
-### Agreed decisions after the first implementation round
+### Revised architecture
 
-- Polyhedron groups (top-level sub-objects) are never merged by `simplify`. Polyhedrons within the same
-  group may be merged. This preserves object names, since each named `.obj` object is one polyhedron group.
-- `simplify` deduplicates only when the result is obvious: cache the simplified form of a polyhedron,
-  reuse the existing polyhedron index when the same simplified shape appears in several places, and keep
-  the original polyhedron if simplification produces an identical result. Do no extra computation to find
-  less obvious duplicates.
-- `prune/collection` has a default parameter named `mapping`. Its value is a comma-separated list of entries
-  of the form `(<new name> "=") <old name>`. With no `=`, the entry keeps its name; with `=`, it is renamed.
-  Example: `prune/collection:fred=ted,main,cube=jon` keeps `main`, renames `ted` to `fred`, renames `jon`
-  to `cube`, and removes all entries not mentioned, along with anything they alone reference.
-- A separate `rename-entries` operation is agreed in principle: "prune without pruning", for collections only.
-  It should use the same mapping syntax but keep unmapped entries. Its parameter details still need to be settled.
-- Wavefront `.mod` binary support stays out of scope until needed; `obj/bin` remains unsupported.
+This supersedes the earlier implementation notes after `efb5377`.
 
-### Second revision: single objects vs collections (agreed)
-
-- A single 3D object and a collection of named entries are different stack types. `load/obj/collection` pushes
-  a collection; other OBJ loads push a single 3D object.
+- `3DObject` is the prose name of a role, not a TypeScript identifier. Use `ThreeDObject` as the TypeScript
+  identifier for now; it may be a union of concrete object types.
+- `Vector3DObjectData` holds the shared vertex, line, polygon, and polyhedron lists.
+  `Vector3DPolyhedronGroup` references a `Vector3DObjectData` plus a polyhedron-group index.
+  The `Dictionary<String,Object>` role is `Map<string, ThreeDObject>`.
+- The special `default` sub-object is removed. It existed only to make a collection look like a single object,
+  which caused the earlier ambiguity.
+- A single 3D object and a collection of named entries are different stack types. `load/obj` pushes a single
+  object; `load/obj/collection` pushes a `Map<string, ThreeDObject>`.
 - Unnamed OBJ groups are reachable by loading the whole file as one 3D object. In a collection,
-  `load/obj/collection;default-name-prefix=anonymous-` names them `anonymous-1`, `anonymous-2`, …
-  Without the prefix, they are excluded when the target role is `Dictionary<String,Object>`. The default
-  collection behavior is otherwise left open for a possible future role that includes named and unnamed entries.
+  `load/obj/collection;default-name-prefix=anonymous-` names them `anonymous-1`, `anonymous-2`, and so on.
+  Without the prefix, they are excluded from the `Map<string, ThreeDObject>` role.
 - Extracting a named entry is explicit: `extract:<name>` has shape `(collection<K,T> -- named-object:T)` and
   throws if the name is absent.
-- `prune` on a single object has no names and needs no mappings. `prune/collection` uses the name mappings
-  discussed above. The `/collection` modifier is required until the parser can know the role of the top stack
-  value.
-- The special `default` sub-object is removed. It existed only to make a collection look like a single object,
-  which is the source of this ambiguity.
-- Multiple mapping entries that produce the same new name are an error; there is no correct way to combine them.
-- `rename-entries` remains "prune without pruning", but only makes sense for collections.
+- `prune` on a single object has no names and needs no mappings. `prune/collection` keeps and renames entries.
+  The `/collection` modifier is required until the parser can know the role of the top stack value.
+- A mapping is a semicolon-separated list of entries of the form `(<new name> "=") <old name>`; a bare old name
+  keeps its name. Duplicate new names are an error, since there is no correct way to combine them.
+  Example: `prune/collection:fred=ted;main;cube=jon`.
+- `rename-entries` is "prune without pruning", for collections only. It uses the same mapping grammar and keeps
+  unmapped entries. Spell it `rename-entries:<mapping>` or
+  `rename-entries;mapping=<the same mapping string, percent-encoded>`, e.g.
+  `rename-entries:fred=ted;cube=jon`.
+- `simplify` never merges polyhedron groups; polyhedrons within one group may be merged. It works in coordinate
+  space with outward-facing loops, so equal coordinates are shared. Passes: merge polyhedrons sharing an
+  oppositely oriented polygon; merge coplanar loops sharing an edge; remove vertexes with exactly two collinear
+  neighbours; rebuild. `simplify/keep-unused` appends the result after the original parts; plain `simplify`
+  prunes them. Deduplicate only obvious results: cache a simplified polyhedron, reuse one index for identical
+  results, and keep the original when simplification changes nothing.
+- `obj/bin` remains unsupported; free-form curves/surfaces, `l`, and `p` in OBJ are errors.
 
-#### Decisions that need revision
+### Punted to future
 
-- The `default` group in `Vector3DObject`, and the rule that store/validate/simplify operate on `default`, must be
-  replaced by explicit single-object or collection operations.
-- The `prune` mapping decision above now applies only to the collection form. `default=jon` is no longer a special
-  case; `default` is just an ordinary name when used in a collection.
-- The plan that `simplify` preserves names by preserving polyhedron groups needs revisiting: a single object has no
-  names, while a collection needs an explicit choice between simplifying the whole collection and simplifying one
-  extracted object.
-- The OBJ decisions need revising: `load/obj` pushes a single object, `load/obj/collection` pushes a collection
-  (unnamed groups excluded unless `default-name-prefix` is given), and the writer still needs a matching
-  single/collection choice.
-- The open questions about synthesizing `default` are resolved by removing `default`; duplicate new names are an
-  error. `load/obj/collection`, `extract:<name>`, and required `prune/collection` are settled. The rename operator
-  is `rename-entries`; its parameter details remain open.
+- A collection role that permits both named and unnamed entries. For `Map<string, ThreeDObject>` unnamed groups
+  are excluded when no prefix is given; the default for that future role is unspecified. This is what the earlier
+  "future role default" note meant.
+- Role-aware parsing, which would let the `/collection` modifier on `prune` become optional.
+- Store/writer behavior for collections.
+- Whether `simplify` on a collection simplifies the whole collection or one extracted object.
+- A better naming system for identifiers that start with a digit (see To-do).
 
-- `simplify` (src/simplify.ts) works in coordinate space: each polygon is an outward-facing loop of coordinates,
-  so vertexes with equal coordinates are merged automatically. Passes, in order:
-  1. Within each polyhedron group, merge polyhedrons that share a polygon with opposite orientation, dropping that polygon.
-  2. Within each merged group, merge coplanar loops sharing an edge (skipping merges that would repeat a vertex).
-  3. Remove vertexes with exactly two neighbours on a straight line (tolerance 1e-6).
-  4. Rebuild the object. `simplify/keep-unused` appends the result after the original parts, which are kept;
-     plain `simplify` then prunes to `default`.
-  Object names are preserved by keeping polyhedron groups intact (see the agreed decisions above).
-- HTTP and HTTPS URIs are loaded with `fetch` (`resource.ts`). Storing to them is an error.
-  The shebang and the test task have `--allow-net`, and tests use a local `Deno.serve` on 127.0.0.1.
-- OBJ (`src/obj.ts`): winding was checked against the Wavefront spec (https://paulbourke.net/dataformats/obj/).
-  Faces are counter-clockwise when viewed from the front, the same as this project, so no reversal is needed
-  (marked `IMPLIED WINDING ORDER APPLIES HERE`).
-  Each `o` becomes a named polyhedron group; `default` holds all of them.
-  The builder accepts names, and the OBJ writer emits `o` before every polyhedron (bare when unnamed), so names
-  round-trip. `prune` now renames and keeps groups through its mapping parameter; see the agreed decisions above.
-  `obj/bin` is rejected (OBJ is text only here). Free-form curves/surfaces, `l`, and `p` are errors.
-- `validate` and `checkManifold`: a simplified definition from the user. Every polygon is closed, and every line is
-  used by exactly two polygon edges in opposite directions.
+### Known divergences in current code
 
-## Open questions (waiting on the user)
+- `Vector3DObject` still combines data, polyhedron groups, and names with a `default` group; split it into
+  `Vector3DObjectData` and `Vector3DPolyhedronGroup`.
+- `prune;main-object-name=...` still exists; replace it with `prune` and `prune/collection` mappings.
+- `store`, `validate`, `simplify`, and `trianglesFromVector3DObject` still use the `default` group; make them
+  role-specific.
+- OBJ load/store still produce and consume one combined object with `default`; add `load/obj/collection`,
+  `extract`, `default-name-prefix`, and a matching writer choice.
+- `simplify` currently merges across all polyhedrons of `default`; make it group-scoped.
+- `rename-entries` is not implemented.
+- README and tests still describe the old architecture; update them during the refactor.
 
-- If a future role permits named and unnamed entries together, what should collection loads do when
-  `default-name-prefix` is absent?
-- What concrete TypeScript type names should represent the single-object, collection, and named-entry roles?
-- What parameter name and shape should `rename-entries` use?
+## To-do
 
+Keep this section at the end of the devlog until we have a more formal task list.
+
+- Figure out a better system for munging names that start with numbers, such as `Object3D` instead of
+  `ThreeDObject`, then apply it consistently and all at once.
+- Refactor the model into `Vector3DObjectData` and `Vector3DPolyhedronGroup`, with `Map<string, ThreeDObject>`
+  for collections.
+- Implement the revised operators: `load/obj/collection`, `extract`, `prune/collection`, `rename-entries`.
+- Decide the punted items above before merging this branch to master.
+- Update README and tests to match the revised architecture.
