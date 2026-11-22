@@ -429,3 +429,15 @@ Deno.test("fix-polygons/triangles, then store/stl, writes only triangles", async
 		await Deno.remove(dir, { recursive: true });
 	}
 });
+
+Deno.test("simplify/single-loop-polygons is accepted, and other modifiers are not", async () => {
+	const operation = instantiateOperation(
+		parseOperationSpec("simplify/single-loop-polygons"),
+	);
+	assertEquals(typeof operation.apply, "function");
+	assertThrows(
+		() => instantiateOperation(parseOperationSpec("simplify/keep-unused")),
+		Error,
+		"takes no modifiers except single-loop-polygons, got keep-unused",
+	);
+});

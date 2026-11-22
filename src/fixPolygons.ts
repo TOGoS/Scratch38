@@ -31,8 +31,11 @@ function isConvexLoop(loop: Loop): boolean {
 	});
 }
 
-/** Greedily joins neighbouring pieces while each join keeps the piece convex. */
-function mergeConvex(pieces: Loop[]): Loop[] {
+/**
+ * Greedily joins neighbouring pieces, refusing joins that would leave a hole. With `convex`, a join is
+ * also refused unless the result is convex.
+ */
+function mergePieces(pieces: Loop[], convex: boolean): Loop[] {
 	const result = pieces.slice();
 	let changed = true;
 	while (changed) {
@@ -40,8 +43,8 @@ function mergeConvex(pieces: Loop[]): Loop[] {
 		outer: for (let i = 0; i < result.length; i++) {
 			for (let j = 0; j < result.length; j++) {
 				if (i === j) continue;
-				const merged = mergeAcross(result[i], result[j]);
-				if (merged !== undefined && isConvexLoop(merged)) {
+				const merged = mergeAcross(result[i], result[j], true);
+				if (merged !== undefined && (!convex || isConvexLoop(merged))) {
 					result[i] = merged;
 					result.splice(j, 1);
 					changed = true;
@@ -60,7 +63,11 @@ function mergeConvex(pieces: Loop[]): Loop[] {
 function fixFace(loops: Loop[], target: FixTarget): PolygonLoops[] {
 	const single = loops.length === 1;
 	if (target === "single-loop") {
-		return single ? [loops] : triangulateLoops(loops).map((t) => [t]);
+		return single
+			? [loops]
+			: mergePieces(triangulateLoops(loops), false).map((
+				piece,
+			) => [piece]);
 	}
 	if (target === "triangles") {
 		return single && loops[0].length === 3
@@ -70,12 +77,12 @@ function fixFace(loops: Loop[], target: FixTarget): PolygonLoops[] {
 	if (single && isConvexLoop(loops[0])) {
 		return [loops];
 	}
-	return mergeConvex(triangulateLoops(loops)).map((piece) => [piece]);
+	return mergePieces(triangulateLoops(loops), true).map((piece) => [piece]);
 }
 
 /**
  * Rewrites every face of an object so that each polygon satisfies a target:
- * - `single-loop`: faces with holes are triangulated, so every polygon has one loop.
+ * - `single-loop`: faces with holes are triangulated, then the triangles are merged back wherever no hole would form.
  * - `convex`: every polygon is convex, using triangulation followed by convex merging.
  * - `triangles`: every polygon is a triangle.
  * The surface is unchanged: its vector area and total area are preserved, and it stays manifold.

@@ -248,3 +248,50 @@ Deno.test("simplify removes every line a polygon shares with itself", () => {
 		assertEquals(new Set(lines).size, lines.length);
 	}
 });
+
+// Two faces that share two separate runs of edges. Merging them would enclose a hole.
+const FACE_F: Vertex[] = [
+	[0, 0, 0],
+	[1, 0, 0],
+	[1, 1, 0],
+	[1, 2, 0],
+	[1, 3, 0],
+	[0, 3, 0],
+];
+const FACE_G: Vertex[] = [
+	[1, 0, 0],
+	[3, 0, 0],
+	[3, 3, 0],
+	[1, 3, 0],
+	[1, 2, 0],
+	[2, 2, 0],
+	[2, 1, 0],
+	[1, 1, 0],
+];
+
+Deno.test("simplify without single-loop-polygons may leave a polygon with a hole", () => {
+	const polygons = simplifyPolyhedrons([[FACE_F, FACE_G]]).flat();
+	assertEquals(polygons.length, 1);
+	assertEquals(polygons[0].length, 2);
+});
+
+Deno.test("single-loop-polygons refuses a merge that would enclose a hole", () => {
+	const polygons = simplifyPolyhedrons([[FACE_F, FACE_G]], {
+		singleLoopPolygons: true,
+	}).flat();
+	assertEquals(polygons.length, 2);
+	for (const loops of polygons) {
+		assertEquals(loops.length, 1);
+	}
+});
+
+Deno.test("single-loop-polygons still merges faces that share one run of edges", () => {
+	const left: Vertex[] = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]];
+	const right: Vertex[] = [[1, 0, 0], [2, 0, 0], [2, 1, 0], [1, 1, 0]];
+	const polygons = simplifyPolyhedrons([[left, right]], {
+		singleLoopPolygons: true,
+	}).flat();
+	assertEquals(polygons.length, 1);
+	assertEquals(polygons[0].length, 1);
+	assertEquals(polygons[0][0].length, 4);
+});

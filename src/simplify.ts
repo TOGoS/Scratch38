@@ -133,11 +133,43 @@ export function removeSpurs(loop: Loop): Loop {
  * `splitSharedLines` deals with those afterwards. Spurs left behind are removed.
  * Returns undefined if they share no edge, or the result would have fewer than three vertexes.
  */
-export function mergeAcross(f: Loop, g: Loop): Loop | undefined {
+/** Whether some edge of a loop is traversed again, in the opposite direction, by the same loop. */
+function touchesItself(loop: Loop): boolean {
+	const keys = loop.map(keyOf);
+	const n = keys.length;
+	const edges = new Set(keys.map((k, i) => `${k}|${keys[(i + 1) % n]}`));
+	return keys.some((k, i) => edges.has(`${keys[(i + 1) % n]}|${k}`));
+}
+
+/**
+ * Joins two loops across a run of consecutive edges they share, traversed in opposite directions.
+ * Normally the longest run is merged and any other shared runs are left in place, which can leave a
+ * polygon with a hole. With `singleLoop`, the merge is refused unless f and g share exactly one run,
+ * and the result has no repeated vertex or self-touching line. Gluing two disks along one arc, and nowhere
+ * else, gives a disk, so the outline stays a single loop.
+ */
+export function mergeAcross(
+	f: Loop,
+	g: Loop,
+	singleLoop = false,
+): Loop | undefined {
 	const fKeys = f.map(keyOf);
 	const gKeys = g.map(keyOf);
 	const n = f.length;
 	const m = g.length;
+	if (singleLoop) {
+		const shared = f.map((_, i) =>
+			gKeys.some((_, j) =>
+				gKeys[j] === fKeys[(i + 1) % n] &&
+				gKeys[(j + 1) % m] === fKeys[i]
+			)
+		);
+		const sharedCount = shared.filter((s) => s).length;
+		const runs = shared.filter((s, i) =>
+			s && !shared[(i - 1 + n) % n]
+		).length;
+		if (runs !== 1 || sharedCount === n) return undefined;
+	}
 	let best: { i: number; s: number; length: number } | undefined;
 	for (let i = 0; i < n; i++) {
 		for (let s = 0; s < m; s++) {
@@ -163,6 +195,7 @@ export function mergeAcross(f: Loop, g: Loop): Loop | undefined {
 	if (best === undefined) return undefined;
 	
 	const { i, s, length } = best;
+	if (singleLoop && length !== sharedCountOf(fKeys, gKeys)) return undefined;
 	// From the end of the run around f to its start, then from the start around g to its end.
 	const fPart = Array.from(
 		{ length: n - length + 1 },
@@ -173,7 +206,26 @@ export function mergeAcross(f: Loop, g: Loop): Loop | undefined {
 		(_, t) => g[(s + length + t) % m],
 	);
 	const merged = removeSpurs(cleanLoop([...fPart, ...gPart.slice(1, -1)]));
+	// A repeated vertex is a pinch: the pieces touch at a point as well as along the shared arc, which is not a disk.
+	if (
+		singleLoop &&
+		(touchesItself(merged) ||
+			new Set(merged.map(keyOf)).size !== merged.length)
+	) {
+		return undefined;
+	}
 	return merged.length >= 3 ? merged : undefined;
+}
+
+/** How many of f's edges are traversed backwards by g. */
+function sharedCountOf(fKeys: string[], gKeys: string[]): number {
+	const n = fKeys.length;
+	const m = gKeys.length;
+	return fKeys.filter((_, i) =>
+		gKeys.some((_, j) =>
+			gKeys[j] === fKeys[(i + 1) % n] && gKeys[(j + 1) % m] === fKeys[i]
+		)
+	).length;
 }
 
 /**
@@ -258,14 +310,14 @@ function mergePolyhedrons(polyhedrons: Loop[][]): Loop[][] {
 }
 
 /** Repeatedly joins coplanar loops that share an edge. Mutates and returns `loops`. */
-function mergeCoplanar(loops: Loop[]): Loop[] {
+function mergeCoplanar(loops: Loop[], singleLoop: boolean): Loop[] {
 	let changed = true;
 	while (changed) {
 		changed = false;
 		outer: for (let i = 0; i < loops.length; i++) {
 			for (let j = 0; j < loops.length; j++) {
 				if (i === j || !areCoplanar(loops[i], loops[j])) continue;
-				const merged = mergeAcross(loops[i], loops[j]);
+				const merged = mergeAcross(loops[i], loops[j], singleLoop);
 				if (merged !== undefined) {
 					loops[i] = merged;
 					loops.splice(j, 1);
@@ -330,12 +382,23 @@ function removeCollinearVertexes(loops: Loop[]): void {
  * each polygon being one or more loops. The caller groups those loops into the flat
  * edges stored in `Polyhedron3DData`.
  */
-export function simplifyPolyhedrons(polyhedra: Loop[][]): PolyhedronLoops[] {
+export interface SimplifyOptions {
+	/** Refuse merges that would leave a polygon with a hole. */
+	singleLoopPolygons?: boolean;
+}
+
+export function simplifyPolyhedrons(
+	polyhedra: Loop[][],
+	options: SimplifyOptions = {},
+): PolyhedronLoops[] {
 	const cleaned = polyhedra.map((loops) =>
 		loops.map(cleanLoop).filter((loop) => loop.length >= 3)
 	);
 	const groups: PolyhedronLoops[] = mergePolyhedrons(cleaned).map(
-		(loops) => mergeCoplanar(loops).map(splitSharedLines),
+		(loops) =>
+			mergeCoplanar(loops, options.singleLoopPolygons ?? false).map(
+				splitSharedLines,
+			),
 	);
 	removeCollinearVertexes(groups.flat(2));
 	return groups
@@ -376,10 +439,13 @@ function sameCounts(before: Loop[][], after: PolyhedronLoops[]): boolean {
  * so the old data is kept as the base. Use `prune` afterwards to drop unused parts.
  * If nothing changes, the same object is returned.
  */
-export function simplifyObject3d(object: Object3D): Object3D {
+export function simplifyObject3d(
+	object: Object3D,
+	options: SimplifyOptions = {},
+): Object3D {
 	const leaves = polyhedronLeaves(object);
 	const before = leaves.map(loopOfPolyhedron);
-	const after = simplifyPolyhedrons(before);
+	const after = simplifyPolyhedrons(before, options);
 	if (sameCounts(before, after)) {
 		return object;
 	}
