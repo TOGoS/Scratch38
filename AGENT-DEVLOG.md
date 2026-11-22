@@ -100,6 +100,13 @@ Kept out of README.md, which describes the tool and its spec.
   STL: `store/stl` writes every polyhedron of the object as one solid.
 - Storing a collection is not part of this work (see Punted).
 - `obj/bin` remains unsupported; free-form curves/surfaces, `l`, and `p` in OBJ are errors.
+- Coplanar merging: `mergeAcross` takes the longest run of consecutive shared lines (reverse-traversed) and drops only that run.
+  Other shared runs stay. The merged outline may then use a line twice, which is accepted (the donut case). Spurs
+  (a vertex whose two neighbours are the same) are removed by `removeSpurs`. The old rejection of repeated vertexes is gone.
+- Face matching across polyhedrons uses `canonicalLoop`, the smallest rotation over all starts. Comparing only from the
+  smallest vertex's first occurrence failed when a loop repeats a vertex, so equal faces were missed.
+- Deterministic order: polyhedron faces are matched in input order (first unmatched partner), and coplanar merges
+  scan loops by index. A polyhedron sharing several faces with another loses all of those shared faces.
 - Deduplicate only obvious results: keep the original when a simplification changes nothing, and reuse one index
   for identical results.
 

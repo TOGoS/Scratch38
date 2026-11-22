@@ -227,11 +227,14 @@ Shape: `(input:Object3D -- output:Object3D)`
 
 Simplifies a shape, without changing its shape, on a best-effort basis:
 - Merging polyhedrons that share a polygon, which is on opposite sides of each, into one polyhedron without that polygon
-- Replacing adjacent coplanar polygons with a single polygon
+- Replacing adjacent coplanar polygons with a single polygon, across one run of consecutive shared lines
 - Consolidating collinear lines that meet at a vertex with no other lines
 - Merging vertexes with identical coordinates, and lines between the same two vertexes
 
-A merge is skipped if it would leave a polygon that is not simple, or with fewer than three vertexes.
+Two polygons that share several separate runs of lines are merged across one run only, so no polygon ends up with a hole.
+Spurs left by a merge (where the outline runs out along a line and straight back) are removed.
+A polygon may still use a line twice, with the same polyhedron on both sides of it. That is accepted.
+A merge is skipped if it would leave fewer than three vertexes.
 Coplanarity and collinearity are checked with a small tolerance.
 
 `simplify` accepts any `Object3D` whose leaves are all polyhedrons (a `Polyhedron3D`, a union of them, a union of unions, and so on).

@@ -55,18 +55,20 @@ function cleanLoop(loop: Loop): Loop {
 	return result;
 }
 
-function hasRepeatedVertex(loop: Loop): boolean {
-	return new Set(loop.map(keyOf)).size !== loop.length;
-}
-
-/** The same loop regardless of where it starts. */
-function canonicalLoop(loop: Loop): string {
+/**
+ * The same loop regardless of where it starts. Every rotation is compared, so this also holds for loops
+ * that visit a vertex more than once, where the smallest vertex does not identify a single start.
+ */
+export function canonicalLoop(loop: Loop): string {
 	const keys = loop.map(keyOf);
-	let start = 0;
-	for (let i = 1; i < keys.length; i++) {
-		if (keys[i] < keys[start]) start = i;
+	let best: string | undefined;
+	for (let start = 0; start < keys.length; start++) {
+		const candidate = [...keys.slice(start), ...keys.slice(0, start)].join(
+			"|",
+		);
+		if (best === undefined || candidate < best) best = candidate;
 	}
-	return [...keys.slice(start), ...keys.slice(0, start)].join("|");
+	return best ?? "";
 }
 
 function rotate(loop: Loop, start: number): Loop {
@@ -107,27 +109,75 @@ function reverseLoop(loop: Loop): Loop {
 }
 
 /**
- * Joins two loops that share an edge traversed in opposite directions,
- * dropping that edge. Returns undefined if they do not share one, or the result would not be simple.
+ * Removes spurs: places where the loop runs out along a line and straight back along it,
+ * so that a vertex's neighbours on both sides are the same.
+ * Removing such a spur does not change the shape.
+ */
+export function removeSpurs(loop: Loop): Loop {
+	let result = loop;
+	let found = true;
+	while (found && result.length >= 4) {
+		found = false;
+		const n = result.length;
+		for (let i = 0; i < n; i++) {
+			if (keyOf(result[(i - 1 + n) % n]) === keyOf(result[(i + 1) % n])) {
+				const drop = new Set([i, (i + 1) % n]);
+				result = result.filter((_, k) => !drop.has(k));
+				found = true;
+				break;
+			}
+		}
+	}
+	return result;
+}
+
+/**
+ * Joins two loops across the longest run of consecutive edges they share, traversed in opposite directions,
+ * dropping that run. Only one run is merged; any other shared run stays, so the result may use a line twice
+ * (the same polyhedron on both sides of it), which is accepted. Spurs left behind are removed.
+ * Returns undefined if they share no edge, or the result would have fewer than three vertexes.
  */
 function mergeAcross(f: Loop, g: Loop): Loop | undefined {
 	const fKeys = f.map(keyOf);
 	const gKeys = g.map(keyOf);
-	for (let i = 0; i < f.length; i++) {
-		const a = fKeys[i];
-		const b = fKeys[(i + 1) % f.length];
-		for (let j = 0; j < g.length; j++) {
-			if (gKeys[j] !== b || gKeys[(j + 1) % g.length] !== a) continue;
-			// fRot runs from b to a, gRot from a to b, so drop the shared edge at both ends.
-			const fRot = rotate(f, (i + 1) % f.length);
-			const gRot = rotate(g, (j + 1) % g.length);
-			const merged = cleanLoop([...fRot, ...gRot.slice(1, -1)]);
-			if (merged.length >= 3 && !hasRepeatedVertex(merged)) {
-				return merged;
+	const n = f.length;
+	const m = g.length;
+	let best: { i: number; s: number; length: number } | undefined;
+	for (let i = 0; i < n; i++) {
+		for (let s = 0; s < m; s++) {
+			// A run of one edge: g[s] = f[i+1] and g[s+1] = f[i]. The run in g then reads f backwards.
+			if (
+				gKeys[s] !== fKeys[(i + 1) % n] ||
+				gKeys[(s + 1) % m] !== fKeys[i]
+			) continue;
+			let length = 1;
+			let start = s;
+			while (
+				length + 1 < n && length + 1 < m &&
+				gKeys[(start - 1 + m) % m] === fKeys[(i + length + 1) % n]
+			) {
+				start = (start - 1 + m) % m;
+				length++;
+			}
+			if (best === undefined || length > best.length) {
+				best = { i, s: start, length };
 			}
 		}
 	}
-	return undefined;
+	if (best === undefined) return undefined;
+	
+	const { i, s, length } = best;
+	// From the end of the run around f to its start, then from the start around g to its end.
+	const fPart = Array.from(
+		{ length: n - length + 1 },
+		(_, t) => f[(i + length + t) % n],
+	);
+	const gPart = Array.from(
+		{ length: m - length + 1 },
+		(_, t) => g[(s + length + t) % m],
+	);
+	const merged = removeSpurs(cleanLoop([...fPart, ...gPart.slice(1, -1)]));
+	return merged.length >= 3 ? merged : undefined;
 }
 
 /**
