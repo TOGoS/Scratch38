@@ -51,9 +51,8 @@ Kept out of README.md, which describes the tool and its spec.
   To add http/https, add a case to `parseResourceName` and `openResource`. Operations don't change.
 - Facet normals are ignored on load and recomputed on store from the winding order.
 - Store writes only the `default` group. Non-triangular polygons are an error on store.
-- `prune` keeps only what the main object references, renumbers each index array in its original order,
-  and makes the main object the `default`. Its default name is `default`.
-  The main object becomes `default` (user's decision). Keeping several named objects is a future extension.
+- `prune` keeps only the groups named by its `mapping` parameter, plus what they reference, and renumbers
+  each index array in its original order. See "Agreed decisions after the first implementation round" below.
 - `validate` peeks: it checks the object on top of the stack and leaves it there (user's decision).
   "Manifold" is the simplified definition the user gave: every polygon of the `default` object is closed,
   and every line is used by exactly two polygon edges going in different directions.
@@ -63,28 +62,47 @@ Kept out of README.md, which describes the tool and its spec.
 - `tools/fix-blank-lines.ts` is run by `deno task fmt`. Its tests are in `tools/fix-blank-lines_test.ts`.
 - `src/cli_test.ts` runs `stlmod` as a subprocess. It needs `--allow-run`, which is in the test task.
 
+### Agreed decisions after the first implementation round
+
+- Polyhedron groups (top-level sub-objects) are never merged by `simplify`. Polyhedrons within the same
+  group may be merged. This preserves object names, since each named `.obj` object is one polyhedron group.
+- `simplify` deduplicates only when the result is obvious: cache the simplified form of a polyhedron,
+  reuse the existing polyhedron index when the same simplified shape appears in several places, and keep
+  the original polyhedron if simplification produces an identical result. Do no extra computation to find
+  less obvious duplicates.
+- `prune` has a default parameter named `mapping`. Its value is a comma-separated list of entries of the
+  form `(<new name> "=") <old name>`. With no `=`, the group keeps its name; with `=`, it is renamed.
+  Example: `prune:fred=ted,main,default=jon` keeps `main` as `main`, renames `ted` to `fred`, renames `jon`
+  to `default`, and removes all groups not mentioned, along with anything they alone reference.
+- A separate `rename-sub-objects` operation is agreed in principle: "prune without pruning". It should use
+  the same mapping syntax but keep unmapped groups. Its exact name and parameter details still need to be
+  settled before implementation.
+- Wavefront `.mod` binary support stays out of scope until needed; `obj/bin` remains unsupported.
+
 - `simplify` (src/simplify.ts) works in coordinate space: each polygon is an outward-facing loop of coordinates,
   so vertexes with equal coordinates are merged automatically. Passes, in order:
-  1. Merge polyhedrons that share a polygon with opposite orientation, dropping that polygon.
+  1. Within each polyhedron group, merge polyhedrons that share a polygon with opposite orientation, dropping that polygon.
   2. Within each merged group, merge coplanar loops sharing an edge (skipping merges that would repeat a vertex).
   3. Remove vertexes with exactly two neighbours on a straight line (tolerance 1e-6).
   4. Rebuild the object. `simplify/keep-unused` appends the result after the original parts, which are kept;
      plain `simplify` then prunes to `default`.
-  Known limitation: simplify drops object names (merged polyhedrons have no single name).
+  Object names are preserved by keeping polyhedron groups intact (see the agreed decisions above).
 - HTTP and HTTPS URIs are loaded with `fetch` (`resource.ts`). Storing to them is an error.
   The shebang and the test task have `--allow-net`, and tests use a local `Deno.serve` on 127.0.0.1.
 - OBJ (`src/obj.ts`): winding was checked against the Wavefront spec (https://paulbourke.net/dataformats/obj/).
   Faces are counter-clockwise when viewed from the front, the same as this project, so no reversal is needed
   (marked `IMPLIED WINDING ORDER APPLIES HERE`).
-  Each `o` becomes a named polyhedron, which gets its own named group. `default` holds all of them.
+  Each `o` becomes a named polyhedron group; `default` holds all of them.
   The builder accepts names, and the OBJ writer emits `o` before every polyhedron (bare when unnamed), so names
-  round-trip. `prune;main-object-name=X` keeps the named polyhedron, but it becomes `default` and loses its name.
-  `obj/bin` is rejected (I took OBJ to be text only). Free-form curves/surfaces, `l`, and `p` are errors.
+  round-trip. `prune` now renames and keeps groups through its mapping parameter; see the agreed decisions above.
+  `obj/bin` is rejected (OBJ is text only here). Free-form curves/surfaces, `l`, and `p` are errors.
 - `validate` and `checkManifold`: a simplified definition from the user. Every polygon is closed, and every line is
   used by exactly two polygon edges in opposite directions.
 
 ## Open questions (waiting on the user)
 
-- `obj/bin`: the README listed it. Keep it as unsupported, or implement the Wavefront binary `.mod` format?
-- Simplify drops object names. Should it keep names where the merged polyhedrons still correspond to one?
+- If a `prune` mapping does not map anything to `default`, should the result have no `default` group,
+  or should one be synthesized from the kept groups? Downstream operations currently assume `default`.
+- What should happen when several mapping entries produce the same new name, and what is the final
+  name and parameter shape for `rename-sub-objects`?
 
