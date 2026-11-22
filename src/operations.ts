@@ -13,22 +13,25 @@ import { formatStlBinary, formatStlText, parseStl, StlFormat } from "./stl.ts";
 
 export type StackValue = Object3D;
 
-export interface OperationContext {
+/** Everything parsed out of an operation token: its modifiers, and its named parameter values. */
+export interface OperatorArguments {
 	modifiers: string[];
-	params: ReadonlyMap<string, string>;
-	stack: StackValue[];
+	namedParams: ReadonlyMap<string, string>;
 }
 
+/** A concrete operation, ready to run against a stack. It returns a new stack and leaves its input alone. */
+export interface Operation {
+	apply(stack: readonly StackValue[]): Promise<StackValue[]>;
+}
+
+/** The constructor of operations. Instantiating checks the arguments, so nothing runs if they are wrong. */
 export interface Operator {
 	name: string;
-	/** Named parameters the operation accepts. */
+	/** Named parameters the operator accepts. */
 	params: string[];
-	/** Parameter set by the `:value` form, if the operation has one. */
+	/** Parameter set by the `:value` form, if the operator has one. */
 	defaultParam?: string;
-	// TODO: Separate operation construction from running.
-	// - `Operator#instantiate(paramValues:ReadonlyMap<string,string>) : Operation`
-	// - `Operation#apply(in:StackValue[]) : StackValue[]`
-	run(context: OperationContext): void | Promise<void>;
+	instantiate(args: OperatorArguments): Operation;
 }
 
 type FileFormat =
@@ -81,151 +84,183 @@ function noModifiers(operation: string, modifiers: string[]): void {
 	}
 }
 
-function popObject(operation: string, stack: StackValue[]): StackValue {
-	const object = stack.pop();
-	if (object === undefined) {
+/** Splits the top object off a stack, failing if there is none. */
+function popObject(
+	operation: string,
+	stack: readonly StackValue[],
+): { rest: StackValue[]; object: StackValue } {
+	if (stack.length === 0) {
 		throw new Error(
 			`${operation} needs a 3D object on the stack, but the stack is empty`,
 		);
 	}
-	return object;
+	return { rest: stack.slice(0, -1), object: stack[stack.length - 1] };
 }
 
-const definitions: Operator[] = [
+const operators: Operator[] = [
 	{
 		name: "crash",
 		params: ["message"],
 		defaultParam: "message",
-		run({ modifiers, params }) {
+		instantiate({ modifiers, namedParams }) {
 			noModifiers("crash", modifiers);
-			throw new Error(params.get("message") ?? "Crash operation invoked");
+			const message = namedParams.get("message") ??
+				"Crash operation invoked";
+			return {
+				async apply() {
+					throw new Error(message);
+				},
+			};
 		},
 	},
 	{
 		name: "dup",
 		params: [],
-		run({ modifiers, stack }) {
+		instantiate({ modifiers }) {
 			noModifiers("dup", modifiers);
-			const top = popObject("dup", stack);
-			stack.push(top, top);
+			return {
+				async apply(stack) {
+					const { object } = popObject("dup", stack);
+					return [...stack, object];
+				},
+			};
 		},
 	},
 	{
 		name: "load",
 		params: ["resource-name"],
 		defaultParam: "resource-name",
-		async run({ modifiers, params, stack }) {
+		instantiate({ modifiers, namedParams }) {
 			const format = formatModifier("load", modifiers);
-			const name = requiredParam("load", params, "resource-name");
-			const bytes = await openResource(name).read();
-			if (format.kind === "obj") {
-				stack.push(
-					makeObject3d(parseObj(new TextDecoder().decode(bytes))),
-				);
-			} else {
-				const triangles = parseStl(
-					bytes,
-					format.variant === "auto" ? undefined : format.variant,
-				);
-				stack.push(makeObject3d([triangles]));
-			}
+			const name = requiredParam("load", namedParams, "resource-name");
+			return {
+				async apply(stack) {
+					const bytes = await openResource(name).read();
+					if (format.kind === "obj") {
+						return [
+							...stack,
+							makeObject3d(
+								parseObj(new TextDecoder().decode(bytes)),
+							),
+						];
+					}
+					const triangles = parseStl(
+						bytes,
+						format.variant === "auto" ? undefined : format.variant,
+					);
+					return [...stack, makeObject3d([triangles])];
+				},
+			};
 		},
 	},
 	{
 		name: "store",
 		params: ["resource-name"],
 		defaultParam: "resource-name",
-		async run({ modifiers, params, stack }) {
+		instantiate({ modifiers, namedParams }) {
 			const format = formatModifier("store", modifiers);
-			const name = requiredParam("store", params, "resource-name");
-			const object = popObject("store", stack);
-			let bytes: Uint8Array;
-			if (format.kind === "obj") {
-				bytes = new TextEncoder().encode(formatObj(object));
-			} else {
-				const triangles = trianglesOfObject3d(object);
-				bytes = format.variant === "binary"
-					? formatStlBinary(triangles)
-					: new TextEncoder().encode(formatStlText(triangles));
-			}
-			await openResource(name).write(bytes);
+			const name = requiredParam("store", namedParams, "resource-name");
+			return {
+				async apply(stack) {
+					const { rest, object } = popObject("store", stack);
+					let bytes: Uint8Array;
+					if (format.kind === "obj") {
+						bytes = new TextEncoder().encode(formatObj(object));
+					} else {
+						const triangles = trianglesOfObject3d(object);
+						bytes = format.variant === "binary"
+							? formatStlBinary(triangles)
+							: new TextEncoder().encode(
+								formatStlText(triangles),
+							);
+					}
+					await openResource(name).write(bytes);
+					return rest;
+				},
+			};
 		},
 	},
 	{
 		name: "validate",
 		params: [],
-		run({ modifiers, stack }) {
+		instantiate({ modifiers }) {
 			noModifiers("validate", modifiers);
-			const object = stack[stack.length - 1];
-			if (object === undefined) {
-				throw new Error(
-					"validate needs a 3D object on the stack, but the stack is empty",
-				);
-			}
-			checkManifold(object);
+			return {
+				async apply(stack) {
+					const { object } = popObject("validate", stack);
+					checkManifold(object);
+					return [...stack];
+				},
+			};
 		},
 	},
 	{
 		name: "simplify",
 		params: [],
-		run({ modifiers, stack }) {
+		instantiate({ modifiers }) {
 			noModifiers("simplify", modifiers);
-			stack.push(simplifyObject3d(popObject("simplify", stack)));
+			return {
+				async apply(stack) {
+					const { rest, object } = popObject("simplify", stack);
+					return [...rest, simplifyObject3d(object)];
+				},
+			};
 		},
 	},
 	{
 		name: "prune",
 		params: [],
-		run({ modifiers, stack }) {
+		instantiate({ modifiers }) {
 			noModifiers("prune", modifiers);
-			stack.push(pruneObject3d(popObject("prune", stack)));
+			return {
+				async apply(stack) {
+					const { rest, object } = popObject("prune", stack);
+					return [...rest, pruneObject3d(object)];
+				},
+			};
 		},
 	},
 ];
 
-const definitionsByName = new Map(definitions.map((d) => [d.name, d]));
+const operatorsByName = new Map(operators.map((o) => [o.name, o]));
 
-// TODO: This should probably just be 'operation',
-// and it can probably be simplified by removing the reference to the Operator.
-// It may be useful to keep the token that was parsed to create it around for debugging;
-// `source: string` or somesuch.
-interface PreparedOperation {
-	definition: Operator;
-	context: Omit<OperationContext, "stack">;
-}
-
-function prepareOperation(spec: OperationSpec): PreparedOperation {
-	const definition = definitionsByName.get(spec.name);
-	if (definition === undefined) {
-		throw new Error(`Unknown operation: ${spec.name}`);
-	}
-	
-	const params = new Map(spec.namedParams);
-	for (const name of params.keys()) {
-		if (!definition.params.includes(name)) {
-			throw new Error(
-				`${definition.name} does not take parameter ${name}`,
-			);
+/** Works out the arguments for an operator from a parsed operation token, checking the names. */
+function argumentsOf(
+	operator: Operator,
+	spec: OperationSpec,
+): OperatorArguments {
+	const namedParams = new Map(spec.namedParams);
+	for (const name of namedParams.keys()) {
+		if (!operator.params.includes(name)) {
+			throw new Error(`${operator.name} does not take parameter ${name}`);
 		}
 	}
 	if (spec.defaultValue !== undefined) {
-		const defaultParam = definition.defaultParam;
+		const defaultParam = operator.defaultParam;
 		if (defaultParam === undefined) {
-			throw new Error(`${definition.name} does not take a default value`);
+			throw new Error(`${operator.name} does not take a default value`);
 		}
-		if (params.has(defaultParam)) {
+		if (namedParams.has(defaultParam)) {
 			throw new Error(
-				`${definition.name} parameter ${defaultParam} given both by name and as default value`,
+				`${operator.name} parameter ${defaultParam} given both by name and as default value`,
 			);
 		}
-		params.set(defaultParam, spec.defaultValue);
+		namedParams.set(defaultParam, spec.defaultValue);
 	}
-	
-	return { definition, context: { modifiers: spec.modifiers, params } };
+	return { modifiers: spec.modifiers, namedParams };
+}
+
+/** Finds the operator named by a parsed operation token, and instantiates it. Throws on bad arguments. */
+export function instantiateOperation(spec: OperationSpec): Operation {
+	const operator = operatorsByName.get(spec.name);
+	if (operator === undefined) {
+		throw new Error(`Unknown operation: ${spec.name}`);
+	}
+	return operator.instantiate(argumentsOf(operator, spec));
 }
 
 /**
- * Parses and checks every operation before running any of them,
+ * Instantiates every operation before applying any of them,
  * so that a mistake late in the command line does not leave partial side effects.
  * Returns the stack as it is after the last operation.
  */
@@ -233,14 +268,13 @@ export async function runOperations(args: string[]): Promise<StackValue[]> {
 	if (args.length === 0) {
 		throw new Error("No operations given");
 	}
-	const prepared = args.map((arg) =>
-		prepareOperation(parseOperationSpec(arg))
+	const operations = args.map((arg) =>
+		instantiateOperation(parseOperationSpec(arg))
 	);
 	
-	const stack: StackValue[] = [];
-	for (const { definition, context } of prepared) {
-		// TODO: Operator/Operand refactor should probably simplify this to simply `stack = operation.apply(stack)`
-		await definition.run({ ...context, stack });
+	let stack: StackValue[] = [];
+	for (const operation of operations) {
+		stack = await operation.apply(stack);
 	}
 	return stack;
 }

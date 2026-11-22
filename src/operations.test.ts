@@ -3,9 +3,15 @@ import {
 	assertRejects,
 	assertStrictEquals,
 	assertStringIncludes,
+	assertThrows,
 } from "@std/assert";
-import { runOperations } from "./operations.ts";
-import { polyhedronLeaves, trianglesOfObject3d } from "./object3d.ts";
+import { instantiateOperation, runOperations } from "./operations.ts";
+import { parseOperationSpec } from "./operation-syntax.ts";
+import {
+	makeObject3d,
+	polyhedronLeaves,
+	trianglesOfObject3d,
+} from "./object3d.ts";
 import { formatStlBinary, formatStlText, parseStl, Triangle } from "./stl.ts";
 
 const TRIANGLES: Triangle[] = [
@@ -337,4 +343,24 @@ Deno.test("trianglesOfObject3d is used for the loaded data", async () => {
 	} finally {
 		await Deno.remove(dir, { recursive: true });
 	}
+});
+
+Deno.test("instantiation checks arguments before any operation is applied", () => {
+	assertThrows(
+		() => instantiateOperation(parseOperationSpec("crash/x")),
+		Error,
+		"takes no modifiers",
+	);
+});
+
+Deno.test("apply returns a new stack and leaves the stack it was given alone", async () => {
+	const object = makeObject3d([TETRAHEDRON]);
+	const before = [object];
+	const after = await instantiateOperation(parseOperationSpec("dup")).apply(
+		before,
+	);
+	assertEquals(before.length, 1);
+	assertEquals(after.length, 2);
+	assertStrictEquals(after[0], object);
+	assertStrictEquals(after[1], object);
 });
