@@ -219,6 +219,10 @@ and `loopsOfObject3d`. Upper-camel-case type names such as `Object3D` are unchan
 
 Keep this section at the end of the devlog until we have a more formal task list.
 
+- Expose the whole scripting language through the library (`./mod`), composably and monadically: callers should be
+  able to import it, parse operation tokens into operators, and build or compose operations without running them.
+  Running is a separate step (`runOperations` is one way to do it). Currently only `parseOperationSpec`,
+  `instantiateOperation`, and `runOperations` are exported from `./mod`.
 - STL can only represent triangles, and OBJ faces cannot express holes.
   - Both `store/stl` and `store/obj` throw when a polygon cannot be written; STL rejects non-triangular polygons.
   - To make them work we'll have to split polygons, including polygons with holes, back up into triangles
