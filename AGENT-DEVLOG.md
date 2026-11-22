@@ -190,6 +190,7 @@ and `loopsOfObject3d`. Upper-camel-case type names such as `Object3D` are unchan
 
 Keep this section at the end of the devlog until we have a more formal task list.
 
+- Rename some operator/operation types as per 'Operators and Operations' section in README.
 - STL can only represent triangles, and OBJ faces cannot express holes.
   - Both `store/stl` and `store/obj` throw when a polygon cannot be written; STL rejects non-triangular polygons.
   - To make them work we'll have to split polygons, including polygons with holes, back up into triangles

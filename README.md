@@ -26,6 +26,18 @@ The following grammars are specified using the following pseudocode syntax:
 `<foo> <delimiter>`, e.g. `<foo> "/"`, implies that the substring named `foo`
 is either self-delimiting or does not contain the delimiter.
 
+## Operators and Operations
+
+In the context of the the stack-based language, these terms are used loosey to mean:
+- **operation** - a concrete operation to be applied to the stack
+- **operator** - the constructor of an operation.
+
+e.g. the `load` operator is instantiated with a `resource-name` parameter
+to construct the operation named `load;resource-name=foo.stl`.
+
+In cases where no parameters are passed, e.g. `crash` and `dup`,
+the name can refer either to the constructor (operator) and the instance (operation).
+
 ## Operation 'Shape'
 
 `(foo:String -- bar:Object3D baz:String)` would mean that an operation
