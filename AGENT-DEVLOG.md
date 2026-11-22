@@ -119,35 +119,41 @@ Kept out of README.md, which describes the tool and its spec.
 - Whether `simplify` on a collection simplifies the whole collection or one extracted object.
 - A better naming system for identifiers that start with a digit (see To-do).
 
-### Known divergences in current code
+### Implementation (2026-11-21)
 
-The following describe the code as it is now, before the architecture change above. Code and tests change in the
-next step.
+Implemented in `src/object3d.ts`, which replaces `vector3d-object.ts`:
+- `Polyhedron3DData`, `Polyhedron3D`, `UnionObject3D`, and `type Object3D = Polyhedron3D | UnionObject3D`,
+  with `readonly` fields so the compiler enforces immutability.
+- `makeObject3D(polyhedra, base?)`: one builder. Without a base it creates fresh data. With a base it copies the
+  base's lists, reuses base vertexes and lines whose coordinates or endpoints match, and appends. A single polyhedron
+  gives a `Polyhedron3D`; more than one gives a `UnionObject3D` of them.
+- `pruneObject3D`: writes a new data per source data, containing only what the leaves use, renumbered in order.
+  The union structure is kept.
+- `checkManifold`: works on coordinates, so leaves from different data are checked together. Each directed edge must
+  be used as many times as its reverse. That gives "two uses in opposite directions, or some multiple of these pairs".
+- `simplify` (`src/simplify.ts`): `simplifyObject3D` runs the merge passes on the leaves' loops. If the leaves share
+  one data, the new parts are appended to it (the base). Otherwise they go into fresh data. If nothing changes
+  (same counts of polyhedrons, loops, and vertexes), it returns the input object. It does not prune.
+- `prune` is a separate operation. `simplify` is not followed by `prune` automatically.
+- `dup` (`(a -- a a)`) is new.
+- OBJ: each `o` starts a new polyhedron, and object names are dropped. The writer emits a bare `o` before each
+  polyhedron. The model has no names, so this is a lossy but consistent round trip.
+- STL: `store/stl` writes all leaves as one solid, and fails on non-triangular polygons.
 
-- `Vector3DObject` combines data, polyhedron groups, and names with a `default` group. It becomes `Polyhedron3DData`
-  plus `UnionObject3D`/`Polyhedron3D`, with no `default` and no groups in the data.
-- `prune;main-object-name=...` still exists. It goes away; `prune` takes the object on the stack as given.
-- `store`, `validate`, `simplify`, and `trianglesFromVector3DObject` use the `default` group. They work on objects.
-- OBJ load produces one combined object with names and `default`. It should produce one `UnionObject3D` of `Polyhedron3D`s.
-- `simplify` merges across all polyhedrons of `default`. It should accept any polyhedron-based object (leaves flattened).
-- `rename-entries` and `extract` are not implemented; leave them until collections are wanted.
-- Tests still describe the old architecture: they use `default`, `namedGroups`, and names.
+The old `default`, `namedGroups`, `polyhedronGroups`, `prune;main-object-name`, and `simplify/keep-unused` are gone.
 
 ## Open questions (waiting on the user)
 
 - Resolved: `Polyhedron3DUnion` is dropped. A polyhedron group is a `UnionObject3D` of `Polyhedron3D`s (user's decision).
 - Resolved: nested unions are flattened for `simplify` and `validate`; the leaves form one set (user's decision).
-  Still open: whether a union of leaves from different `Polyhedron3DData`s is valid for `simplify`, and which data it uses as base.
-- Does plain `simplify` also prune, as the README still says? Or does it stop after keep-unused, which the user's
-  description ("includes all the old data as the base") could also mean?
+  Partly settled in code: leaves from different data are simplified together, and the output goes into fresh data
+  (no base). Confirm this.
 - `obj/bin`: the README listed it. Keep it as unsupported, or implement the Wavefront binary `.mod` format?
 
 ## To-do
 
 Keep this section at the end of the devlog until we have a more formal task list.
 
-- Refactor the model into `Polyhedron3DData`, `Polyhedron3D`, and `UnionObject3D`, as described above.
-  Update the code and tests to match, then the classRef tags.
-- Update `load/obj`, `store/obj`, `store/stl`, `validate`, `simplify`, and `prune` to the new model.
-- Remove `prune;main-object-name`.
+- Consider a shared, append-only list type so appending to a base does not copy it.
 - Collections are deferred; see Punted.
+- Figure out a better system for names that start with digits (for example `Object3D` versus `ThreeDObject`).

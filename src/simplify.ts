@@ -1,12 +1,13 @@
 import type { Vertex } from "./stl.ts";
 import {
-	loopsFromVector3DObject,
-	Vector3DObject,
-	vector3DObjectFromPolyhedrons,
-} from "./vector3d-object.ts";
-
-/** A polygon as its vertex coordinates, outward-facing, in order. */
-type Loop = Vertex[];
+	Loop,
+	loopOfPolyhedron,
+	makeObject3D,
+	Object3D,
+	Polyhedron3D,
+	Polyhedron3DData,
+	polyhedronLeaves,
+} from "./object3d.ts";
 
 /** Tolerance for coplanarity and collinearity checks, which are only approximate. */
 const EPSILON = 1e-6;
@@ -252,67 +253,36 @@ export function simplifyPolyhedrons(polyhedrons: Loop[][]): Loop[][] {
 	return groups.filter((loops) => loops.length > 0);
 }
 
-/**
- * Appends `added` after everything in `original`, offsetting its indexes, and makes it
- * the `default` object. The original's parts are kept, unreferenced by the default.
- */
-function appendVector3DObject(
-	original: Vector3DObject,
-	added: Vector3DObject,
-): Vector3DObject {
-	const vertexOffset = original.vertexes.length;
-	const lineOffset = original.lines.length;
-	const polygonOffset = original.polygons.length;
-	const polyhedronOffset = original.polyhedrons.length;
-	return {
-		classRef: original.classRef,
-		vertexes: [...original.vertexes, ...added.vertexes],
-		lines: [
-			...original.lines,
-			...added.lines.map(([a, b]): [number, number] => [
-				a + vertexOffset,
-				b + vertexOffset,
-			]),
-		],
-		polygons: [
-			...original.polygons,
-			...added.polygons.map((polygon) =>
-				polygon.map((edge) => ({
-					line: edge.line + lineOffset,
-					direction: edge.direction,
-				}))
-			),
-		],
-		polyhedrons: [
-			...original.polyhedrons,
-			...added.polyhedrons.map((polyhedron) =>
-				polyhedron.map((face) => ({
-					polygon: face.polygon + polygonOffset,
-					side: face.side,
-				}))
-			),
-		],
-		polyhedronGroups: [
-			...original.polyhedronGroups,
-			added.polyhedronGroups[0].map((i) => i + polyhedronOffset),
-		],
-		namedGroups: {
-			...original.namedGroups,
-			default: original.polyhedronGroups.length,
-		},
-	};
+/** The shared data, if every leaf refers to the same `Polyhedron3DData`. */
+function commonData(leaves: Polyhedron3D[]): Polyhedron3DData | undefined {
+	const first = leaves[0]?.data;
+	return first !== undefined && leaves.every((leaf) => leaf.data === first)
+		? first
+		: undefined;
+}
+
+/** Whether simplification changed nothing, judged by the number of polyhedrons, loops, and vertexes. */
+function sameCounts(before: Loop[][], after: Loop[][]): boolean {
+	const count = (polyhedra: Loop[][]) => [
+		polyhedra.length,
+		polyhedra.flat().length,
+		polyhedra.flat().flat().length,
+	];
+	return count(before).every((n, i) => n === count(after)[i]);
 }
 
 /**
- * Simplifies the `default` object on a best-effort basis. Returns only the simplified parts,
- * unless `keepUnused`, in which case the original parts are kept too (see README.md).
+ * Simplifies an object on a best-effort basis. Its leaves are treated as one set,
+ * however they are nested. The new parts are appended to the leaves' shared data if they all have one,
+ * so the old data is kept as the base. Use `prune` afterwards to drop unused parts.
+ * If nothing changes, the same object is returned.
  */
-export function simplifyVector3DObject(
-	object: Vector3DObject,
-	keepUnused: boolean,
-): Vector3DObject {
-	const simplified = vector3DObjectFromPolyhedrons(
-		simplifyPolyhedrons(loopsFromVector3DObject(object)),
-	);
-	return keepUnused ? appendVector3DObject(object, simplified) : simplified;
+export function simplifyObject3D(object: Object3D): Object3D {
+	const leaves = polyhedronLeaves(object);
+	const before = leaves.map(loopOfPolyhedron);
+	const after = simplifyPolyhedrons(before);
+	if (sameCounts(before, after)) {
+		return object;
+	}
+	return makeObject3D(after, commonData(leaves));
 }

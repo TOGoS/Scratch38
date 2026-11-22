@@ -1,36 +1,25 @@
 import type { Vertex } from "./stl.ts";
 import {
-	defaultPolyhedronNames,
-	loopsFromVector3DObject,
-	Vector3DObject,
-} from "./vector3d-object.ts";
-
-/** An OBJ object: its name, if any, and its faces as loops of vertex coordinates. */
-export interface ObjObject {
-	name?: string;
-	loops: Vertex[][];
-}
+	Loop,
+	loopOfPolyhedron,
+	Object3D,
+	polyhedronLeaves,
+} from "./object3d.ts";
 
 /** Statements that are accepted and have no effect here. */
 const IGNORED_STATEMENTS = new Set(["vt", "vn", "g", "s", "mtllib", "usemtl"]);
 
-interface PendingObject {
-	name?: string;
-	/** Faces as 0-based vertex indexes, checked once the whole file has been read. */
-	faces: number[][];
-}
-
 /**
- * Parses Wavefront OBJ text (see https://paulbourke.net/dataformats/obj/).
- * Supports vertexes (`v`), faces (`f`, with any number of vertexes), and object names (`o`).
- * Texture and normal references are ignored. Other statements, such as free-form curves,
- * lines, and points, are errors.
+ * Parses Wavefront OBJ text (see https://paulbourke.net/dataformats/obj/) into polyhedrons.
+ * Each `o` statement starts a new polyhedron, and faces before the first `o` form one too.
+ * Object names are not kept. Supports vertexes (`v`), faces (`f`, with any number of vertexes),
+ * and object names (`o`). Texture and normal references are ignored. Other statements, such as
+ * free-form curves, lines, and points, are errors.
  */
 // IMPLIED WINDING ORDER APPLIES HERE
-export function parseObj(text: string): ObjObject[] {
+export function parseObj(text: string): Loop[][] {
 	const vertexes: Vertex[] = [];
-	const pending: PendingObject[] = [{ faces: [] }];
-	let current = pending[0];
+	const sections: number[][][] = [[]];
 	
 	text.split("\n").forEach((rawLine, lineIndex) => {
 		const line = rawLine.replace(/#.*$/, "").trim();
@@ -59,7 +48,7 @@ export function parseObj(text: string): ObjObject[] {
 						`${where}: face needs at least three vertexes`,
 					);
 				}
-				current.faces.push(args.map((token) => {
+				sections[sections.length - 1].push(args.map((token) => {
 					const n = Number(token.split("/")[0]);
 					if (!Number.isInteger(n) || n === 0) {
 						throw new Error(
@@ -71,19 +60,9 @@ export function parseObj(text: string): ObjObject[] {
 				}));
 				break;
 			}
-			case "o": {
-				// A bare `o` starts a new unnamed object, and `o name` reopens or starts a named one.
-				const name = args.join(" ");
-				if (name === "") {
-					current = { faces: [] };
-					pending.push(current);
-				} else {
-					current = pending.find((p) => p.name === name) ??
-						{ name, faces: [] };
-					if (!pending.includes(current)) pending.push(current);
-				}
+			case "o":
+				sections.push([]);
 				break;
-			}
 			default:
 				if (!IGNORED_STATEMENTS.has(keyword)) {
 					throw new Error(
@@ -93,34 +72,33 @@ export function parseObj(text: string): ObjObject[] {
 		}
 	});
 	
-	const objects = pending.filter((p) => p.faces.length > 0).map((p) => ({
-		name: p.name,
-		loops: p.faces.map((refs) =>
-			refs.map((i) => {
-				const v = vertexes[i];
-				if (v === undefined) {
-					throw new Error(
-						`Face refers to vertex ${i + 1}, which does not exist`,
-					);
-				}
-				return v;
-			})
-		),
-	}));
-	if (objects.length === 0) {
+	const polyhedra = sections
+		.filter((section) => section.length > 0)
+		.map((section) =>
+			section.map((indexes) =>
+				indexes.map((i) => {
+					const v = vertexes[i];
+					if (v === undefined) {
+						throw new Error(
+							`Face refers to vertex ${
+								i + 1
+							}, which does not exist`,
+						);
+					}
+					return v;
+				})
+			)
+		);
+	if (polyhedra.length === 0) {
 		throw new Error("OBJ file has no faces");
 	}
-	return objects;
+	return polyhedra;
 }
 
 /**
- * Writes a Vector3DObject's `default` object as OBJ text. Each polyhedron gets an `o`
- * line, named if it has a name, so that names survive a round trip.
+ * Writes an object as OBJ text. Each polyhedron gets a bare `o` line, since objects have no names.
  */
-export function formatObj(object: Vector3DObject): string {
-	const polyhedrons = loopsFromVector3DObject(object);
-	const names = defaultPolyhedronNames(object);
-	
+export function formatObj(object: Object3D): string {
 	const vertexes: Vertex[] = [];
 	const indexes = new Map<string, number>();
 	const indexOf = (v: Vertex): number => {
@@ -135,13 +113,13 @@ export function formatObj(object: Vector3DObject): string {
 	};
 	
 	const body: string[] = [];
-	polyhedrons.forEach((loops, p) => {
-		body.push(names[p] === undefined ? "o" : `o ${names[p]}`);
-		for (const loop of loops) {
+	for (const leaf of polyhedronLeaves(object)) {
+		body.push("o");
+		for (const loop of loopOfPolyhedron(leaf)) {
 			// IMPLIED WINDING ORDER APPLIES HERE
 			body.push(`f ${loop.map((v) => indexOf(v) + 1).join(" ")}`);
 		}
-	});
+	}
 	
 	const header = ["# written by stlmod"];
 	const vertexLines = vertexes.map((v) => `v ${v.join(" ")}`);

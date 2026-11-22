@@ -1,48 +1,51 @@
 import { assertEquals, assertThrows } from "@std/assert";
 import type { Vertex } from "./stl.ts";
+import { makeObject3D } from "./object3d.ts";
 import { formatObj, parseObj } from "./obj.ts";
-import { vector3DObjectFromPolyhedrons } from "./vector3d-object.ts";
 
 const SQUARE = "v 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nf 1 2 3 4\n";
 
 Deno.test("parses a polygon with any number of vertexes", () => {
-	const [object] = parseObj(SQUARE);
-	assertEquals(object.name, undefined);
-	assertEquals(object.loops, [[[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]]);
+	assertEquals(parseObj(SQUARE), [[[[0, 0, 0], [1, 0, 0], [1, 1, 0], [
+		0,
+		1,
+		0,
+	]]]]);
 });
 
 Deno.test("negative vertex references count back from the vertexes read so far", () => {
-	const [object] = parseObj("v 0 0 0\nv 1 0 0\nv 0 1 0\nf -3 -2 -1\n");
-	assertEquals(object.loops, [[[0, 0, 0], [1, 0, 0], [0, 1, 0]]]);
+	assertEquals(parseObj("v 0 0 0\nv 1 0 0\nv 0 1 0\nf -3 -2 -1\n"), [[[
+		[0, 0, 0],
+		[1, 0, 0],
+		[0, 1, 0],
+	]]]);
 });
 
 Deno.test("texture and normal references are ignored", () => {
 	const text =
 		"v 0 0 0\nv 1 0 0\nv 0 1 0\nvt 0 0\nvn 0 0 1\nf 1/1/1 2/1/1 3//1\n";
-	const [object] = parseObj(text);
-	assertEquals(object.loops, [[[0, 0, 0], [1, 0, 0], [0, 1, 0]]]);
+	assertEquals(parseObj(text), [[[[0, 0, 0], [1, 0, 0], [0, 1, 0]]]]);
 });
 
 Deno.test("comments and vertex weights are accepted", () => {
-	const [object] = parseObj(
-		"# a comment\nv 0 0 0 1.0 # origin\nv 1 0 0\nv 0 1 0\nf 1 2 3 # face\n",
-	);
-	assertEquals(object.loops, [[[0, 0, 0], [1, 0, 0], [0, 1, 0]]]);
+	const text =
+		"# a comment\nv 0 0 0 1.0 # origin\nv 1 0 0\nv 0 1 0\nf 1 2 3 # face\n";
+	assertEquals(parseObj(text), [[[[0, 0, 0], [1, 0, 0], [0, 1, 0]]]]);
 });
 
-Deno.test("each o statement starts a named object", () => {
-	const objects = parseObj(
-		"v 0 0 0\nv 1 0 0\nv 0 1 0\no first\nf 1 2 3\no second\nv 0 0 1\nf 1 2 4\n",
+Deno.test("each o statement starts a new polyhedron, whatever its name", () => {
+	const polyhedra = parseObj(
+		"v 0 0 0\nv 1 0 0\nv 0 1 0\no first\nf 1 2 3\no first\nv 0 0 1\nf 1 2 4\n",
 	);
-	assertEquals(objects.map((o) => o.name), ["first", "second"]);
-	assertEquals(objects[1].loops, [[[0, 0, 0], [1, 0, 0], [0, 0, 1]]]);
+	assertEquals(polyhedra.length, 2);
+	assertEquals(polyhedra[1], [[[0, 0, 0], [1, 0, 0], [0, 0, 1]]]);
 });
 
 Deno.test("group, smoothing, material and library statements are ignored", () => {
-	const [object] = parseObj(
+	const polyhedra = parseObj(
 		`mtllib things.mtl\ng a b\ns 1\nusemtl red\n${SQUARE}`,
 	);
-	assertEquals(object.loops.length, 1);
+	assertEquals(polyhedra.length, 1);
 });
 
 Deno.test("unsupported statements are errors, with the line number", () => {
@@ -78,19 +81,9 @@ Deno.test("a file without faces is an error", () => {
 	assertThrows(() => parseObj("v 0 0 0\n"), Error, "has no faces");
 });
 
-Deno.test("writing then reading keeps names, including an unnamed object", () => {
+Deno.test("writing then reading keeps every polyhedron, in order", () => {
 	const square: Vertex[][] = [[[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]];
 	const triangle: Vertex[][] = [[[0, 0, 0], [1, 0, 0], [0, 0, 1]]];
-	const object = vector3DObjectFromPolyhedrons(
-		[square, triangle],
-		[undefined, "tri"],
-	);
-	const objects = parseObj(formatObj(object));
-	assertEquals(objects.map((o) => o.name), [undefined, "tri"]);
-	assertEquals(objects[0].loops, [[[0, 0, 0], [1, 0, 0], [1, 1, 0], [
-		0,
-		1,
-		0,
-	]]]);
-	assertEquals(objects[1].loops, [[[0, 0, 0], [1, 0, 0], [0, 0, 1]]]);
+	const text = formatObj(makeObject3D([square, triangle]));
+	assertEquals(parseObj(text), [square, triangle]);
 });

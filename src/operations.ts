@@ -1,18 +1,17 @@
 import { OperationSpec, parseOperationSpec } from "./operation-syntax.ts";
 import { openResource } from "./resource.ts";
-import { formatObj, parseObj } from "./obj.ts";
-import { formatStlBinary, formatStlText, parseStl, StlFormat } from "./stl.ts";
-import { simplifyVector3DObject } from "./simplify.ts";
 import {
 	checkManifold,
-	pruneVector3DObject,
-	trianglesFromVector3DObject,
-	Vector3DObject,
-	vector3DObjectFromPolyhedrons,
-	vector3DObjectFromTriangles,
-} from "./vector3d-object.ts";
+	makeObject3D,
+	Object3D,
+	pruneObject3D,
+	trianglesOfObject3D,
+} from "./object3d.ts";
+import { formatObj, parseObj } from "./obj.ts";
+import { simplifyObject3D } from "./simplify.ts";
+import { formatStlBinary, formatStlText, parseStl, StlFormat } from "./stl.ts";
 
-export type StackValue = Vector3DObject;
+export type StackValue = Object3D;
 
 export interface OperationContext {
 	modifiers: string[];
@@ -71,18 +70,41 @@ function requiredParam(
 	return value;
 }
 
+function noModifiers(operation: string, modifiers: string[]): void {
+	if (modifiers.length > 0) {
+		throw new Error(
+			`${operation} takes no modifiers, got ${modifiers.join("/")}`,
+		);
+	}
+}
+
+function popObject(operation: string, stack: StackValue[]): StackValue {
+	const object = stack.pop();
+	if (object === undefined) {
+		throw new Error(
+			`${operation} needs a 3D object on the stack, but the stack is empty`,
+		);
+	}
+	return object;
+}
+
 const definitions: OperationDefinition[] = [
 	{
 		name: "crash",
 		params: ["message"],
 		defaultParam: "message",
 		run({ modifiers, params }) {
-			if (modifiers.length > 0) {
-				throw new Error(
-					`crash takes no modifiers, got ${modifiers.join("/")}`,
-				);
-			}
+			noModifiers("crash", modifiers);
 			throw new Error(params.get("message") ?? "Crash operation invoked");
+		},
+	},
+	{
+		name: "dup",
+		params: [],
+		run({ modifiers, stack }) {
+			noModifiers("dup", modifiers);
+			const top = popObject("dup", stack);
+			stack.push(top, top);
 		},
 	},
 	{
@@ -94,19 +116,15 @@ const definitions: OperationDefinition[] = [
 			const name = requiredParam("load", params, "resource-name");
 			const bytes = await openResource(name).read();
 			if (format.kind === "obj") {
-				const objects = parseObj(new TextDecoder().decode(bytes));
 				stack.push(
-					vector3DObjectFromPolyhedrons(
-						objects.map((o) => o.loops),
-						objects.map((o) => o.name),
-					),
+					makeObject3D(parseObj(new TextDecoder().decode(bytes))),
 				);
 			} else {
 				const triangles = parseStl(
 					bytes,
 					format.variant === "auto" ? undefined : format.variant,
 				);
-				stack.push(vector3DObjectFromTriangles(triangles));
+				stack.push(makeObject3D([triangles]));
 			}
 		},
 	},
@@ -117,17 +135,12 @@ const definitions: OperationDefinition[] = [
 		async run({ modifiers, params, stack }) {
 			const format = formatModifier("store", modifiers);
 			const name = requiredParam("store", params, "resource-name");
-			const object = stack.pop();
-			if (object === undefined) {
-				throw new Error(
-					"store needs a 3DObject on the stack, but the stack is empty",
-				);
-			}
+			const object = popObject("store", stack);
 			let bytes: Uint8Array;
 			if (format.kind === "obj") {
 				bytes = new TextEncoder().encode(formatObj(object));
 			} else {
-				const triangles = trianglesFromVector3DObject(object);
+				const triangles = trianglesOfObject3D(object);
 				bytes = format.variant === "binary"
 					? formatStlBinary(triangles)
 					: new TextEncoder().encode(formatStlText(triangles));
@@ -139,15 +152,11 @@ const definitions: OperationDefinition[] = [
 		name: "validate",
 		params: [],
 		run({ modifiers, stack }) {
-			if (modifiers.length > 0) {
-				throw new Error(
-					`validate takes no modifiers, got ${modifiers.join("/")}`,
-				);
-			}
+			noModifiers("validate", modifiers);
 			const object = stack[stack.length - 1];
 			if (object === undefined) {
 				throw new Error(
-					"validate needs a 3DObject on the stack, but the stack is empty",
+					"validate needs a 3D object on the stack, but the stack is empty",
 				);
 			}
 			checkManifold(object);
@@ -157,49 +166,16 @@ const definitions: OperationDefinition[] = [
 		name: "simplify",
 		params: [],
 		run({ modifiers, stack }) {
-			const keepUnused = modifiers.join("/") === "keep-unused";
-			if (modifiers.length > 0 && !keepUnused) {
-				throw new Error(
-					`simplify takes no modifiers except keep-unused, got ${
-						modifiers.join("/")
-					}`,
-				);
-			}
-			const object = stack.pop();
-			if (object === undefined) {
-				throw new Error(
-					"simplify needs a 3DObject on the stack, but the stack is empty",
-				);
-			}
-			const simplified = simplifyVector3DObject(object, true);
-			stack.push(
-				keepUnused
-					? simplified
-					: pruneVector3DObject(simplified, "default"),
-			);
+			noModifiers("simplify", modifiers);
+			stack.push(simplifyObject3D(popObject("simplify", stack)));
 		},
 	},
 	{
 		name: "prune",
-		params: ["main-object-name"],
-		run({ modifiers, params, stack }) {
-			if (modifiers.length > 0) {
-				throw new Error(
-					`prune takes no modifiers, got ${modifiers.join("/")}`,
-				);
-			}
-			const object = stack.pop();
-			if (object === undefined) {
-				throw new Error(
-					"prune needs a 3DObject on the stack, but the stack is empty",
-				);
-			}
-			stack.push(
-				pruneVector3DObject(
-					object,
-					params.get("main-object-name") ?? "default",
-				),
-			);
+		params: [],
+		run({ modifiers, stack }) {
+			noModifiers("prune", modifiers);
+			stack.push(pruneObject3D(popObject("prune", stack)));
 		},
 	},
 ];

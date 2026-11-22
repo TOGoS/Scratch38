@@ -189,8 +189,8 @@ Parameters:
 Shape: `(-- Object3D)`
 
 OBJ details:
-- All faces in the file are loaded as one `UnionObject3D` of `Polyhedron3D`s. Each `o` section, and each group of faces before the first `o`,
-  becomes one polyhedron in it. Object names are not kept.
+- Each `o` statement starts a new polyhedron, and faces before the first `o` form one too. Object names are not kept.
+  The result is a `Polyhedron3D` if there is one polyhedron, otherwise a `UnionObject3D` of `Polyhedron3D`s.
 - Faces may have any number of vertexes. Negative vertex references are relative to the vertexes read so far.
 - Texture and normal references, and `g`, `s`, `mtllib`, and `usemtl` statements, are ignored.
 - Other statements, such as `l`, `p`, and free-form curves and surfaces,
@@ -247,7 +247,7 @@ Writes a new `Polyhedron3DData` containing only the vertexes, lines, polygons, a
 rewriting indexes accordingly. Indexes keep their relative order.
 `prune` likewise works on the whole object, however its unions are nested.
 
-e.g. a shape with 10 vertexes, the first two of which are unused by the main polyhedron group
+e.g. a shape with 10 vertexes, the first two of which are unused by its polyhedrons
 would be transformed to one with 8 vertexes, and all the vertex indexes 2 lower than
 the corresponding indexes of the input.
 
