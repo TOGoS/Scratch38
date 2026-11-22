@@ -51,10 +51,11 @@ Kept out of README.md, which describes the tool and its spec.
 - `crash` throws. The top level catches the error, writes it to stderr, and exits with status 1.
   It prints only the message, not a stack trace, to match the other errors.
 - Winding: a polygon's interior is on the left of each directed edge, so outer boundaries run counter-clockwise
-  and hole boundaries clockwise viewed from outside. This matches STL; OBJ agrees, so no reversal is needed.
-  OpenSCAD's manual says clockwise; that premise was wrong. README's Winding Order section records this.
-  Code that depends on the convention is marked `// IMPLIED WINDING ORDER APPLIES HERE`; find them with
-  `grep -rn "IMPLIED WINDING ORDER" .`.
+  and hole boundaries clockwise viewed from outside. This matches STL and OBJ, so neither needs reversal.
+  OpenSCAD's `polyhedron` defines faces clockwise viewed from outside, the opposite convention, so importing or
+  exporting OpenSCAD polyhedrons requires reversing each face's vertex order.
+  README's Winding Order section records this. Code that depends on the convention is marked
+  `// IMPLIED WINDING ORDER APPLIES HERE`; find them with `grep -rn "IMPLIED WINDING ORDER" .`.
 - `load/stl` without a binary/text modifier detects the format from the content: a file is binary if its size
   matches the triangle count in its header, otherwise ASCII.
 - `store/stl` without a modifier writes ASCII.
