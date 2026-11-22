@@ -19,12 +19,15 @@ export interface OperationContext {
 	stack: StackValue[];
 }
 
-export interface OperationDefinition {
+export interface Operator {
 	name: string;
 	/** Named parameters the operation accepts. */
 	params: string[];
 	/** Parameter set by the `:value` form, if the operation has one. */
 	defaultParam?: string;
+	// TODO: Separate operation construction from running.
+	// - `Operator#instantiate(paramValues:ReadonlyMap<string,string>) : Operation`
+	// - `Operation#apply(in:StackValue[]) : StackValue[]`
 	run(context: OperationContext): void | Promise<void>;
 }
 
@@ -88,7 +91,7 @@ function popObject(operation: string, stack: StackValue[]): StackValue {
 	return object;
 }
 
-const definitions: OperationDefinition[] = [
+const definitions: Operator[] = [
 	{
 		name: "crash",
 		params: ["message"],
@@ -182,8 +185,12 @@ const definitions: OperationDefinition[] = [
 
 const definitionsByName = new Map(definitions.map((d) => [d.name, d]));
 
+// TODO: This should probably just be 'operation',
+// and it can probably be simplified by removing the reference to the Operator.
+// It may be useful to keep the token that was parsed to create it around for debugging;
+// `source: string` or somesuch.
 interface PreparedOperation {
-	definition: OperationDefinition;
+	definition: Operator;
 	context: Omit<OperationContext, "stack">;
 }
 
@@ -232,6 +239,7 @@ export async function runOperations(args: string[]): Promise<StackValue[]> {
 	
 	const stack: StackValue[] = [];
 	for (const { definition, context } of prepared) {
+		// TODO: Operator/Operand refactor should probably simplify this to simply `stack = operation.apply(stack)`
 		await definition.run({ ...context, stack });
 	}
 	return stack;
