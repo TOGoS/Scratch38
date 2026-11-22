@@ -72,6 +72,8 @@ This supersedes the earlier implementation notes after `efb5377`.
   identifier for now; it may be a union of concrete object types.
 - `Vector3DObjectData` holds the shared vertex, line, polygon, and polyhedron lists.
   `Vector3DPolyhedronGroup` references a `Vector3DObjectData` plus a polyhedron-group index.
+  `Union3DObject` contains a list of `ThreeDObject`s; it represents the union of otherwise-distinct objects,
+  which may share a `Vector3DObjectData`.
   The `Dictionary<String,Object>` role is `Map<string, ThreeDObject>`.
 - The special `default` sub-object is removed. It existed only to make a collection look like a single object,
   which caused the earlier ambiguity.
@@ -79,7 +81,10 @@ This supersedes the earlier implementation notes after `efb5377`.
   object; `load/obj/collection` pushes a `Map<string, ThreeDObject>`.
 - Unnamed OBJ groups are reachable by loading the whole file as one 3D object. In a collection,
   `load/obj/collection;default-name-prefix=anonymous-` names them `anonymous-1`, `anonymous-2`, and so on.
-  Without the prefix, they are excluded from the `Map<string, ThreeDObject>` role.
+  Without the prefix, they are excluded from the `Map<string, ThreeDObject>` role. Supporting unnamed entries
+  in a collection would need a different collection type; it is not planned now.
+  The OBJ loader may keep unnamed groups in a parallel list internally, then union all entries for the
+  single-object case. That list is not a public stack type.
 - Extracting a named entry is explicit: `extract:<name>` has shape `(collection<K,T> -- named-object:T)` and
   throws if the name is absent.
 - `prune` on a single object has no names and needs no mappings. `prune/collection` keeps and renames entries.
@@ -101,9 +106,6 @@ This supersedes the earlier implementation notes after `efb5377`.
 
 ### Punted to future
 
-- A collection role that permits both named and unnamed entries. For `Map<string, ThreeDObject>` unnamed groups
-  are excluded when no prefix is given; the default for that future role is unspecified. This is what the earlier
-  "future role default" note meant.
 - Role-aware parsing, which would let the `/collection` modifier on `prune` become optional.
 - Store/writer behavior for collections.
 - Whether `simplify` on a collection simplifies the whole collection or one extracted object.
@@ -117,7 +119,7 @@ This supersedes the earlier implementation notes after `efb5377`.
 - `store`, `validate`, `simplify`, and `trianglesFromVector3DObject` still use the `default` group; make them
   role-specific.
 - OBJ load/store still produce and consume one combined object with `default`; add `load/obj/collection`,
-  `extract`, `default-name-prefix`, and a matching writer choice.
+  `extract`, `default-name-prefix`, `Union3DObject` for the single-object union, and a matching writer choice.
 - `simplify` currently merges across all polyhedrons of `default`; make it group-scoped.
 - `rename-entries` is not implemented.
 - README and tests still describe the old architecture; update them during the refactor.
@@ -128,8 +130,8 @@ Keep this section at the end of the devlog until we have a more formal task list
 
 - Figure out a better system for munging names that start with numbers, such as `Object3D` instead of
   `ThreeDObject`, then apply it consistently and all at once.
-- Refactor the model into `Vector3DObjectData` and `Vector3DPolyhedronGroup`, with `Map<string, ThreeDObject>`
-  for collections.
+- Refactor the model into `Vector3DObjectData`, `Vector3DPolyhedronGroup`, and `Union3DObject`, with
+  `Map<string, ThreeDObject>` for collections.
 - Implement the revised operators: `load/obj/collection`, `extract`, `prune/collection`, `rename-entries`.
 - Decide the punted items above before merging this branch to master.
 - Update README and tests to match the revised architecture.
