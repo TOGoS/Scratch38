@@ -37,10 +37,15 @@ Kept out of README.md, which describes the tool and its spec.
   *operation*; an operation is what runs against the stack. One operator may produce operations with different
   stack shapes, depending on its parameters. Parameters cannot refer to stack values, so stack effects are
   statically analyzable. There is no `foo:${stack-value}`-style syntax for operator parameters.
+- *Type* is what TypeScript can infer from a value in isolation (`classRef`); *role* is what a context expects
+  of that value. Meaning comes from type plus role. Give each role its own type, sharing structure where useful;
+  do not reuse one `Vector3DObject` type as both a single object and a collection just because role-checking
+  would allow it.
 - `crash` throws. The top level catches the error, writes it to stderr, and exits with status 1.
   It prints only the message, not a stack trace, to match the other errors.
-- Stack values are `Vector3DObject` (src/vector3d-object.ts). Built from triangles: each shared
-  vertex and edge is stored once, and all faces form one polyhedron in the `default` group.
+- Stack values are currently `Vector3DObject` (src/vector3d-object.ts). Built from triangles: each shared
+  vertex and edge is stored once, and all faces form one polyhedron in the `default` group. The role/type and
+  single-object/collection decisions below supersede this; it will be split into separate types.
 - Winding: counter-clockwise viewed from outside, same as STL (user's decision).
   The premise for the earlier clockwise choice was wrong: STL is counter-clockwise,
   and OpenSCAD's manual says clockwise. README's Winding Order section records this.
@@ -74,28 +79,27 @@ Kept out of README.md, which describes the tool and its spec.
   reuse the existing polyhedron index when the same simplified shape appears in several places, and keep
   the original polyhedron if simplification produces an identical result. Do no extra computation to find
   less obvious duplicates.
-- `prune` has a default parameter named `mapping`. Its value is a comma-separated list of entries of the
-  form `(<new name> "=") <old name>`. With no `=`, the group keeps its name; with `=`, it is renamed.
-  Example: `prune:fred=ted,main,default=jon` keeps `main` as `main`, renames `ted` to `fred`, renames `jon`
-  to `default`, and removes all groups not mentioned, along with anything they alone reference.
-- A separate `rename-sub-objects` operation is agreed in principle: "prune without pruning". It should use
-  the same mapping syntax but keep unmapped groups. Its exact name and parameter details still need to be
-  settled before implementation.
+- `prune/collection` has a default parameter named `mapping`. Its value is a comma-separated list of entries
+  of the form `(<new name> "=") <old name>`. With no `=`, the entry keeps its name; with `=`, it is renamed.
+  Example: `prune/collection:fred=ted,main,cube=jon` keeps `main`, renames `ted` to `fred`, renames `jon`
+  to `cube`, and removes all entries not mentioned, along with anything they alone reference.
+- A separate `rename-entries` operation is agreed in principle: "prune without pruning", for collections only.
+  It should use the same mapping syntax but keep unmapped entries. Its parameter details still need to be settled.
 - Wavefront `.mod` binary support stays out of scope until needed; `obj/bin` remains unsupported.
 
 ### Second revision: single objects vs collections (agreed)
 
-- A single 3D object and a collection of named sub-objects are different stack types. Loading OBJ as one object
-  and loading it as a collection must be separate operations (possibly modifiers of `load`), with different
-  result types.
-- Extracting a named object from a collection is an explicit operation, not an implicit part of loading.
-- `prune` on a single object has no names and needs no mappings. `prune` on a collection uses the name mappings
-  discussed above. Since stack roles and types are statically known, one `prune` operator can produce both,
-  but the collection form should require, or at least allow, a modifier such as `prune/collection`.
+- A single 3D object and a collection of named entries are different stack types. `load/obj/collection` pushes
+  a collection; other OBJ loads push a single 3D object.
+- Extracting a named entry is explicit: `extract:<name>` has shape `(collection<K,T> -- named-object:T)` and
+  throws if the name is absent.
+- `prune` on a single object has no names and needs no mappings. `prune/collection` uses the name mappings
+  discussed above. The `/collection` modifier is required until the parser can know the role of the top stack
+  value.
 - The special `default` sub-object is removed. It existed only to make a collection look like a single object,
   which is the source of this ambiguity.
 - Multiple mapping entries that produce the same new name are an error; there is no correct way to combine them.
-- `rename-sub-objects` remains "prune without pruning", but only makes sense for collections.
+- `rename-entries` remains "prune without pruning", but only makes sense for collections.
 
 #### Decisions that need revision
 
@@ -109,9 +113,9 @@ Kept out of README.md, which describes the tool and its spec.
 - The OBJ decisions need revising: `load/obj` must say which stack type it pushes, unnamed `o` groups and the old
   `default` need a defined representation in the collection form, and the writer needs a matching single/collection
   choice.
-- The open questions about synthesizing `default` are resolved by removing `default`; the question about duplicate
-  new names is resolved as an error. The exact names of the load modifiers, the extraction operator, and the
-  rename operator's parameters remain open.
+- The open questions about synthesizing `default` are resolved by removing `default`; duplicate new names are an
+  error. `load/obj/collection`, `extract:<name>`, and required `prune/collection` are settled. The rename operator
+  is `rename-entries`; its parameter details remain open.
 
 - `simplify` (src/simplify.ts) works in coordinate space: each polygon is an outward-facing loop of coordinates,
   so vertexes with equal coordinates are merged automatically. Passes, in order:
@@ -135,11 +139,8 @@ Kept out of README.md, which describes the tool and its spec.
 
 ## Open questions (waiting on the user)
 
-- Which modifiers distinguish loading OBJ as one object from loading it as a collection, and which is the default?
-- What should the extraction operator be called, and what is its syntax (e.g. `extract:<name>`)?
-- Should `prune/collection` be required, or merely allowed, for the collection form?
 - How should an unnamed OBJ `o` group be represented in a collection: a synthetic name, a positional reference,
   or an error?
-- What are the stack type names for a single 3D object and for a collection?
-- What are the final name and parameter shape for `rename-sub-objects`?
+- What are the stack type names for a single 3D object, a collection, and a named entry?
+- What parameter name and shape should `rename-entries` use?
 
