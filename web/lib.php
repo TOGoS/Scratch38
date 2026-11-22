@@ -11,7 +11,7 @@ function togetl_db_path()
     if ($env !== false && $env !== '') {
         return $env;
     }
-    return dirname(__DIR__) . '/out/togetl.sqlite3';
+    return dirname(__DIR__) . '/out/thedb.sqlite3';
 }
 
 function db()

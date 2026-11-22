@@ -29,13 +29,13 @@ Not yet implemented:
 ```sh
 ./scripts/install-deps.sh --distro debian   # or --distro alpine; see SETUP.md
 ./scripts/get-jdk.sh          # only if no JDK 8 on PATH or in JAVA_HOME
-./scripts/get-sqlite-jdbc.sh
-./scripts/fetch-fixtures.sh   # optional upstream sample documents
-./build.sh
-./test/run-tests.sh
+make
 ```
 
-(we should streamline this at some point; maybe use Make)
+`make` builds `togetl`, runs the tests, fetches the SQLite JDBC jar if it is
+missing, and produces `out/thedb.sqlite3`.
+`make run-web-server` then serves the database read-only.
+See the [Makefile](Makefile) for the individual targets.
 
 See [SETUP.md](SETUP.md) for required packages, the Java selection order, and
 distro-specific notes.
@@ -44,33 +44,42 @@ The build targets Java 8 and does not require Maven.
 
 ## Usage
 
+`make` runs the whole pipeline from the demo documents in `fixtures/demo/`.
+The outputs are named after the source they are derived from, so
+`out/3DPrintingData.togetltsv` comes from `fixtures/demo/3DPrintingData.tef`.
+Aggregates get their own names.
+
+The commands behind the Makefile rules are:
+
 ```sh
 ./togetl version
 
 # Parts data with the domain mapping.
 ./togetl import --dialect=parts \
     --derive-source-uri=bitprint \
-    --input=fixtures/upstream/3DPrintingData.tef \
-    --output=out/3dparts-data.togetltsv \
-    --report=out/3dparts-data-report.tsv
+    --input=fixtures/demo/3DPrintingData.tef \
+    --output=out/3DPrintingData.togetltsv \
+    --report=out/3DPrintingData.report.tsv
 
 # Shared namespace vocabulary.
 ./togetl import --dialect=namespaces \
     --derive-source-uri=bitprint \
-    --input=fixtures/upstream/namespaces.tef \
+    --input=fixtures/demo/namespaces.tef \
     --output=out/namespaces.togetltsv
 
 # Check mapping terms against vocabulary definitions.
-./togetl vocab --report=out/vocab-report.tsv
+./togetl vocab --input=out/3DPrintingData.togetltsv \
+    --input=out/namespaces.togetltsv \
+    --report=out/vocab-report.tsv
 
 # Load the streams into SQLite.
-./togetl load --db=out/togetl.sqlite3 \
-    --input=out/3dparts-data.togetltsv \
-    --report=out/3dparts-data-report.tsv \
+./togetl load --db=out/thedb.sqlite3 \
+    --input=out/3DPrintingData.togetltsv \
+    --report=out/3DPrintingData.report.tsv \
     --input=out/namespaces.togetltsv
 
 # Browse read-only.
-TOGETL_DB=out/togetl.sqlite3 php -S localhost:8080 web/router.php
+TOGETL_DB=out/thedb.sqlite3 php -S localhost:8080 web/router.php
 ```
 
 `import` defaults to the `generic` dialect. Every import needs a source URI,

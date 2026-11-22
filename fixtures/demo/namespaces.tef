@@ -1,0 +1,458 @@
+#format http://ns.nuke24.net/TEF/Formats/SyntaxV0.3
+# TEF is ‹TOGoS's Entry File›, documented here: https://github.com/TOGoS/TEF
+
+=namespace http://ns.nuke24.net/ContentCouch/
+project-homepage-url: https://github.com/TOGoS/ContentCouch/
+
+Also uses:
+- http://purl.org/dc/terms/created
+  - creation date, probably ISO-8601 formatted
+- http://purl.org/dc/terms/creator
+  - name of creator
+- http://bitzi.com/xmlns/2002/01/bz-core#fileLength
+  - length, in bytes, of a blob
+  - if applied to a DirectoryEntry or similar, can be assumed
+    to mean the length of the content
+
+=type http://ns.nuke24.net/ContentCouch/Blob 
+=type http://ns.nuke24.net/ContentCouch/Commit
+=type http://ns.nuke24.net/ContentCouch/Directory
+=type http://ns.nuke24.net/ContentCouch/DirectoryEntry
+
+File name, content, and other metadata.
+
+=attribute http://ns.nuke24.net/ContentCouch/description
+
+For commits, this serves as the commit message.
+
+=attribute http://ns.nuke24.net/ContentCouch/name
+=attribute http://ns.nuke24.net/ContentCouch/target
+=attribute http://ns.nuke24.net/ContentCouch/entries
+
+List of DirectoryEntry objects of a Directory.
+
+=attribute http://ns.nuke24.net/ContentCouch/parent
+
+A parent of a Commit.  There may be multiple.
+
+
+=namespace http://ns.nuke24.net/SynthGen2100/
+project-homepage-url: https://gitlab.com/TOGoS/SynthGen2100/
+
+
+=namespace http://ns.nuke24.net/TBB/
+short-description: TOGoS Binary Blocks schema
+project-homepage-url: http://togos.nfshost.com/docs/2012/TOGoSBinaryBlocks.html
+
+- http://ns.nuke24.net/TBB/Schema :: a TBB encoding scheme
+  - http://ns.nuke24.net/TBB/format :: the format of blocks encoded by this schema
+    - may be an opaque URI, a text description, or a machine-readable declaration of the format
+    - http://www.nuke24.net/docs/2014/CoolCereal.rdf is a an example of a schema
+      whose 'format' is simply a text description
+  - http://ns.nuke24.net/TBB/prototype :: the prototype object, i.e. the object
+    from which objects defined by blocks using this schema inherit a base set of properties
+
+
+=type http://ns.nuke24.net/TBB/Schema
+
+A TOGoS Binary Blocks (TBB)-based encoding scheme.
+
+Should have at least a 'format' property,
+and possibly a 'prototype'.
+
+=attribute http://ns.nuke24.net/TBB/format
+
+Some representation of the encoding scheme.
+This may be an opaque resource reference,
+human readable text, or a amachine-readable declaration of the format.
+
+=attribute http://ns.nuke24.net/TBB/prototype
+
+The 'default' object represented by an encoding scheme.
+Meaningful when the format provides a way to skip explicit
+indication of values for certain properties, in which case
+those properties of encoded objects will default to the
+corresponding properties of the prototype.
+
+
+=namespace http://ns.nuke24.net/TEF/
+short-description: Syntactic-level attributes of TEF entries
+project-homepage-url: https://github.com/TOGoS/TEF/
+
+=namespace http://ns.nuke24.net/TEF/Formats/
+short-description: TEF-based formats
+
+=format http://ns.nuke24.net/TEF/Formats/SyntaxV0.3
+subformat-of: http://ns.nuke24.net/Formats/SharpFormat
+short-description: TEF basic syntax, v0.3
+
+Specifies tokenization of TEF syntax, including:
+- new entry lines (type string, ID string)
+- header logical lines (key, value)
+- content
+
+This format does *not* ascribe structure or meaning to header keys,
+not even `tef:`-prefixed ones.
+
+The `#format` line may be followed by other `#format` lines
+(yet to be defined as of 2025-11-26)
+that indicate higher-level semantics.
+
+See https://github.com/TOGoS/TEF/
+
+
+=namespace http://ns.nuke24.net/Datatypes/
+short-description: Non-project-specific lexical-to-value mappings
+
+=datatype http://ns.nuke24.net/Datatypes/Subject
+short-description: lexical-to-value mapping meaning 'subject of the document'
+doc-ref: http://www.nuke24.net/docs/2023/SubjectDatatype.html
+
+Lexical scope: Any string or byte sequence in one of several
+formats that can be unambiguously gleaned from the data stream
+and that have well-defined lexical-to-value mappings according to
+http://www.nuke24.net/docs/2023/SubjectDatatype.html,
+including RDF+XML and TOGoS Binary/Text Blocks.
+
+Value scope: Anything that can be described by documents in those formats.
+
+
+=datatype http://ns.nuke24.net/Datatypes/URIResource
+short-description: Encodes values by referencing them by URI
+
+Lexical space: URIs.
+
+Value space: Any resource that can be named by a URI.
+
+The lexical-to-value mapping of a given URI is the resource
+identified by that URI.  For HTTP and hash URIs, the resource
+is always a byte sequence, possibly with some metadata attached
+(e.g. `Content-Type` hints at the content's `http://purl.org/dc/terms/format`),
+but other URI schemes may allow references to more abstract resources.
+
+Note that ~http://www.w3.org/2001/XMLSchema#anyURI~
+(as documented [[https://www.w3.org/TR/xmlschema-2/#anyURI][here]])
+does *not* specify the value as being the target of the URI.
+Deocding a string by `anyURI` results the URI itself;
+i.e. basically a string with a flat on it saying "I am a URI".
+
+
+=namespace http://ns.nuke24.net/TOGVM/
+project-homepage-url: https://github.com/TOGoS/TOGVM-Spec/
+
+=namespace http://ns.nuke24.net/TOGVM/Expression/
+short-description: Functional expression types
+project-homepage-url: https://github.com/TOGoS/TOGVM-Spec/
+
+
+=namespace http://ns.nuke24.net/TOGVM/Datatypes/
+short-description: Lexical-to-value mappings
+doc-ref: https://github.com/TOGoS/TOGVM-Spec/blob/master/DATATYPES.org
+
+'datatype' in the XML datatype sense: https://www.w3.org/TR/xmlschema-2/
+
+
+=datatype http://ns.nuke24.net/TOGVM/Datatypes/TS34Encoded
+short-description: A particularly useful encoding
+
+Format is: data URI + [whitespace + datatype URI]*,
+i.e. a list of URIs separated by whitespace, where the first one
+references data to be decoded, and the rest represent datatypes
+whose lexical-to-value mapping should be applied, in order, to
+resolve the intended value.
+
+Representations of values using this encoding are trivially mappable
+to `http://ns.nuke24.net/TOGVM/Expression/DataInterpretation` expressions
+and to active URIs by applying the `http://ns.nuke24.net/TOGVM/Functions/InterpretData` function.
+
+Intended as a simple, relatively compact, universal interchange format
+when arbitrarily-encoded values need to be unambiguously referenced.
+
+=namespace http://ns.nuke24.net/TTSGCG/
+short-description: Cuts and shapes used by TOGoS's TypeScript G-Code Generator
+project-homepage-url: https://github.com/TOGoS/TTSGCG/
+
+
+=namespace http://ns.nuke24.net/Game21/
+short-description: Game21 world objects
+project-homepage-url: https://gitlab.com/TOGoS/Game21/
+
+
+=namespace http://ns.nuke24.net/RDF/
+short-description: Pseudo-properties for talking about objects described by RDF
+project-homepage-url: https://github.com/TOGoS/PHPXMLRDFParser/blob/master/lib/TOGoS/XMLRDFParser/RDF/Namespaces.php
+
+- http://ns.nuke24.net/RDF/hasItem :: attribute of Collections, object is an element of the list
+- http://ns.nuke24.net/RDF/Collection :: A class for list objects
+- http://ns.nuke24.net/RDF/Data :: A class for objects that are just a simple value
+
+
+=namespace http://ns.nuke24.net/Schema/
+project-homepage-url: https://github.com/TOGoS/SchemaSchema/
+
+Types and predicates to describe metadata about application classes
+and their associated database tables, access rules, etc.
+
+- http://ns.nuke24.net/Schema/ :: core predicates - 'name', 'long name', 'has field', etc.
+- http://ns.nuke24.net/Schema/RDB/ :: relational database stuff
+- http://ns.nuke24.net/Schema/Types/ :: data types; integer, number, string, list, etc.
+- http://ns.nuke24.net/Schema/DataTypeTranslation/ ::
+  predicates to indicate context-specific types, e.g. how a value should be represented
+  in postgres, in PHP, in JSON, etc.
+
+TODO: SchemaSchema can dump out its own schema, so have it do that,
+save it somewhere, and reference it here.
+
+
+=namespace http://ns.nuke24.net/ShapeSheet/
+project-homepage-url: https://gitlab.com/TOGoS/ShapeSheet/
+
+Types to represent 2.5D objects using per-pixel depth and material information.
+
+
+=namespace http://ns.nuke24.net/SynthGen2100/
+short-description: SynthGen2100 device descriptions
+project-homepage-url: https://gitlab.com/TOGoS/SynthGen2100/
+
+SynthGen2100 also uses the TOGVM schema.
+
+
+=namespace http://ns.nuke24.net/Synx/
+short-description: Reserved symbols for disambiguating meaning, especially in JavaScript/TypeScript objects
+tef:content-type: text/org
+
+- http://ns.nuke24.net/Synx/schema ::
+  Indicates how a data structure E encodes a concept V,
+  which may be useful in contexts where that cannot be provided out-of-band.
+  e.g. in a JSON-encoded object.  Does a string represent a sequence of characters,
+  or does it actually encode something else?
+  Does '{ "@id": "xyz" }' represent an object with a single property named "@id",
+  or is it telling us that the value in question is "xyz"?
+- http://ns.nuke24.net/Synx/unit ::
+  Names the unit of a numeric quantity that would otherwise be unitless.
+  e.g. in TypeScript, ~type Inches = number & { [Symbol.for("http://ns.nuke24.net/Synx/unit")]: "inch" }~
+- http://ns.nuke24.net/Synx/referenceeType ::
+  For a reference type (e.g. a string with schema = 'http://ns.nuke24.net/Synx/Schema/URI' or 'http://ns.nuke24.net/Synx/Schema/Name'),
+  indicates the type of the refereced object.
+
+Schemas:
+
+- http://ns.nuke24.net/Synx/Schema/Literal ::
+  E and V are the same thing.  Generally this should be the default assumption.
+- http://ns.nuke24.net/Synx/Schema/URI ::
+  E is the URI of V.
+- http://ns.nuke24.net/Synx/Schema/Name ::
+  E is a short name for V.
+- http://ns.nuke24.net/Synx/Schema/JSON-LD ::
+  E is the JSON-LD representation of V.  e.g. ~{ "@id": "http://example.com/XYZ" }~ represents
+  the resource with URI "http://example.com/XYZ",
+  and ~"A string"~ represents the 8-character text "A string".
+- http://ns.nuke24.net/Synx/Schema/Expression ::
+  E represents an algorithm that can be used to produce V.
+- http://ns.nuke24.net/Synx/Schema/RDFObject1 ::
+  E is an RDF representation of V, and said RDF representation is itself represented in this form:
+  #+BEGIN_SOURCE typescript
+  interface RDFObject1 {
+    uri?: string,
+    simpleValue?: string,
+    attributes?: [{attributeName:string}: RDFObject1
+  }
+  #+END_SOURCE
+
+
+=namespace http://ns.nuke24.net/X-2024/
+
+Placeholder namespace for in-progress definitions
+or concepts that haven't yet been fully fleshed-out
+or proven to be useful.
+
+Process for promotion to a 'nicer name', should I feel that is important,
+is to, once the name is otherwise settled, simply remove the "X-2024/" part.
+This way interpreters can automatically infer aliases.
+
+'Settled' means that a name and its meaning have remained constant for some time under use.
+
+
+=format http://ns.nuke24.net/Formats/SharpFormat
+alias: http://ns.nuke24.net/X-2024/Formats/HashFormat
+doc-ref: http://www.nuke24.net/docs/2025/SharpFormat.html
+tef:content-type: text/markdown
+
+The format of files whose content starts with
+"#format " + a URI identifying the specific format.
+
+By convention, more than one `#format` line may be specified,
+and may be preceded or followed by other `#` lines (such as shebang lines,
+for compatibility with UNIX scriptse)
+where later lines refine the format.
+
+e.g. `#format http://ns.nuke24.net/Formats/SharpFormat` on line N
+indicates that the rest of the file follows this format,
+and can be expected to be followed by another `#format` line
+that is *at least* as specific.  So it is valid, but redundant,
+to repeat `#format http://ns.nuke24.net/Formats/SharpFormat`
+any number of times.  Other SharpFormats may be stricter
+about exactly what follows the initial `#format` line.
+
+Documented in more detail, for now, in [Scratch38/S0001](https://github.com/TOGoS/Scratch38/blob/subtrees/s0001/master/).
+
+=format http://ns.nuke24.net/X-2024/Formats/JSONLFileManifest
+=format http://ns.nuke24.net/X-2024/Formats/TSVFileManifest
+=format http://ns.nuke24.net/X-2024/Formats/JSONLRDF
+
+
+=namespace http://ns.nuke24.net/X-2024/Project/
+
+Terms for talking about projects.
+
+=type http://ns.nuke24.net/X-2024/Project/Projbase
+
+A codebase, though it might contain documentation, data,
+or other files that I wouldn't refer to as 'code'.
+
+Generally corresponds to a 'repository', but it may be mirrored across
+multiple Git repositories or what have you.
+
+=attribute http://ns.nuke24.net/X-2024/Project/projbaseName
+
+A path-like string that names the project, and is likely part of the
+file path or URL to the repository where the projbase is stored,
+e.g. "TOGoS/docs/TSoft40" is the projbase name for The TOGoS Software System.
+
+
+=namespace urn:oid:1.3.6.1.4.1.44868.
+short-description: EarthIT OID namespace
+
+Originally allocated using the e-mail address stevens@earthit.com.
+
+=namespace urn:oid:1.3.6.1.4.1.44868.261.
+title: TOGoS's Software Projects
+tef:content-type: text/org
+
+Low IDs manually allocated on [2024-12-25] because I wanted to be able
+to talk about these things and feel like they should have low numbers.
+
+| ID | used | note                      |
+|----+------+---------------------------|
+|  0 | -    | reserved                  |
+|  1 | X    | Dungeon Master map editor |
+|  2 | X    | Dungeon                   |
+|  3 | X    | New Dungeon               |
+|  4 | X    | Maze3D (Atari version)    |
+|  5 | X    | Maze3D (DOS version)      |
+|  6 | X    | LW                        |
+|  7 |      |                           |
+|  8 |      |                           |
+|  9 | X    | CSBwin                    |
+| 10 |      |                           |
+| 11 |      |                           |
+| 12 | X    | LW2 or D2 or whatever     |
+| 13 | X    | D3                        |
+| 14 | X    | D4                        |
+| 15 | X    | D5                        |
+| 16 |      |                           |
+| 17 |      |                           |
+| 18 |      |                           |
+| 19 |      |                           |
+| 20 |      |                           |
+| 21 | X    | Game21                    |
+| 22 | X    | ?                         |
+
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.1
+short-description: Dad's Dungeon Master map editor
+created: early 1990s
+
+i.e. a tool for making maps of existing dungeons, not for editing game data.
+Ran on the Atari that lived in the farm room at the time.
+
+Graphics were in a very similar style to those used in the Dungeon Master hint book,
+a.k.a. 'The Lost Scrolls Of Mount Anaias'.
+
+I spent a lot of time making up my own Dungeon Master levels,
+complete with switches and keys whose effects were not in any way documented.
+
+The tiles could be modified by some means.
+Not sure if via a custom editor or if they were imported from a standard bitmap file.
+I drew my own tiles to make different mazes.
+
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.2
+title: Dungeon
+doc-ref: http://www.nuke24.net/dlog/Dungeon.html
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.3
+title: New Dungeon
+doc-ref: http://www.nuke24.net/dlog/New_Dungeon.html
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.4
+short-description: Maze 3D (Atari version)
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.5
+short-description: Maze 3D (DOS version)
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.6
+short-description: LW
+doc-ref: http://www.nuke24.net/dlog/LW.html
+
+Dad's attempt to clone Legacy of the Wizard.
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.9
+title: CSBwin
+doc-ref: http://www.nuke24.net/dlog/CSBwin.html
+doc-ref: http://dmweb.free.fr/community/clones/chaos-strikes-back-for-windows-and-linux-raspbian-macos-x-pocket-pc/
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.12
+short-description: D2 or LW2 or whatever I called my MSVC++ tile-based project
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.13
+title: D3
+short-description: experimental telnet-based engine
+
+There may have been a couple iterations of this.
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.14
+title: D4
+short-description: top-down maze game written in Ruby
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.15
+title: D5
+doc-ref: https://www.nuke24.net/projects/D5.2/
+short-description: web-based pseudo-multiplayer world exploration game in Java
+
+Like a 2D Minecraft creative mode where 16x16 (and later 64x64)-tile
+'plots' could be claimed by different users.
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.21
+title: Game21
+doc-ref: https://www.nuke24.net/plog/6.html
+demo-ref: https://www.nuke24.net/plog/20.html
+demo-ref: https://www.nuke24.net/plog/21.html
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.42
+title: D0.2
+created: late 200Xs?
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.43
+title: D0.3 / Gnarly Ground
+created: 2026-03-06
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.1002
+title: ColorMaze
+short-description: a J++ (not-quite-Java) maze game I wrote in 1997 or so
+
+The Microsoft UI framework was not quite compatible
+with regular Java, so the applet I had written didn't
+seem to work right when I loaded it up later.
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.1003
+title: TOGoSTree
+demo-ref: https://www.nuke24.net/projects/TOGoSTree/
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.1004
+short-descripiton: Dad's bridge simulator (DOS)
+created: mid-199Xs
+
+=projbase urn:oid:1.3.6.1.4.1.44868.261.1005
+short-descripiton: Dad's dots-and-boxes game (DOS)
+created: mid-199Xs

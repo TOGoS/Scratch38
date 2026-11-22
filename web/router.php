@@ -3,7 +3,7 @@
  * Router for PHP's built-in web server.
  *
  * Usage:
- *   TOGETL_DB=out/togetl.sqlite3 php -S localhost:8080 web/router.php
+ *   TOGETL_DB=out/thedb.sqlite3 php -S localhost:8080 web/router.php
  */
 
 $path = parse_url(
