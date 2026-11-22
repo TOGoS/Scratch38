@@ -9,9 +9,12 @@ import { instantiateOperation, runOperations } from "./operators.ts";
 import { parseOperationSpec } from "./operation-syntax.ts";
 import {
 	makeObject3d,
+	makeObject3dFromPolygonLoops,
 	polyhedronLeaves,
 	trianglesOfObject3d,
 } from "./object3d.ts";
+import { formatObj } from "./obj.ts";
+import type { Vertex } from "./stl.ts";
 import { formatStlBinary, formatStlText, parseStl, Triangle } from "./stl.ts";
 
 const TRIANGLES: Triangle[] = [
@@ -363,4 +366,66 @@ Deno.test("apply returns a new stack and leaves the stack it was given alone", a
 	assertEquals(after.length, 2);
 	assertStrictEquals(after[0], object);
 	assertStrictEquals(after[1], object);
+});
+
+Deno.test("fix-polygons takes single-loop, convex, or triangles", async () => {
+	await assertRejects(
+		() => runOperations(["fix-polygons"]),
+		Error,
+		"fix-polygons takes single-loop, convex, or triangles",
+	);
+});
+
+Deno.test("fix-polygons rejects unknown modifiers", async () => {
+	await assertRejects(
+		() => runOperations(["fix-polygons/quads"]),
+		Error,
+		"fix-polygons takes single-loop, convex, or triangles, got quads",
+	);
+});
+
+Deno.test("fix-polygons needs an object on the stack", async () => {
+	await assertRejects(
+		() => runOperations(["fix-polygons/convex"]),
+		Error,
+		"stack is empty",
+	);
+});
+
+Deno.test("fix-polygons/triangles, then store/stl, writes only triangles", async () => {
+	const dir = await Deno.makeTempDir();
+	try {
+		const input = `${dir}/in.obj`;
+		const output = `${dir}/out.stl`;
+		const lShape: [number, number][] = [[0, 0], [2, 0], [2, 1], [1, 1], [
+			1,
+			2,
+		], [0, 2]];
+		const bottom = lShape.map(([x, y]): Vertex => [x, y, 0]);
+		const top = lShape.map(([x, y]): Vertex => [x, y, 1]);
+		const polygons = [
+			[top],
+			[bottom.slice().reverse()],
+			...lShape.map((_, i) => {
+				const j = (i + 1) % lShape.length;
+				return [[bottom[i], bottom[j], top[j], top[i]]];
+			}),
+		];
+		await Deno.writeTextFile(
+			input,
+			formatObj(makeObject3dFromPolygonLoops([polygons])),
+		);
+		await runOperations([
+			`load/obj:${input}`,
+			"fix-polygons/triangles",
+			`store/stl/text:${output}`,
+		]);
+		const triangles = parseStl(
+			new TextEncoder().encode(await Deno.readTextFile(output)),
+			"text",
+		);
+		assertEquals(triangles.length > 0, true);
+	} finally {
+		await Deno.remove(dir, { recursive: true });
+	}
 });

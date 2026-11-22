@@ -186,6 +186,14 @@ Renamed lower-camel-case identifiers ending in `3D` to end in `3d`:
 `makeObject3d`, `simplifyObject3d`, `pruneObject3d`, `trianglesOfObject3d`,
 and `loopsOfObject3d`. Upper-camel-case type names such as `Object3D` are unchanged.
 
+- `fix-polygons` (`src/fixPolygons.ts`, `src/triangulate.ts`): faces are projected onto the axis their vector area
+  points along, holes are bridged to the outer loop (nearest visible vertex), and the result is ear-clipped.
+  Triangles keep the face's outward orientation. `convex` merges triangles with `mergeAcross` (exported from
+  `simplify.ts`) while the result stays convex.
+  Decision: `single-loop` triangulates faces with holes rather than producing simple non-triangle pieces.
+  Faces with a single loop are left alone for `single-loop`, even when concave.
+  Known limits: faces made of several separate regions, and holes whose bridge crosses an existing edge, are errors.
+  Tests in `src/fixPolygons.test.ts` check vector area, total area, manifoldness, and the target constraint.
 - Operators and operations, split into modules:
   - `src/operators.ts`: the registry and token parsing (`instantiateOperation`, `runOperations`, `argumentsOf`).
   - `src/operator/<name>.ts`: each operator's parameters and validation. Default-exports an object literal

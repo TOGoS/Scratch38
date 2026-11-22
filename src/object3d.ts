@@ -122,7 +122,8 @@ export function loopsOfEdges<T>(
 
 /**
  * Builds an `Object3D` from polyhedrons, each a list of polygons, each polygon a list of loops.
- * Loops are counter-clockwise when viewed from outside; loop order within a polygon is not significant.
+ * A polygon's outer loop is counter-clockwise when viewed from outside, and any holes are clockwise, so the region is always
+ * on the left of each loop's direction. Loop order within a polygon is not significant.
  * Each polygon's edges are stored as one flat, unordered list once vertex and line indexes are assigned.
  * Vertexes and lines with the same coordinates or endpoints are shared.
  * If `base` is given, the new parts are appended to copies of its lists, and existing parts are reused where they match.

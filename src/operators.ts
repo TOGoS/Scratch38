@@ -4,6 +4,7 @@ import type { StackValue } from "./operation/Operation.ts";
 import type Operator from "./operator/Operator.ts";
 import type { OperatorArguments } from "./operator/Operator.ts";
 import crash from "./operator/crash.ts";
+import fixPolygons from "./operator/fixPolygons.ts";
 import dup from "./operator/dup.ts";
 import load from "./operator/load.ts";
 import prune from "./operator/prune.ts";
@@ -19,6 +20,7 @@ const operators: Operator[] = [
 	validate,
 	simplify,
 	prune,
+	fixPolygons,
 ];
 
 const operatorsByName = new Map(operators.map((o) => [o.name, o]));

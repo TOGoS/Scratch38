@@ -133,7 +133,7 @@ export function removeSpurs(loop: Loop): Loop {
  * `splitSharedLines` deals with those afterwards. Spurs left behind are removed.
  * Returns undefined if they share no edge, or the result would have fewer than three vertexes.
  */
-function mergeAcross(f: Loop, g: Loop): Loop | undefined {
+export function mergeAcross(f: Loop, g: Loop): Loop | undefined {
 	const fKeys = f.map(keyOf);
 	const gKeys = g.map(keyOf);
 	const n = f.length;

@@ -272,6 +272,20 @@ e.g. a shape with 10 vertexes, the first two of which are unused by its polyhedr
 would be transformed to one with 8 vertexes, and all the vertex indexes 2 lower than
 the corresponding indexes of the input.
 
+### `fix-polygons`
+
+Rewrites every face of the object so that its polygons satisfy a constraint.
+The surface does not change: its vector area and total area are preserved, and it stays manifold.
+
+Modifiers (required):
+- `fix-polygons/single-loop` - every polygon has one boundary. Faces with holes are triangulated;
+  other faces are left alone.
+- `fix-polygons/convex` - every polygon is convex. Faces are triangulated, and neighbouring triangles
+  are merged while the result stays convex. Convex faces are left alone.
+- `fix-polygons/triangles` - every polygon is a triangle, suitable for STL export.
+
+Shape: `(input:Object3D -- output:Object3D)`
+
 ### `crash`
 
 Always fails, for testing error handling.
