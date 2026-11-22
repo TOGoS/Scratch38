@@ -188,8 +188,9 @@ and `loopsOfObject3d`. Upper-camel-case type names such as `Object3D` are unchan
 
 - Operators and operations, split into modules:
   - `src/operators.ts`: the registry and token parsing (`instantiateOperation`, `runOperations`, `argumentsOf`).
-  - `src/operator/<name>.ts`: each operator's parameters and validation. Exports `operator`, and passes the validated
-    values to its operation's constructor.
+  - `src/operator/<name>.ts`: each operator's parameters and validation. Default-exports an object literal
+    (`satisfies Operator`), not a per-operator type; operators are just functions from arguments to operations.
+    It passes the validated values to its operation's constructor.
   - `src/operator/Operator.ts`: the `Operator` type and `OperatorArguments` (modifiers and named parameter values,
     with the default value already filled in).
   - `src/operation/<Name>.ts`: each operation as a class with an async `apply(stack)` that returns a new stack.

@@ -3,13 +3,13 @@ import type Operation from "./operation/Operation.ts";
 import type { StackValue } from "./operation/Operation.ts";
 import type Operator from "./operator/Operator.ts";
 import type { OperatorArguments } from "./operator/Operator.ts";
-import { operator as crash } from "./operator/crash.ts";
-import { operator as dup } from "./operator/dup.ts";
-import { operator as load } from "./operator/load.ts";
-import { operator as prune } from "./operator/prune.ts";
-import { operator as simplify } from "./operator/simplify.ts";
-import { operator as store } from "./operator/store.ts";
-import { operator as validate } from "./operator/validate.ts";
+import crash from "./operator/crash.ts";
+import dup from "./operator/dup.ts";
+import load from "./operator/load.ts";
+import prune from "./operator/prune.ts";
+import simplify from "./operator/simplify.ts";
+import store from "./operator/store.ts";
+import validate from "./operator/validate.ts";
 
 const operators: Operator[] = [
 	crash,

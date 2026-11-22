@@ -3,7 +3,7 @@ import Store from "../operation/Store.ts";
 import { requiredParam } from "./checks.ts";
 import { parseFileFormat } from "./parseFormat.ts";
 
-export const operator: Operator = {
+export default {
 	name: "store",
 	params: ["resource-name"],
 	defaultParam: "resource-name",
@@ -12,4 +12,4 @@ export const operator: Operator = {
 		const name = requiredParam("store", namedParams, "resource-name");
 		return new Store(format, name);
 	},
-};
+} satisfies Operator;

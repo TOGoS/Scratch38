@@ -2,7 +2,7 @@ import type Operator from "./Operator.ts";
 import Crash from "../operation/Crash.ts";
 import { noModifiers } from "./checks.ts";
 
-export const operator: Operator = {
+export default {
 	name: "crash",
 	params: ["message"],
 	defaultParam: "message",
@@ -12,4 +12,4 @@ export const operator: Operator = {
 			namedParams.get("message") ?? "Crash operation invoked",
 		);
 	},
-};
+} satisfies Operator;

@@ -43,8 +43,9 @@ may go into AGENT-DEVLOG.md under a header of the form "## <date> - <title> - <y
 
 - A TypeScript file whose default export is a type is named after that type, in PascalCase,
   e.g. `src/operation/Dup.ts` with `export default class Dup`.
-- A file with no default export is named in lower camel case, e.g. `src/operator/dup.ts`
-  exporting `operator`, or `src/operation/stack.ts` exporting helpers.
+- A file whose default export is not a type (an object, function, or value), or that has no default export,
+  is named in lower camel case, e.g. `src/operator/dup.ts` whose default export is an object literal,
+  or `src/operation/stack.ts` exporting helpers.
 
 ## Project notes and agent handoff
 
