@@ -91,8 +91,10 @@ Kept out of README.md, which describes the tool and its spec.
 
 - A single 3D object and a collection of named entries are different stack types. `load/obj/collection` pushes
   a collection; other OBJ loads push a single 3D object.
-- Unnamed OBJ groups are reachable either by loading the whole file as one 3D object, or by a collection modifier
-  that assigns synthetic names `anonymous-1`, `anonymous-2`, …; the modifier's exact name is open.
+- Unnamed OBJ groups are reachable by loading the whole file as one 3D object. In a collection,
+  `load/obj/collection;default-name-prefix=anonymous-` names them `anonymous-1`, `anonymous-2`, …
+  Without the prefix, they are excluded when the target role is `Dictionary<String,Object>`. The default
+  collection behavior is otherwise left open for a possible future role that includes named and unnamed entries.
 - Extracting a named entry is explicit: `extract:<name>` has shape `(collection<K,T> -- named-object:T)` and
   throws if the name is absent.
 - `prune` on a single object has no names and needs no mappings. `prune/collection` uses the name mappings
@@ -112,8 +114,9 @@ Kept out of README.md, which describes the tool and its spec.
 - The plan that `simplify` preserves names by preserving polyhedron groups needs revisiting: a single object has no
   names, while a collection needs an explicit choice between simplifying the whole collection and simplifying one
   extracted object.
-- The OBJ decisions need revising: `load/obj` pushes a single object, `load/obj/collection` pushes a collection with
-  synthetic `anonymous-N` names for unnamed groups, and the writer still needs a matching single/collection choice.
+- The OBJ decisions need revising: `load/obj` pushes a single object, `load/obj/collection` pushes a collection
+  (unnamed groups excluded unless `default-name-prefix` is given), and the writer still needs a matching
+  single/collection choice.
 - The open questions about synthesizing `default` are resolved by removing `default`; duplicate new names are an
   error. `load/obj/collection`, `extract:<name>`, and required `prune/collection` are settled. The rename operator
   is `rename-entries`; its parameter details remain open.
@@ -140,7 +143,8 @@ Kept out of README.md, which describes the tool and its spec.
 
 ## Open questions (waiting on the user)
 
-- What modifier should assign synthetic `anonymous-N` names to unnamed OBJ groups?
+- If a future role permits named and unnamed entries together, what should collection loads do when
+  `default-name-prefix` is absent?
 - What concrete TypeScript type names should represent the single-object, collection, and named-entry roles?
 - What parameter name and shape should `rename-entries` use?
 
