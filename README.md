@@ -117,9 +117,9 @@ type Object3D = Polyhedron3D | UnionObject3D;
   (probably `number` in TypeScript, but let's parameterize it as `D` in case
   we want to support rational numbers later or something).
 - A list of lines between vertexes, each of which is a pair of vertex indices.
-- A list of polygons, each of which is made of a series of (line index, direction)
-  such that the vertexes are visited in counter-clockwise order when viewed
-  from 'the front' of the polygon.
+- A list of polygons, each of which is a flat, unordered list of (line index, direction) edges.
+  Together the edges form one or more closed boundaries; grouping them into loops is left to
+  algorithms that need that order. The polygon's interior is on the left of each directed edge.
   Direction is 'forwards' or 'backwards', since each line segment is re-used
   for two (or some multiple of two) polygons.
 - A list of polyhedrons, each of which is a list of (polygon index, side),
@@ -144,8 +144,9 @@ The new data may still contain parts that nothing refers to.
 
 ## Winding Order
 
-Polygon vertexes are listed counter-clockwise when viewed from the front of the polygon,
-i.e. from outside the solid, following the right-hand rule.
+A polygon's interior is on the left of each of its directed edges when viewed from outside the
+solid, following the right-hand rule. So an outer boundary runs counter-clockwise and a hole
+boundary runs clockwise. The same rule applies to the vertex sequence of a `Loop`.
 
 This matches STL, whose facet vertexes are counter-clockwise when viewed from outside
 and whose facet normals point outward by the right-hand rule.
@@ -201,8 +202,11 @@ OBJ details:
 
 Same modifiers and parameters as load, but stores the result instead of loading it.
 Removes the object from the stack.
-STL writes every polyhedron of the object as one solid.
-OBJ writes each polyhedron as an unnamed object (`o` line), since the object has no names.
+STL writes every polyhedron of the object as one solid, and only accepts triangles.
+OBJ writes each polyhedron as an unnamed object (`o` line), since the object has no names,
+and writes each polygon's single boundary as one `f` line.
+OBJ faces cannot express holes, so storing a polygon with holes fails.
+Turning such a polygon into hole-free faces (or a different OBJ representation) is future work.
 
 Shape: `(Object3D --)`
 
@@ -214,10 +218,11 @@ Ensures that the object is 'manifold' (or at least not obviously problematic), a
 The object is left on the stack unchanged.
 
 This is a simplified definition, to be refined later.
-A polyhedron-based object is manifold if every polygon
-in it is closed (each edge ends where the next one starts),
+A polyhedron-based object is manifold if the edges of every polygon
+in it form closed boundaries (no branching or dangling ends),
 and every line is used by two polygon edges,
 which go in different directions (or some multiple of these pairs).
+Polygons with holes are accepted.
 `validate` accepts any `Object3D` whose leaves are all polyhedrons (a `Polyhedron3D`, a union of them, a union of unions, and so on).
 The leaves are checked together, as one object.
 
@@ -231,9 +236,10 @@ Simplifies a shape, without changing its shape, on a best-effort basis:
 - Consolidating collinear lines that meet at a vertex with no other lines
 - Merging vertexes with identical coordinates, and lines between the same two vertexes
 
-Two polygons that share several separate runs of lines are merged across one run only, so no polygon ends up with a hole.
+Two polygons that share several separate runs of lines are merged across one run only.
+If the merged outline then uses a line twice in opposite directions, `simplify` drops both uses
+and splits the outline into the outer loop and hole loops of one polygon.
 Spurs left by a merge (where the outline runs out along a line and straight back) are removed.
-A polygon may still use a line twice, with the same polyhedron on both sides of it. That is accepted.
 A merge is skipped if it would leave fewer than three vertexes.
 Coplanarity and collinearity are checked with a small tolerance.
 

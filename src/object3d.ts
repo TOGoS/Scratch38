@@ -1,6 +1,10 @@
 import type { Triangle, Vertex } from "./stl.ts";
 
-/** A polygon's vertexes, counter-clockwise when viewed from outside, as coordinates. */
+/**
+ * A sequence of vertexes tracing part of a polygon boundary. The polygon's interior is on the left
+ * of each step, so viewed from outside an outer boundary runs counter-clockwise and a hole boundary
+ * runs clockwise. This is the same convention that `PolygonEdge` directions express.
+ */
 export type Loop = Vertex[];
 
 export interface PolygonEdge {
@@ -8,7 +12,17 @@ export interface PolygonEdge {
 	readonly direction: "forwards" | "backwards";
 }
 
+/**
+ * A polygon's boundary as a flat, unordered list of directed edges.
+ * Grouping the edges into loops is a separate concern (see `loopsOfEdges`).
+ */
 export type Polygon = readonly PolygonEdge[];
+
+/** A polygon given as loops of vertexes, at a boundary where loops are the natural input. */
+export type PolygonLoops = readonly Loop[];
+
+/** A polyhedron given as a list of polygons, each a list of vertex loops. */
+export type PolyhedronLoops = readonly PolygonLoops[];
 
 export interface PolyhedronFace {
 	readonly polygon: number;
@@ -58,14 +72,65 @@ function sortedUnique(indexes: number[]): number[] {
 }
 
 /**
- * Builds an `Object3D` from polyhedrons, each a list of loops counter-clockwise when viewed from outside.
+ * Groups directed edges into closed loops, following each edge to the one that starts where it ends.
+ * Endpoints are compared with `key`. Throws on branching (an endpoint starting more than one edge)
+ * or on a path that cannot close, so malformed boundaries are reported here rather than silently accepted.
+ */
+export function loopsOfEdges<T>(
+	edges: readonly (readonly [T, T])[],
+	key: (value: T) => string,
+): T[][] {
+	const startOf = new Map<string, number>();
+	edges.forEach(([from], i) => {
+		const fromKey = key(from);
+		if (startOf.has(fromKey)) {
+			throw new Error(
+				`Cannot group edges into loops: vertex ${fromKey} starts more than one edge`,
+			);
+		}
+		startOf.set(fromKey, i);
+	});
+	const visited = new Set<number>();
+	const result: T[][] = [];
+	for (let start = 0; start < edges.length; start++) {
+		if (visited.has(start)) continue;
+		const loop: T[] = [];
+		let current = start;
+		while (!visited.has(current)) {
+			visited.add(current);
+			const [from, to] = edges[current];
+			loop.push(from);
+			const next = startOf.get(key(to));
+			if (next === undefined) {
+				throw new Error(
+					`Cannot group edges into loops: edge from ${key(from)} to ${
+						key(to)
+					} has no continuation`,
+				);
+			}
+			current = next;
+		}
+		if (current !== start) {
+			throw new Error(
+				"Cannot group edges into loops: edges do not form closed loops",
+			);
+		}
+		result.push(loop);
+	}
+	return result;
+}
+
+/**
+ * Builds an `Object3D` from polyhedrons, each a list of polygons, each polygon a list of loops.
+ * Loops are counter-clockwise when viewed from outside; loop order within a polygon is not significant.
+ * Each polygon's edges are stored as one flat, unordered list once vertex and line indexes are assigned.
  * Vertexes and lines with the same coordinates or endpoints are shared.
  * If `base` is given, the new parts are appended to copies of its lists, and existing parts are reused where they match.
  * A single polyhedron becomes a `Polyhedron3D`; otherwise the result is a `UnionObject3D` of them.
  */
 // IMPLIED WINDING ORDER APPLIES HERE
-export function makeObject3d(
-	polyhedra: readonly (readonly Loop[])[],
+export function makeObject3dFromPolygonLoops(
+	polyhedra: readonly PolyhedronLoops[],
 	base?: Polyhedron3DData,
 ): Object3D {
 	const vertexes: Vertex[] = [...(base?.vertexes ?? [])];
@@ -107,15 +172,19 @@ export function makeObject3d(
 	const polygons: Polygon[] = [...(base?.polygons ?? [])];
 	const polyhedrons: Polyhedron[] = [...(base?.polyhedrons ?? [])];
 	const newPolyhedrons: number[] = [];
-	for (const loops of polyhedra) {
+	for (const polygonsOfPolyhedron of polyhedra) {
 		const faces: PolyhedronFace[] = [];
-		for (const loop of loops) {
-			const indexes = loop.map(vertexIndex);
-			polygons.push(
-				indexes.map((from, i) =>
-					lineIndex(from, indexes[(i + 1) % indexes.length])
-				),
-			);
+		for (const loops of polygonsOfPolyhedron) {
+			const edges: PolygonEdge[] = [];
+			for (const loop of loops) {
+				const indexes = loop.map(vertexIndex);
+				indexes.forEach((from, i) =>
+					edges.push(
+						lineIndex(from, indexes[(i + 1) % indexes.length]),
+					)
+				);
+			}
+			polygons.push(edges);
 			faces.push({ polygon: polygons.length - 1, side: "front" });
 		}
 		polyhedrons.push(faces);
@@ -140,6 +209,17 @@ export function makeObject3d(
 	};
 }
 
+/** Builds an object whose polygons each have one loop. */
+export function makeObject3d(
+	polyhedra: readonly (readonly Loop[])[],
+	base?: Polyhedron3DData,
+): Object3D {
+	return makeObject3dFromPolygonLoops(
+		polyhedra.map((loops) => loops.map((loop) => [loop])),
+		base,
+	);
+}
+
 /** Every `Polyhedron3D` in an object, in order, however its unions are nested. */
 export function polyhedronLeaves(object: Object3D): Polyhedron3D[] {
 	return "members" in object
@@ -160,43 +240,40 @@ function mapLeaves(
 		: replace(object);
 }
 
-/**
- * The vertex indexes at the start of each edge of a polygon, in order.
- * Throws unless every edge ends where the next one starts, so that the polygon is closed.
- */
-function polygonVertexIndexes(
+/** The endpoints of one polygon edge, in the edge's direction. */
+function endpointsOf(
 	data: Polyhedron3DData,
-	polygonIndex: number,
-): number[] {
-	const polygon = itemAt(data.polygons, polygonIndex, "polygon");
-	const starts = polygon.map((edge) => {
-		const [a, b] = itemAt(data.lines, edge.line, "line");
-		return edge.direction === "forwards" ? a : b;
+	edge: PolygonEdge,
+): readonly [Vertex, Vertex] {
+	const [a, b] = itemAt(data.lines, edge.line, "line");
+	return edge.direction === "forwards"
+		? [data.vertexes[a], data.vertexes[b]]
+		: [data.vertexes[b], data.vertexes[a]];
+}
+
+/** The loops of one polygon, found by grouping its flat edges into cycles. */
+function loopOfPolygon(data: Polyhedron3DData, polygonIndex: number): Loop[] {
+	const edges = itemAt(data.polygons, polygonIndex, "polygon").map((edge) =>
+		endpointsOf(data, edge)
+	);
+	return loopsOfEdges(edges, keyOf);
+}
+
+/** The loops of each polygon of one polyhedron, in face order. */
+// IMPLIED WINDING ORDER APPLIES HERE
+export function polygonLoopsOfPolyhedron(leaf: Polyhedron3D): Loop[][] {
+	const faces = itemAt(leaf.data.polyhedrons, leaf.polyhedron, "polyhedron");
+	return faces.map((face) => {
+		const loops = loopOfPolygon(leaf.data, face.polygon);
+		return face.side === "front"
+			? loops
+			: loops.map((loop) => loop.slice().reverse());
 	});
-	const ends = polygon.map((edge) => {
-		const [a, b] = itemAt(data.lines, edge.line, "line");
-		return edge.direction === "forwards" ? b : a;
-	});
-	for (let i = 0; i < polygon.length; i++) {
-		if (ends[i] !== starts[(i + 1) % polygon.length]) {
-			throw new Error(
-				`Polygon ${polygonIndex} edges do not form a closed loop`,
-			);
-		}
-	}
-	return starts;
 }
 
 /** The loops of one polyhedron, counter-clockwise when viewed from outside. */
-// IMPLIED WINDING ORDER APPLIES HERE
 export function loopOfPolyhedron(leaf: Polyhedron3D): Loop[] {
-	const faces = itemAt(leaf.data.polyhedrons, leaf.polyhedron, "polyhedron");
-	return faces.map((face) => {
-		const loop = polygonVertexIndexes(leaf.data, face.polygon).map((i) =>
-			leaf.data.vertexes[i]
-		);
-		return face.side === "front" ? loop : loop.reverse();
-	});
+	return polygonLoopsOfPolyhedron(leaf).flat();
 }
 
 /** The loops of every polyhedron in an object, one list per polyhedron. */
@@ -226,11 +303,28 @@ export function trianglesOfObject3d(object: Object3D): Triangle[] {
  */
 export function checkManifold(object: Object3D): void {
 	const counts = new Map<string, number>();
-	for (const loop of loopsOfObject3d(object).flat()) {
-		loop.forEach((v, i) => {
-			const key = `${keyOf(v)}|${keyOf(loop[(i + 1) % loop.length])}`;
-			counts.set(key, (counts.get(key) ?? 0) + 1);
-		});
+	for (const leaf of polyhedronLeaves(object)) {
+		const faces = itemAt(
+			leaf.data.polyhedrons,
+			leaf.polyhedron,
+			"polyhedron",
+		);
+		for (const face of faces) {
+			// Walking the edges checks that the polygon is closed and does not branch.
+			loopOfPolygon(leaf.data, face.polygon);
+			for (
+				const edge of itemAt(
+					leaf.data.polygons,
+					face.polygon,
+					"polygon",
+				)
+			) {
+				let [from, to] = endpointsOf(leaf.data, edge);
+				if (face.side === "back") [from, to] = [to, from];
+				const key = `${keyOf(from)}|${keyOf(to)}`;
+				counts.set(key, (counts.get(key) ?? 0) + 1);
+			}
+		}
 	}
 	for (const [key, count] of counts) {
 		const [from, to] = key.split("|");
@@ -261,7 +355,7 @@ function pruneData(
 		itemAt(data.polygons, i, "polygon")
 	);
 	const lineIndexes = sortedUnique(
-		polygons.flatMap((p) => p.map((edge) => edge.line)),
+		polygons.flatMap((polygon) => polygon.map((edge) => edge.line)),
 	);
 	const lines = lineIndexes.map((i) => itemAt(data.lines, i, "line"));
 	const vertexIndexes = sortedUnique(lines.flat());

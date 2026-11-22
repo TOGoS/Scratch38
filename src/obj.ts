@@ -1,8 +1,8 @@
 import type { Vertex } from "./stl.ts";
 import {
 	Loop,
-	loopOfPolyhedron,
 	Object3D,
+	polygonLoopsOfPolyhedron,
 	polyhedronLeaves,
 } from "./object3d.ts";
 
@@ -97,6 +97,7 @@ export function parseObj(text: string): Loop[][] {
 
 /**
  * Writes an object as OBJ text. Each polyhedron gets a bare `o` line, since objects have no names.
+ * OBJ faces cannot express holes, so a polygon with more than one boundary is an error.
  */
 export function formatObj(object: Object3D): string {
 	const vertexes: Vertex[] = [];
@@ -115,9 +116,15 @@ export function formatObj(object: Object3D): string {
 	const body: string[] = [];
 	for (const leaf of polyhedronLeaves(object)) {
 		body.push("o");
-		for (const loop of loopOfPolyhedron(leaf)) {
+		for (const loops of polygonLoopsOfPolyhedron(leaf)) {
+			if (loops.length === 0) {
+				throw new Error("OBJ cannot write a polygon with no boundary");
+			}
+			if (loops.length > 1) {
+				throw new Error("OBJ cannot write a polygon with holes");
+			}
 			// IMPLIED WINDING ORDER APPLIES HERE
-			body.push(`f ${loop.map((v) => indexOf(v) + 1).join(" ")}`);
+			body.push(`f ${loops[0].map((v) => indexOf(v) + 1).join(" ")}`);
 		}
 	}
 	

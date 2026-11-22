@@ -1,6 +1,6 @@
 import { assertEquals, assertThrows } from "@std/assert";
 import type { Vertex } from "./stl.ts";
-import { makeObject3d } from "./object3d.ts";
+import { makeObject3d, makeObject3dFromPolygonLoops } from "./object3d.ts";
 import { formatObj, parseObj } from "./obj.ts";
 
 const SQUARE = "v 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nf 1 2 3 4\n";
@@ -86,4 +86,16 @@ Deno.test("writing then reading keeps every polyhedron, in order", () => {
 	const triangle: Vertex[][] = [[[0, 0, 0], [1, 0, 0], [0, 0, 1]]];
 	const text = formatObj(makeObject3d([square, triangle]));
 	assertEquals(parseObj(text), [square, triangle]);
+});
+
+// IMPLIED WINDING ORDER APPLIES HERE
+Deno.test("writing a polygon with holes is an error", () => {
+	const outer: Vertex[] = [[0, 0, 1], [4, 0, 1], [4, 4, 1], [0, 4, 1]];
+	const hole: Vertex[] = [[1, 1, 1], [1, 3, 1], [3, 3, 1], [3, 1, 1]];
+	const object = makeObject3dFromPolygonLoops([[[outer, hole]]]);
+	assertThrows(
+		() => formatObj(object),
+		Error,
+		"OBJ cannot write a polygon with holes",
+	);
 });
