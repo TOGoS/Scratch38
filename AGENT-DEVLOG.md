@@ -111,8 +111,9 @@ This supersedes the earlier implementation notes after `efb5377`.
 
 ### Punted to future
 
-- Role-aware parsing, which would let the `/collection` modifier on `prune` become optional.
-- Store/writer behavior for collections.
+- Role-aware parsing, which would let the `/collection` modifier on `prune` become optional
+  in contexts where the role of its argument is obvious (e.g. after a `load/obj/collection`).
+- Other ways to create collections.
 - Whether `simplify` on a collection simplifies the whole collection or one extracted object.
 - A better naming system for identifiers that start with a digit (see To-do).
 
@@ -122,7 +123,8 @@ This supersedes the earlier implementation notes after `efb5377`.
   `type:Vector3DObjectData`, `type:Vector3DPolyhedronGroup`, and `type:Union3DObject`.
 - `prune;main-object-name=...` still exists; replace it with `prune` and `prune/collection` mappings.
 - `store`, `validate`, `simplify`, and `trianglesFromVector3DObject` still use the `default` group; make them
-  role-specific.
+  role-specific (explicitly with `/collection` to indicate that their input and output is a collection,
+  or potentially implictly by context; otherwise they work on 3D objects).
 - OBJ load/store still produce and consume one combined object with `default`; add `load/obj/collection`,
   `extract`, `default-name-prefix`, `type:Union3DObject` for the single-object union, and a matching writer choice.
 - `simplify` currently merges across all polyhedrons of `default`; make it group-scoped.
@@ -138,5 +140,4 @@ Keep this section at the end of the devlog until we have a more formal task list
 - Refactor the model into `type:Vector3DObjectData`, `type:Vector3DPolyhedronGroup`, and `type:Union3DObject`,
   with `type:Map<string, ThreeDObject>` for collections.
 - Implement the revised operators: `load/obj/collection`, `extract`, `prune/collection`, `rename-entries`.
-- Decide the punted items above before merging this branch to master.
 - Update README and tests to match the revised architecture.
