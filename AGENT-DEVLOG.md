@@ -44,6 +44,8 @@ Kept out of README.md, which describes the tool and its spec.
 - *Type* is what TypeScript can infer from a value in isolation (`classRef`); *role* is what a context expects
   of that value. Meaning comes from type plus role. Prefer one type per type/role combination unless a type is
   genuinely valid in several roles; role-specific TypeScript aliases are optional until used.
+  Use `role:` and `type:` prefixes when a name could mean either, e.g. `role:Dictionary<K,V>` represented by
+  `type:Map<K,V>`.
 - `crash` throws. The top level catches the error, writes it to stderr, and exits with status 1.
   It prints only the message, not a stack trace, to match the other errors.
 - Winding: counter-clockwise viewed from outside, same as STL. OBJ faces are counter-clockwise viewed from the
@@ -68,25 +70,28 @@ Kept out of README.md, which describes the tool and its spec.
 
 This supersedes the earlier implementation notes after `efb5377`.
 
-- `3DObject` is the prose name of a role, not a TypeScript identifier. Use `ThreeDObject` as the TypeScript
-  identifier for now; it may be a union of concrete object types.
-- `Vector3DObjectData` holds the shared vertex, line, polygon, and polyhedron lists.
-  `Vector3DPolyhedronGroup` references a `Vector3DObjectData` plus a polyhedron-group index.
-  `Union3DObject` contains a list of `ThreeDObject`s; it represents the union of otherwise-distinct objects,
+- `3D object`, `3DObject`, and `ThreeDObject` are the same concept; `ThreeDObject` is the TypeScript-safe
+  spelling. Use `role:3DObject` or `type:3DObject` to say which is meant.
+- There are currently two `type:3DObject` representations: `type:Union3DObject` and
+  `type:Vector3DPolyhedronGroup`. Either can represent a `role:3DObject`.
+- `type:Vector3DObjectData` holds the shared vertex, line, polygon, and polyhedron lists.
+  `type:Vector3DPolyhedronGroup` references a `Vector3DObjectData` plus a polyhedron-group index.
+  `type:Union3DObject` contains a list of `ThreeDObject`s; it represents the union of otherwise-distinct objects,
   which may share a `Vector3DObjectData`.
-  The `Dictionary<String,Object>` role is `Map<string, ThreeDObject>`.
+- `role:Dictionary<K,V>` is represented by `type:Map<K,V>`. Our collection role is
+  `role:Dictionary<string, ThreeDObject>`, represented by `type:Map<string, ThreeDObject>`.
 - The special `default` sub-object is removed. It existed only to make a collection look like a single object,
   which caused the earlier ambiguity.
-- A single 3D object and a collection of named entries are different stack types. `load/obj` pushes a single
-  object; `load/obj/collection` pushes a `Map<string, ThreeDObject>`.
+- A `role:3DObject` and a `role:Dictionary<string, ThreeDObject>` are different stack roles. `load/obj` pushes
+  the former; `load/obj/collection` pushes a `type:Map<string, ThreeDObject>`.
 - Unnamed OBJ groups are reachable by loading the whole file as one 3D object. In a collection,
   `load/obj/collection;default-name-prefix=anonymous-` names them `anonymous-1`, `anonymous-2`, and so on.
-  Without the prefix, they are excluded from the `Map<string, ThreeDObject>` role. Supporting unnamed entries
+  Without the prefix, they are excluded from `role:Dictionary<string, ThreeDObject>`. Supporting unnamed entries
   in a collection would need a different collection type; it is not planned now.
   The OBJ loader may keep unnamed groups in a parallel list internally, then union all entries for the
   single-object case. That list is not a public stack type.
-- Extracting a named entry is explicit: `extract:<name>` has shape `(collection<K,T> -- named-object:T)` and
-  throws if the name is absent.
+- Extracting a named entry is explicit: `extract:<name>` has shape
+  `(role:Dictionary<K,T> -- role:named-object:T)` and throws if the name is absent.
 - `prune` on a single object has no names and needs no mappings. `prune/collection` keeps and renames entries.
   The `/collection` modifier is required until the parser can know the role of the top stack value.
 - A mapping is a semicolon-separated list of entries of the form `(<new name> "=") <old name>`; a bare old name
@@ -113,13 +118,13 @@ This supersedes the earlier implementation notes after `efb5377`.
 
 ### Known divergences in current code
 
-- `Vector3DObject` still combines data, polyhedron groups, and names with a `default` group; split it into
-  `Vector3DObjectData` and `Vector3DPolyhedronGroup`.
+- `type:Vector3DObject` still combines data, polyhedron groups, and names with a `default` group; split it into
+  `type:Vector3DObjectData`, `type:Vector3DPolyhedronGroup`, and `type:Union3DObject`.
 - `prune;main-object-name=...` still exists; replace it with `prune` and `prune/collection` mappings.
 - `store`, `validate`, `simplify`, and `trianglesFromVector3DObject` still use the `default` group; make them
   role-specific.
 - OBJ load/store still produce and consume one combined object with `default`; add `load/obj/collection`,
-  `extract`, `default-name-prefix`, `Union3DObject` for the single-object union, and a matching writer choice.
+  `extract`, `default-name-prefix`, `type:Union3DObject` for the single-object union, and a matching writer choice.
 - `simplify` currently merges across all polyhedrons of `default`; make it group-scoped.
 - `rename-entries` is not implemented.
 - README and tests still describe the old architecture; update them during the refactor.
@@ -130,8 +135,8 @@ Keep this section at the end of the devlog until we have a more formal task list
 
 - Figure out a better system for munging names that start with numbers, such as `Object3D` instead of
   `ThreeDObject`, then apply it consistently and all at once.
-- Refactor the model into `Vector3DObjectData`, `Vector3DPolyhedronGroup`, and `Union3DObject`, with
-  `Map<string, ThreeDObject>` for collections.
+- Refactor the model into `type:Vector3DObjectData`, `type:Vector3DPolyhedronGroup`, and `type:Union3DObject`,
+  with `type:Map<string, ThreeDObject>` for collections.
 - Implement the revised operators: `load/obj/collection`, `extract`, `prune/collection`, `rename-entries`.
 - Decide the punted items above before merging this branch to master.
 - Update README and tests to match the revised architecture.
