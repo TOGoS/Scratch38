@@ -3,6 +3,7 @@ import type { Triangle, Vertex } from "./stl.ts";
 import {
 	checkManifold,
 	makeObject3d,
+	makeObject3dFromPolygonLoops,
 	Object3D,
 	Polyhedron3D,
 	polyhedronLeaves,
@@ -153,7 +154,8 @@ Deno.test("two polygons sharing a run of three edges merge across the whole run"
 	];
 	const [polyhedron] = simplifyPolyhedrons([[f, g]]);
 	assertEquals(polyhedron.length, 1);
-	assertEquals(polyhedron[0].length, 8);
+	assertEquals(polyhedron[0].length, 1);
+	assertEquals(polyhedron[0][0].length, 8);
 });
 
 Deno.test("two polyhedrons sharing two faces lose both shared faces", () => {
@@ -168,4 +170,80 @@ Deno.test("two polyhedrons sharing two faces lose both shared faces", () => {
 	const [leaf] = leavesOf(simplified);
 	assertEquals(leaf.data.polygons.length, 8);
 	checkManifold(simplified);
+});
+
+// IMPLIED WINDING ORDER APPLIES HERE
+Deno.test("simplify splits a line shared with itself into outer and hole loops", () => {
+	const a: Vertex = [0, 0, 0];
+	const b: Vertex = [4, 0, 0];
+	const c: Vertex = [4, 4, 0];
+	const d: Vertex = [0, 4, 0];
+	const e: Vertex = [1, 1, 0];
+	const f: Vertex = [1, 3, 0];
+	const g: Vertex = [3, 3, 0];
+	const h: Vertex = [3, 1, 0];
+	// A square annulus cut open along a-e, so a-e is traversed in both directions.
+	const cutDonut = [a, b, c, d, a, e, f, g, h, e];
+	const [polyhedron] = simplifyPolyhedrons([[cutDonut]]);
+	assertEquals(polyhedron.length, 1);
+	assertEquals(polyhedron[0].length, 2);
+	assertEquals(polyhedron[0][0], [a, b, c, d]);
+	assertEquals(polyhedron[0][1], [e, f, g, h]);
+});
+
+// IMPLIED WINDING ORDER APPLIES HERE
+Deno.test("simplify removes every line a polygon shares with itself", () => {
+	// A square plate with a square hole, with its top and bottom cut open along a-e.
+	const top: Vertex[] = [
+		[0, 0, 1],
+		[4, 0, 1],
+		[4, 4, 1],
+		[0, 4, 1],
+		[0, 0, 1],
+		[1, 1, 1],
+		[1, 3, 1],
+		[3, 3, 1],
+		[3, 1, 1],
+		[1, 1, 1],
+	];
+	const bottom: Vertex[] = [
+		[1, 1, 0],
+		[3, 1, 0],
+		[3, 3, 0],
+		[1, 3, 0],
+		[1, 1, 0],
+		[0, 0, 0],
+		[0, 4, 0],
+		[4, 4, 0],
+		[4, 0, 0],
+		[0, 0, 0],
+	];
+	const walls: Vertex[][] = [
+		[[0, 0, 0], [0, 0, 1], [0, 4, 1], [0, 4, 0]],
+		[[0, 4, 0], [0, 4, 1], [4, 4, 1], [4, 4, 0]],
+		[[4, 4, 0], [4, 4, 1], [4, 0, 1], [4, 0, 0]],
+		[[4, 0, 0], [4, 0, 1], [0, 0, 1], [0, 0, 0]],
+		[[1, 1, 0], [1, 1, 1], [3, 1, 1], [3, 1, 0]],
+		[[3, 1, 0], [3, 1, 1], [3, 3, 1], [3, 3, 0]],
+		[[3, 3, 0], [3, 3, 1], [1, 3, 1], [1, 3, 0]],
+		[[1, 3, 0], [1, 3, 1], [1, 1, 1], [1, 1, 0]],
+	];
+	const plate = [
+		[top],
+		[bottom],
+		...walls.map((wall) => [wall]),
+	];
+	const object = makeObject3dFromPolygonLoops([plate]);
+	checkManifold(object);
+	const simplified = pruneObject3d(simplifyObject3d(object));
+	checkManifold(simplified);
+	const [leaf] = leavesOf(simplified);
+	assertEquals(
+		leaf.data.polygons.some((polygon) => polygon.length === 2),
+		true,
+	);
+	for (const polygon of leaf.data.polygons) {
+		const lines = polygon.flat().map((edge) => edge.line);
+		assertEquals(new Set(lines).size, lines.length);
+	}
 });

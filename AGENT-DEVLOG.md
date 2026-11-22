@@ -61,8 +61,8 @@ Kept out of README.md, which describes the tool and its spec.
 - Resources: `openResource(name)` returns a `Resource` with `read()` and `write()`. Stdin/stdout, plain paths,
   `file:`, `http:`, and `https:` are supported; storing to an HTTP(S) URL is an error. Other URI schemes error.
 - `validate` peeks: it checks the object on top of the stack and leaves it there.
-  "Manifold" is the simplified definition from the user: every polygon in a polyhedron group is closed, and every
-  line is used by exactly two polygon edges in opposite directions.
+  "Manifold" is the simplified definition from the user: every loop of every polygon in a polyhedron group is closed,
+  and every line is used by exactly two polygon edges in opposite directions.
 - Leftover stack values at the end of a run are silently discarded.
 - `tools/fix-blank-lines.ts` is run by `deno task fmt`. Its tests are in `tools/fix-blank-lines_test.ts`.
 - `src/cli_test.ts` runs `stlmod` as a subprocess. It needs `--allow-run`, which is in the test task.
@@ -88,9 +88,10 @@ Kept out of README.md, which describes the tool and its spec.
 - `simplify` and `validate` accept any polyhedron-based `Object3D`: one whose leaves are all `Polyhedron3D`s,
   however they are nested in `UnionObject3D`s (user's decision). The leaves are treated as one set, so nested unions
   do not separate them. Polyhedrons from anywhere in the object may be merged.
-  Passes: merge polyhedrons sharing an oppositely oriented polygon; merge coplanar loops sharing an edge; remove
-  vertexes with exactly two collinear neighbours; rebuild. The output's new data includes the whole old data as its
-  base. `simplify/keep-unused` stops there; plain `simplify` also prunes (kept as in the README).
+  Passes: merge polyhedrons sharing an oppositely oriented polygon; merge coplanar loops sharing an edge; split loops
+  that use a line twice into outer and hole loops; remove vertexes with exactly two collinear neighbours; rebuild.
+  The output's new data includes the whole old data as its base. `simplify` does not prune; `prune` is a separate
+  operation.
 - `prune` writes a new `Polyhedron3DData` containing only what the object refers to, unless the data is already pruned.
   `prune` works on the whole object, however its unions are nested.
 - `validate` checks the leaves together, as one set, however they are nested.
@@ -101,8 +102,9 @@ Kept out of README.md, which describes the tool and its spec.
 - Storing a collection is not part of this work (see Punted).
 - `obj/bin` remains unsupported; free-form curves/surfaces, `l`, and `p` in OBJ are errors.
 - Coplanar merging: `mergeAcross` takes the longest run of consecutive shared lines (reverse-traversed) and drops only that run.
-  Other shared runs stay. The merged outline may then use a line twice, which is accepted (the donut case). Spurs
-  (a vertex whose two neighbours are the same) are removed by `removeSpurs`. The old rejection of repeated vertexes is gone.
+  Other shared runs stay. `splitSharedLines` then removes each line used twice in opposite directions and splits the
+  outline into the outer and hole loops of one polygon. Spurs (a vertex whose two neighbours are the same) are removed
+  by `removeSpurs`. The old rejection of repeated vertexes is gone.
 - Face matching across polyhedrons uses `canonicalLoop`, the smallest rotation over all starts. Comparing only from the
   smallest vertex's first occurrence failed when a loop repeats a vertex, so equal faces were missed.
 - Deterministic order: polyhedron faces are matched in input order (first unmatched partner), and coplanar merges
@@ -131,16 +133,18 @@ Kept out of README.md, which describes the tool and its spec.
 Implemented in `src/object3d.ts`, which replaces `vector3d-object.ts`:
 - `Polyhedron3DData`, `Polyhedron3D`, `UnionObject3D`, and `type Object3D = Polyhedron3D | UnionObject3D`,
   with `readonly` fields so the compiler enforces immutability.
-- `makeObject3d(polyhedra, base?)`: one builder. Without a base it creates fresh data. With a base it copies the
-  base's lists, reuses base vertexes and lines whose coordinates or endpoints match, and appends. A single polyhedron
-  gives a `Polyhedron3D`; more than one gives a `UnionObject3D` of them.
+- `makeObject3dFromPolygonLoops(polyhedra, base?)`: one builder. Each polygon is a list of loops, outer first.
+  Without a base it creates fresh data. With a base it copies the base's lists, reuses base vertexes and lines whose
+  coordinates or endpoints match, and appends. A single polyhedron gives a `Polyhedron3D`; more than one gives a
+  `UnionObject3D` of them. `makeObject3d` is the convenience form where each polygon has one loop.
 - `pruneObject3d`: writes a new data per source data, containing only what the leaves use, renumbered in order.
   The union structure is kept.
 - `checkManifold`: works on coordinates, so leaves from different data are checked together. Each directed edge must
   be used as many times as its reverse. That gives "two uses in opposite directions, or some multiple of these pairs".
-- `simplify` (`src/simplify.ts`): `simplifyObject3d` runs the merge passes on the leaves' loops. If the leaves share
-  one data, the new parts are appended to it (the base). Otherwise they go into fresh data. If nothing changes
-  (same counts of polyhedrons, loops, and vertexes), it returns the input object. It does not prune.
+- `simplify` (`src/simplify.ts`): `simplifyObject3d` runs the merge and split passes on the leaves' loops, then builds
+  polygons from the resulting loop groups. If the leaves share one data, the new parts are appended to it (the base).
+  Otherwise they go into fresh data. If nothing changes (same counts of polyhedrons, loops, and vertexes), it returns
+  the input object. It does not prune.
 - `prune` is a separate operation. `simplify` is not followed by `prune` automatically.
 - `dup` (`(a -- a a)`) is new.
 - OBJ: each `o` starts a new polyhedron, and object names are dropped. The writer emits a bare `o` before each
@@ -157,22 +161,19 @@ The old `default`, `namedGroups`, `polyhedronGroups`, `prune;main-object-name`, 
   (no base). Confirm this.
 - `obj/bin`: the README listed it. Keep it as unsupported, or implement the Wavefront binary `.mod` format?
 
-## How To Handle Donuts?
+## 2026-11-22 - Polygons with holes - Master Pickle
 
-Currently (3e5f2479b1cccfbd75617f3129c0a752de7ec9a0) the simplification algorithm removes
-spur linees that a polygon shares with itself, but leaves other shared-with-selflines since
-removing them would lead to polygons that cannot be represented by a single loop of lines.
+A polygon is now a list of boundary loops: the outer loop first, then any holes.
+Each loop is still a closed cycle of directed lines; the outer loop is counter-clockwise
+and holes are clockwise when viewed from the front.
 
-Does a polygon need to be representable by a single loop of lines?
-If not, we could just remove all the shared-with-self lines.
+`simplify` now removes every line a polygon shares with itself. After a coplanar merge,
+a line used twice in opposite directions is a cut between an outer boundary and a hole.
+`splitSharedLines` drops both uses and reconnects the remaining paths into separate loops
+of one polygon, so donuts no longer leave doubled lines behind.
 
-Whether the resulting polyhedron can be directly exported to OBJ or STL is another matter!
-
-Splitting polygons back up into single-loop polygons or donuts may require
-a bit of math that I'm not ready to think about at the moment.
-For candidate splitting lines, you'd probably want to pick pairs of vertexes that are close in euclidean space,
-but that don't have any other lines between them.
-Perhaps Master Haiku could figure it out (or look up an algorithm).
+Splitting a polygon back into single-loop polygons for export is still not implemented.
+OBJ output writes each loop as its own face, and STL still rejects non-triangular polygons.
 
 ## 2026-11-22 - Lower-camel-case names ending in 3D - Master Pickle
 
@@ -184,17 +185,9 @@ and `loopsOfObject3d`. Upper-camel-case type names such as `Object3D` are unchan
 
 Keep this section at the end of the devlog until we have a more formal task list.
 
-- Allow for polygons with holes (i.e. inner loops in addition to the outer one)
-  - We could simply allow for the lines that make up a polygon's edges to be specified
-    in any order and not be contiguous--then holes can be represented!
-  - Operations like 'simplify' may need to sort lines or group into separate loops
-    as part of their inner workings, but this requirement does not necessarily apply
-    to the data structure in `Polyhedron3DData`
 - STL can only represent triangles.
   - Currently we just throw an error when attempting to export a shape to STL that contains non-triangular faces.
-  - To make it work we'll have to split them back up again!
-  - But this means that, internally, we can probably support polygons with holes,
-    since we won't be exporting them directly anyway.
+  - To make it work we'll have to split polygons, including polygons with holes, back up into triangles.
 - Consider a shared, append-only list type so appending to a base does not need to copy the backing array.
 - Collections are deferred; see Punted.
 - Figure out a better system for names that start with digits (for example `Object3D` versus `ThreeDObject`).

@@ -2,11 +2,12 @@ import type { Vertex } from "./stl.ts";
 import {
 	Loop,
 	loopOfPolyhedron,
-	makeObject3d,
+	makeObject3dFromPolygonLoops,
 	Object3D,
 	Polyhedron3D,
 	Polyhedron3DData,
 	polyhedronLeaves,
+	PolyhedronPolygons,
 } from "./object3d.ts";
 
 /** Tolerance for coplanarity and collinearity checks, which are only approximate. */
@@ -133,8 +134,8 @@ export function removeSpurs(loop: Loop): Loop {
 
 /**
  * Joins two loops across the longest run of consecutive edges they share, traversed in opposite directions,
- * dropping that run. Only one run is merged; any other shared run stays, so the result may use a line twice
- * (the same polyhedron on both sides of it), which is accepted. Spurs left behind are removed.
+ * dropping that run. Only one run is merged; any other shared run stays, so the result may use a line twice.
+ * `splitSharedLines` deals with those afterwards. Spurs left behind are removed.
  * Returns undefined if they share no edge, or the result would have fewer than three vertexes.
  */
 function mergeAcross(f: Loop, g: Loop): Loop | undefined {
@@ -178,6 +179,74 @@ function mergeAcross(f: Loop, g: Loop): Loop | undefined {
 	);
 	const merged = removeSpurs(cleanLoop([...fPart, ...gPart.slice(1, -1)]));
 	return merged.length >= 3 ? merged : undefined;
+}
+
+/**
+ * Splits a loop that uses a line twice in opposite directions into loops that do not share lines.
+ * Such a doubled line is a cut between a polygon's outer boundary and a hole; dropping both uses
+ * leaves the boundaries as separate loops of one polygon. Returns one loop if there is no such line.
+ */
+export function splitSharedLines(loop: Loop): Loop[] {
+	const n = loop.length;
+	if (n < 4) return [loop];
+	const keys = loop.map(keyOf);
+	const uses = new Map<string, number[]>();
+	for (let i = 0; i < n; i++) {
+		const a = keys[i];
+		const b = keys[(i + 1) % n];
+		const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+		uses.set(key, [...(uses.get(key) ?? []), i]);
+	}
+	const removed = new Set<number>();
+	for (const positions of uses.values()) {
+		const unmatched = [...positions];
+		while (unmatched.length >= 2) {
+			const i = unmatched.shift()!;
+			const partner = unmatched.findIndex((j) =>
+				keys[i] === keys[(j + 1) % n] && keys[(i + 1) % n] === keys[j]
+			);
+			if (partner < 0) continue;
+			removed.add(i);
+			removed.add(unmatched.splice(partner, 1)[0]);
+		}
+	}
+	if (removed.size === 0) return [loop];
+	
+	const remaining = keys.map((_, i) => i).filter((i) => !removed.has(i));
+	const outgoing = new Map<string, number[]>();
+	for (const i of remaining) {
+		const from = keys[i];
+		outgoing.set(from, [...(outgoing.get(from) ?? []), i]);
+	}
+	const vertexOf = new Map(keys.map((key, i) => [key, loop[i]]));
+	const visited = new Set<number>();
+	const result: Loop[] = [];
+	for (const start of remaining) {
+		if (visited.has(start)) continue;
+		const vertices: Loop = [];
+		let current = start;
+		for (let step = 0; step <= remaining.length; step++) {
+			visited.add(current);
+			vertices.push(vertexOf.get(keys[current])!);
+			const to = keys[(current + 1) % n];
+			const candidates = outgoing.get(to) ?? [];
+			const ordered = [
+				...candidates.filter((i) => i > current),
+				...candidates,
+			];
+			const next = ordered.find((i) => i === start || !visited.has(i));
+			if (next === undefined) break;
+			current = next;
+			if (current === start) break;
+		}
+		if (current !== start) {
+			throw new Error(
+				"Could not split a loop that shares lines with itself",
+			);
+		}
+		result.push(vertices);
+	}
+	return result;
 }
 
 /**
@@ -247,9 +316,9 @@ function mergeCoplanar(loops: Loop[]): Loop[] {
 /**
  * Removes vertexes that have exactly two neighbours, lying on a straight line between them.
  * Such a vertex is shared only by the two lines through it, so removing it changes no shape.
- * Mutates the loops in `groups`.
+ * Mutates the given loops.
  */
-function removeCollinearVertexes(groups: Loop[][]): void {
+function removeCollinearVertexes(loops: Loop[]): void {
 	let changed = true;
 	while (changed) {
 		changed = false;
@@ -259,13 +328,11 @@ function removeCollinearVertexes(groups: Loop[][]): void {
 			neighbours.set(a, (neighbours.get(a) ?? new Set()).add(b));
 			neighbours.set(b, (neighbours.get(b) ?? new Set()).add(a));
 		};
-		for (const loops of groups) {
-			for (const loop of loops) {
-				loop.forEach((v, i) => {
-					coords.set(keyOf(v), v);
-					link(keyOf(v), keyOf(loop[(i + 1) % loop.length]));
-				});
-			}
+		for (const loop of loops) {
+			loop.forEach((v, i) => {
+				coords.set(keyOf(v), v);
+				link(keyOf(v), keyOf(loop[(i + 1) % loop.length]));
+			});
 		}
 		
 		for (const [key, set] of neighbours) {
@@ -280,8 +347,8 @@ function removeCollinearVertexes(groups: Loop[][]): void {
 			) {
 				continue;
 			}
-			const affected = groups.flatMap((loops) =>
-				loops.filter((loop) => loop.some((v) => keyOf(v) === key))
+			const affected = loops.filter((loop) =>
+				loop.some((v) => keyOf(v) === key)
 			);
 			if (affected.some((loop) => loop.length - 1 < 3)) continue;
 			for (const loop of affected) {
@@ -293,14 +360,25 @@ function removeCollinearVertexes(groups: Loop[][]): void {
 	}
 }
 
-/** Simplifies polyhedrons given as loops. Returns one list of loops per polyhedron. */
-export function simplifyPolyhedrons(polyhedrons: Loop[][]): Loop[][] {
-	const cleaned = polyhedrons.map((loops) =>
+/**
+ * Simplifies polyhedrons given as loops. Returns one list of polygons per polyhedron,
+ * each polygon being one or more loops.
+ */
+export function simplifyPolyhedrons(polyhedra: Loop[][]): PolyhedronPolygons[] {
+	const cleaned = polyhedra.map((loops) =>
 		loops.map(cleanLoop).filter((loop) => loop.length >= 3)
 	);
-	const groups = mergePolyhedrons(cleaned).map(mergeCoplanar);
-	removeCollinearVertexes(groups);
-	return groups.filter((loops) => loops.length > 0);
+	const groups: PolyhedronPolygons[] = mergePolyhedrons(cleaned).map(
+		(loops) => mergeCoplanar(loops).map(splitSharedLines),
+	);
+	removeCollinearVertexes(groups.flat(2));
+	return groups
+		.map((polygons) =>
+			polygons
+				.map((loops) => loops.filter((loop) => loop.length >= 3))
+				.filter((loops) => loops.length > 0)
+		)
+		.filter((polygons) => polygons.length > 0);
 }
 
 /** The shared data, if every leaf refers to the same `Polyhedron3DData`. */
@@ -312,13 +390,18 @@ function commonData(leaves: Polyhedron3D[]): Polyhedron3DData | undefined {
 }
 
 /** Whether simplification changed nothing, judged by the number of polyhedrons, loops, and vertexes. */
-function sameCounts(before: Loop[][], after: Loop[][]): boolean {
-	const count = (polyhedra: Loop[][]) => [
-		polyhedra.length,
-		polyhedra.flat().length,
-		polyhedra.flat().flat().length,
+function sameCounts(before: Loop[][], after: PolyhedronPolygons[]): boolean {
+	const beforeCounts = [
+		before.length,
+		before.flat().length,
+		before.flat().flat().length,
 	];
-	return count(before).every((n, i) => n === count(after)[i]);
+	const afterCounts = [
+		after.length,
+		after.flat(2).length,
+		after.flat(3).length,
+	];
+	return beforeCounts.every((n, i) => n === afterCounts[i]);
 }
 
 /**
@@ -334,5 +417,5 @@ export function simplifyObject3d(object: Object3D): Object3D {
 	if (sameCounts(before, after)) {
 		return object;
 	}
-	return makeObject3d(after, commonData(leaves));
+	return makeObject3dFromPolygonLoops(after, commonData(leaves));
 }

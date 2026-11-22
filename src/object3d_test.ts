@@ -1,8 +1,9 @@
 import { assertEquals, assertStrictEquals, assertThrows } from "@std/assert";
-import type { Triangle } from "./stl.ts";
+import type { Triangle, Vertex } from "./stl.ts";
 import {
 	checkManifold,
 	makeObject3d,
+	makeObject3dFromPolygonLoops,
 	Object3D,
 	Polyhedron3D,
 	polyhedronLeaves,
@@ -106,6 +107,33 @@ Deno.test("a face with the wrong winding is not manifold", () => {
 
 Deno.test("the same closed surface in two polyhedrons is manifold when each is closed", () => {
 	checkManifold(makeObject3d([TETRAHEDRON, TETRAHEDRON]));
+});
+
+// IMPLIED WINDING ORDER APPLIES HERE
+Deno.test("validate accepts a donut-shaped polygon", () => {
+	// A square plate with a square hole. The top and bottom are single polygons with two loops each.
+	const topOuter: Vertex[] = [[0, 0, 1], [4, 0, 1], [4, 4, 1], [0, 4, 1]];
+	const topHole: Vertex[] = [[1, 1, 1], [1, 3, 1], [3, 3, 1], [3, 1, 1]];
+	const bottomOuter: Vertex[] = [[0, 0, 0], [0, 4, 0], [4, 4, 0], [4, 0, 0]];
+	const bottomHole: Vertex[] = [[1, 1, 0], [3, 1, 0], [3, 3, 0], [1, 3, 0]];
+	const walls: Vertex[][] = [
+		[[0, 0, 0], [0, 0, 1], [0, 4, 1], [0, 4, 0]],
+		[[0, 4, 0], [0, 4, 1], [4, 4, 1], [4, 4, 0]],
+		[[4, 4, 0], [4, 4, 1], [4, 0, 1], [4, 0, 0]],
+		[[4, 0, 0], [4, 0, 1], [0, 0, 1], [0, 0, 0]],
+		[[1, 1, 0], [1, 1, 1], [3, 1, 1], [3, 1, 0]],
+		[[3, 1, 0], [3, 1, 1], [3, 3, 1], [3, 3, 0]],
+		[[3, 3, 0], [3, 3, 1], [1, 3, 1], [1, 3, 0]],
+		[[1, 3, 0], [1, 3, 1], [1, 1, 1], [1, 1, 0]],
+	];
+	const plate = [
+		[topOuter, topHole],
+		[bottomOuter, bottomHole],
+		...walls.map((wall) => [wall]),
+	];
+	const object = makeObject3dFromPolygonLoops([plate]);
+	assertEquals(polyhedronLeaves(object)[0].data.polygons[0].length, 2);
+	checkManifold(object);
 });
 
 Deno.test("prune removes unused vertexes and keeps the union structure", () => {
