@@ -214,6 +214,13 @@ OBJ details:
 
 Same modifiers and parameters as load, but stores the result instead of loading it.
 Removes the object from the stack.
+
+Modifiers may end with `autofix`, e.g. `store/obj/autofix` or `store/stl/bin/autofix`.
+It applies the changes needed for the format, without changing the object on the stack:
+- OBJ: `fix-polygons/single-loop`, so no polygon has a hole.
+- STL: `fix-polygons/triangles`, so every polygon is a triangle.
+
+Without `autofix`, storing an object that the format cannot express is an error.
 STL writes every polyhedron of the object as one solid, and only accepts triangles.
 OBJ writes each polyhedron as an unnamed object (`o` line), since the object has no names,
 and writes each polygon's single boundary as one `f` line.

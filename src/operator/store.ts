@@ -8,8 +8,12 @@ export default {
 	params: ["resource-name"],
 	defaultParam: "resource-name",
 	instantiate({ modifiers, namedParams }) {
-		const format = parseFileFormat("store", modifiers);
+		const autofix = modifiers[modifiers.length - 1] === "autofix";
+		const format = parseFileFormat(
+			"store",
+			autofix ? modifiers.slice(0, -1) : modifiers,
+		);
 		const name = requiredParam("store", namedParams, "resource-name");
-		return new Store(format, name);
+		return new Store(format, name, autofix);
 	},
 } satisfies Operator;

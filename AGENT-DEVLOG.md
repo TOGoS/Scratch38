@@ -186,6 +186,10 @@ Renamed lower-camel-case identifiers ending in `3D` to end in `3d`:
 `makeObject3d`, `simplifyObject3d`, `pruneObject3d`, `trianglesOfObject3d`,
 and `loopsOfObject3d`. Upper-camel-case type names such as `Object3D` are unchanged.
 
+- `store/<format>/autofix`: a trailing `autofix` modifier applies `fix-polygons/single-loop` (OBJ) or
+  `fix-polygons/triangles` (STL) to the object before writing. The stack is unchanged apart from the pop.
+  `src/testGeometry.ts` holds shared test polyhedra (prisms and the pocket box), since holed objects cannot come
+  from an OBJ file.
 - `fix-polygons` (`src/fixPolygons.ts`, `src/triangulate.ts`): faces are projected onto the axis their vector area
   points along, holes are bridged to the outer loop (nearest visible vertex), and the result is ear-clipped.
   Triangles keep the face's outward orientation. `convex` merges triangles with `mergeAcross` (exported from

@@ -13,7 +13,8 @@ import {
 	polyhedronLeaves,
 	trianglesOfObject3d,
 } from "./object3d.ts";
-import { formatObj } from "./obj.ts";
+import { formatObj, parseObj } from "./obj.ts";
+import { pocketBox } from "./testGeometry.ts";
 import type { Vertex } from "./stl.ts";
 import { formatStlBinary, formatStlText, parseStl, Triangle } from "./stl.ts";
 
@@ -439,5 +440,67 @@ Deno.test("simplify/single-loop-polygons is accepted, and other modifiers are no
 		() => instantiateOperation(parseOperationSpec("simplify/keep-unused")),
 		Error,
 		"takes no modifiers except single-loop-polygons, got keep-unused",
+	);
+});
+
+const POCKET_OUTPUT = "store/obj/autofix";
+
+Deno.test("store/obj writes a polygon with holes only with autofix", async () => {
+	const dir = await Deno.makeTempDir();
+	try {
+		const object = makeObject3dFromPolygonLoops([pocketBox()]);
+		await assertRejects(
+			() =>
+				instantiateOperation(
+					parseOperationSpec(`store/obj:${dir}/plain.obj`),
+				).apply([object]),
+			Error,
+			"cannot write a polygon with holes",
+		);
+		await instantiateOperation(
+			parseOperationSpec(`${POCKET_OUTPUT}:${dir}/fixed.obj`),
+		).apply([object]);
+		const text = await Deno.readTextFile(`${dir}/fixed.obj`);
+		assertEquals(
+			parseObj(text).flat().length > 0,
+			true,
+		);
+	} finally {
+		await Deno.remove(dir, { recursive: true });
+	}
+});
+
+Deno.test("store/stl writes only triangles with autofix", async () => {
+	const dir = await Deno.makeTempDir();
+	try {
+		const object = makeObject3dFromPolygonLoops([pocketBox()]);
+		await assertRejects(
+			() =>
+				instantiateOperation(
+					parseOperationSpec(`store/stl/text:${dir}/plain.stl`),
+				).apply([object]),
+			Error,
+			"only triangles",
+		);
+		await instantiateOperation(
+			parseOperationSpec(`store/stl/text/autofix:${dir}/fixed.stl`),
+		).apply([object]);
+		const triangles = parseStl(
+			new TextEncoder().encode(
+				await Deno.readTextFile(`${dir}/fixed.stl`),
+			),
+			"text",
+		);
+		assertEquals(triangles.length > 0, true);
+	} finally {
+		await Deno.remove(dir, { recursive: true });
+	}
+});
+
+Deno.test("autofix must follow a format", async () => {
+	assertThrows(
+		() => instantiateOperation(parseOperationSpec("store/autofix:x.obj")),
+		Error,
+		"takes stl, stl/bin, stl/text, obj, or obj/text, got no format",
 	);
 });
