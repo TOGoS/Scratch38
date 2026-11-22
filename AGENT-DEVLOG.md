@@ -190,8 +190,13 @@ and `loopsOfObject3d`. Upper-camel-case type names such as `Object3D` are unchan
   points along, holes are bridged to the outer loop (nearest visible vertex), and the result is ear-clipped.
   Triangles keep the face's outward orientation. `convex` merges triangles with `mergeAcross` (exported from
   `simplify.ts`) while the result stays convex.
-  Decision: `single-loop` triangulates faces with holes rather than producing simple non-triangle pieces.
-  Faces with a single loop are left alone for `single-loop`, even when concave.
+  `single-loop`: faces with holes are triangulated, then merged back by `mergePieces` using the single-loop
+  merge rule. Faces with a single loop are left alone, even when concave.
+- Single-loop merge rule (`mergeAcross(f, g, true)`, also used by `simplify/single-loop-polygons`): merge only when
+  f and g share exactly one run of edges, and the result has no repeated vertex or self-touching line. Gluing two
+  disks along one arc gives a disk. Sharing two runs, or touching at an extra point, does not (it encloses a hole
+  or pinches). Plain `simplify` keeps the old behaviour and may leave holes, which is allowed.
+  `convex` merging also uses this rule.
   Known limits: faces made of several separate regions, and holes whose bridge crosses an existing edge, are errors.
   Tests in `src/fixPolygons.test.ts` check vector area, total area, manifoldness, and the target constraint.
 - Operators and operations, split into modules:

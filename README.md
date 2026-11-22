@@ -242,6 +242,10 @@ The leaves are checked together, as one object.
 
 Shape: `(input:Object3D -- output:Object3D)`
 
+Modifiers:
+- `simplify/single-loop-polygons` - never merges polygons where that would leave a polygon with a hole,
+  so every resulting polygon has one loop. Plain `simplify` may leave holes.
+
 Simplifies a shape, without changing its shape, on a best-effort basis:
 - Merging polyhedrons that share a polygon, which is on opposite sides of each, into one polyhedron without that polygon
 - Replacing adjacent coplanar polygons with a single polygon, across one run of consecutive shared lines
@@ -278,8 +282,8 @@ Rewrites every face of the object so that its polygons satisfy a constraint.
 The surface does not change: its vector area and total area are preserved, and it stays manifold.
 
 Modifiers (required):
-- `fix-polygons/single-loop` - every polygon has one boundary. Faces with holes are triangulated;
-  other faces are left alone.
+- `fix-polygons/single-loop` - every polygon has one boundary. Faces with holes are triangulated, then the
+  triangles are merged back wherever no hole would form. Other faces are left alone.
 - `fix-polygons/convex` - every polygon is convex. Faces are triangulated, and neighbouring triangles
   are merged while the result stays convex. Convex faces are left alone.
 - `fix-polygons/triangles` - every polygon is a triangle, suitable for STL export.
