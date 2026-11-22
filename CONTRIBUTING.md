@@ -26,6 +26,8 @@ may go into AGENT-DEVLOG.md under a header of the form "## <date> - <title> - <y
 
 ## Code style
 
+- TypeScript source files containing unit test code should be named like `<modulename>.test.ts`,
+  e.g. unit tests for `src/foomod.ts` would go in `src/foomod.test.ts`.
 - Files are UTF-8 with LF line endings and a final newline (see [.editorconfig](./.editorconfig)).
 - Indent with one tab per level of nesting. Do not indent with spaces.
 - Blank lines inside indented code are indented too, to the same depth as the line before them.
