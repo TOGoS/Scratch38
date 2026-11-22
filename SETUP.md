@@ -7,14 +7,17 @@ What TOGETL needs, and how to get it on Debian or Alpine.
 | Component | Needed for | Debian 13 | Alpine |
 | --- | --- | --- | --- |
 | JDK 8 | build, tests, CLI | not in apt; use `scripts/get-jdk.sh` or your own JDK 8 | `openjdk8-jdk` |
-| SQLite JDBC jar | `togetl load`, database tests | `scripts/get-sqlite-jdbc.sh` | same |
+| SQLite JDBC jar | `togetl load`, database tests | fetched by `make` | same |
 | curl, ca-certificates | fetch scripts | apt | apk |
 | PHP CLI + PDO SQLite | read-only browser in `web/` | `php-cli php-sqlite3` | `php php-pdo_sqlite` |
 | uv | `scripts/format-java-indent.py` | not in apt; Astral's installer (below) | same installer |
-| Upstream fixtures | manual checks only (optional) | `scripts/fetch-fixtures.sh` | same |
+| Upstream fixtures | optional, manual checks only | `scripts/fetch-fixtures.sh` | same |
 
 `scripts/install-deps.sh --distro debian|alpine` installs the apt/apk rows.
-It does not install JDK 8 on Debian, the SQLite JDBC jar, or uv.
+It does not install JDK 8 on Debian or uv.
+`make` fetches the SQLite JDBC jar when it is missing; it uses the committed
+`fixtures/demo/` documents rather than the upstream fixtures.
+It needs GNU Make 4.3 or later.
 Use `--dry-run` to print the commands without running them.
 
 To install uv (not from apt; this is Astral's standalone installer, run as `curl | bash`):
@@ -27,7 +30,8 @@ uv --version
 
 ## Java selection
 
-`build.sh`, `test/run-tests.sh`, and `togetl` pick a JDK in this order:
+`make`, `scripts/run-tests`, and `togetl` pick a JDK in this order
+(see `scripts/java-env.sh`):
 
 1. `$JAVAC` and `$JAVA`, if set.
 2. `$JAVA_HOME/bin/javac` and `$JAVA_HOME/bin/java`, if `$JAVA_HOME` is set.
@@ -44,18 +48,14 @@ The build targets Java 8 (`--release 8`, or `-source/-target 1.8` with a JDK 8 `
 ```sh
 scripts/install-deps.sh --distro debian
 scripts/get-jdk.sh                 # skip if JAVA_HOME already points at JDK 8
-scripts/get-sqlite-jdbc.sh
-./build.sh
-./test/run-tests.sh
+make
 ```
 
 ## Alpine quick start
 
 ```sh
 scripts/install-deps.sh --distro alpine
-scripts/get-sqlite-jdbc.sh
-./build.sh
-./test/run-tests.sh
+make
 ```
 
 On Alpine, `JAVA_HOME` should be `/usr/lib/jvm/java-1.8-openjdk`.

@@ -71,10 +71,11 @@ Some specific cases:
 Default verification after code changes:
 
 ```sh
-./test/run-tests.sh
+make
 ```
 
-This runs project build + tests; use it unless the change is documentation-only.
+This runs project build + tests + data processing (see [Makefile](./Makefile));
+use it unless the change is documentation-only.
 
 The Visual Studio Code 'devcontainer' runs on alpine and should have
 `JAVA_HOME` set to `/usr/lib/jvm/java-1.8-openjdk`, as specified by `devcontainer.json`.

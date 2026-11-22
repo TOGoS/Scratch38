@@ -5,16 +5,14 @@ Read-only PHP browser over the SQLite database produced by `togetl load`.
 ## Run
 
 ```sh
-./togetl load --db out/togetl.sqlite3 \
-    --input out/3dparts-data.togetltsv \
-    --report out/3dparts-data-report.tsv
-
-TOGETL_DB=out/togetl.sqlite3 php -S localhost:8080 web/router.php
+make run-web-server
 ```
+
+This loads the database with `make out/thedb.sqlite3` if needed, then serves it.
 
 Then open <http://localhost:8080/>.
 
-`TOGETL_DB` defaults to `out/togetl.sqlite3` relative to the repository root.
+`TOGETL_DB` defaults to `out/thedb.sqlite3` relative to the repository root.
 The PDO SQLite extension is required. The browser opens the database with
 `PRAGMA query_only = ON` and has no write paths.
 

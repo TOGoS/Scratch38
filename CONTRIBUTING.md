@@ -51,5 +51,6 @@ and save some processing time.  OpenCode provides simialar facilities.
 
 ## Tooling
 
-- The Java source tree is built with `./build.sh`.
+- The Java source tree is built, tested, and processed with `make` (see [Makefile](./Makefile)).
+  `scripts/run-tests` runs the test suite with arguments.
 - Use the project-local formatter for indentation-only cleanups rather than adding a heavy external dependency unless the project grows beyond its current size.
