@@ -259,16 +259,21 @@ function loopOfPolygon(data: Polyhedron3DData, polygonIndex: number): Loop[] {
 	return loopsOfEdges(edges, keyOf);
 }
 
-/** The loops of one polyhedron, counter-clockwise when viewed from outside. */
+/** The loops of each polygon of one polyhedron, in face order. */
 // IMPLIED WINDING ORDER APPLIES HERE
-export function loopOfPolyhedron(leaf: Polyhedron3D): Loop[] {
+export function polygonLoopsOfPolyhedron(leaf: Polyhedron3D): Loop[][] {
 	const faces = itemAt(leaf.data.polyhedrons, leaf.polyhedron, "polyhedron");
-	return faces.flatMap((face) => {
+	return faces.map((face) => {
 		const loops = loopOfPolygon(leaf.data, face.polygon);
 		return face.side === "front"
 			? loops
 			: loops.map((loop) => loop.slice().reverse());
 	});
+}
+
+/** The loops of one polyhedron, counter-clockwise when viewed from outside. */
+export function loopOfPolyhedron(leaf: Polyhedron3D): Loop[] {
+	return polygonLoopsOfPolyhedron(leaf).flat();
 }
 
 /** The loops of every polyhedron in an object, one list per polyhedron. */

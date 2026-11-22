@@ -178,7 +178,7 @@ a line used twice in opposite directions is a cut between an outer boundary and 
 `splitSharedLines` drops both uses and groups the remaining edges into loops with `loopsOfEdges`.
 
 Splitting a polygon back into single-loop polygons for export is still not implemented.
-OBJ output writes each reconstructed loop as its own face, and STL still rejects non-triangular polygons.
+`store/obj` and `store/stl` both fail on a polygon with holes; STL also rejects other non-triangular polygons.
 
 ## 2026-11-22 - Lower-camel-case names ending in 3D - Master Pickle
 
@@ -190,9 +190,10 @@ and `loopsOfObject3d`. Upper-camel-case type names such as `Object3D` are unchan
 
 Keep this section at the end of the devlog until we have a more formal task list.
 
-- STL can only represent triangles.
-  - Currently we just throw an error when attempting to export a shape to STL that contains non-triangular faces.
-  - To make it work we'll have to split polygons, including polygons with holes, back up into triangles.
+- STL can only represent triangles, and OBJ faces cannot express holes.
+  - Both `store/stl` and `store/obj` throw when a polygon cannot be written; STL rejects non-triangular polygons.
+  - To make them work we'll have to split polygons, including polygons with holes, back up into triangles
+    (or use another OBJ representation, such as free-form objects).
 - Consider a shared, append-only list type so appending to a base does not need to copy the backing array.
 - Collections are deferred; see Punted.
 - Figure out a better system for names that start with digits (for example `Object3D` versus `ThreeDObject`).

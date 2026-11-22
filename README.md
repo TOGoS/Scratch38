@@ -203,8 +203,10 @@ OBJ details:
 Same modifiers and parameters as load, but stores the result instead of loading it.
 Removes the object from the stack.
 STL writes every polyhedron of the object as one solid, and only accepts triangles.
-OBJ writes each polyhedron as an unnamed object (`o` line), since the object has no names.
-OBJ has no way to mark a hole in a face, so each loop of a polygon is written as a separate `f` line.
+OBJ writes each polyhedron as an unnamed object (`o` line), since the object has no names,
+and writes each polygon's single boundary as one `f` line.
+OBJ faces cannot express holes, so storing a polygon with holes fails.
+Turning such a polygon into hole-free faces (or a different OBJ representation) is future work.
 
 Shape: `(Object3D --)`
 
