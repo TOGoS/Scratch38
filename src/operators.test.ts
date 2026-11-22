@@ -5,7 +5,7 @@ import {
 	assertStringIncludes,
 	assertThrows,
 } from "@std/assert";
-import { instantiateOperation, runOperations } from "./operations.ts";
+import { instantiateOperation, runOperations } from "./operators.ts";
 import { parseOperationSpec } from "./operation-syntax.ts";
 import {
 	makeObject3d,

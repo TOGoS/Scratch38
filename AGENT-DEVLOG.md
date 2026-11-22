@@ -186,11 +186,16 @@ Renamed lower-camel-case identifiers ending in `3D` to end in `3d`:
 `makeObject3d`, `simplifyObject3d`, `pruneObject3d`, `trianglesOfObject3d`,
 and `loopsOfObject3d`. Upper-camel-case type names such as `Object3D` are unchanged.
 
-- Operators and operations (`src/operations.ts`): `Operator.instantiate(arguments)` checks everything synchronously
-  and returns an `Operation`. `OperatorArguments` holds the modifiers and named parameter values (with any default
-  value already filled in). `Operation.apply(stack)` is async and returns a new stack. `runOperations` instantiates
-  every argument first, then applies them in order. Parameters describe what an operator accepts; arguments are the
-  actual values.
+- Operators and operations, split into modules:
+  - `src/operators.ts`: the registry and token parsing (`instantiateOperation`, `runOperations`, `argumentsOf`).
+  - `src/operator/<name>.ts`: each operator's parameters and validation. Exports `operator`, and passes the validated
+    values to its operation's constructor.
+  - `src/operator/Operator.ts`: the `Operator` type and `OperatorArguments` (modifiers and named parameter values,
+    with the default value already filled in).
+  - `src/operation/<Name>.ts`: each operation as a class with an async `apply(stack)` that returns a new stack.
+  - `src/operation/Operation.ts`: the `Operation` type.
+  Parameters describe what an operator accepts; arguments are the actual values.
+  The file layout follows the naming convention in CONTRIBUTING.md.
 
 ## To-do
 

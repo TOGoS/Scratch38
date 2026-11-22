@@ -39,6 +39,13 @@ may go into AGENT-DEVLOG.md under a header of the form "## <date> - <title> - <y
 - Lower camel case (e.g. fields): Lower-case all words, then upper-case first letter of all but the first, then squish words together.
 - Following this convention, "XML HTTP request" becomes `XMLHTTPRequest` (upper), or `xmlHttpRequest` (lower).
 
+## File naming
+
+- A TypeScript file whose default export is a type is named after that type, in PascalCase,
+  e.g. `src/operation/Dup.ts` with `export default class Dup`.
+- A file with no default export is named in lower camel case, e.g. `src/operator/dup.ts`
+  exporting `operator`, or `src/operation/stack.ts` exporting helpers.
+
 ## Project notes and agent handoff
 
 - Keep changes consistent with the architecture described in README.md
