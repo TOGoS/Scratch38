@@ -1,4 +1,7 @@
 {
+	"name": "@togos/s38s39",
+	"version": "0.1.0",
+	"license": "MIT",
 	"imports": {
 		"@std/assert": "jsr:@std/assert@^1",
 		"@std/path": "jsr:@std/path@^1"
@@ -6,11 +9,36 @@
 	"fmt": {
 		"useTabs": true,
 		"newLineKind": "lf",
-		"exclude": ["*.md"]
+		"exclude": [
+			"*.md"
+		]
 	},
 	"tasks": {
 		"fmt": "deno fmt && deno run --allow-read --allow-write tools/fix-blank-lines.ts src tools stlmod",
-		"test": "deno test --allow-read --allow-write --allow-run --allow-net=127.0.0.1,example.com",
+		"test:unit": "deno test --ignore='**/*.io.test.ts'",
+		"test:io": "deno test --allow-read --allow-write --allow-run --allow-net=127.0.0.1,example.com 'src/**/*.io.test.ts'",
+		"test": "deno task test:unit && deno task test:io",
 		"check": "deno check stlmod src tools"
+	},
+	"publish": {
+		"include": [
+			"LICENSE",
+			"README.md",
+			"src/**/*.ts",
+			"deno.json"
+		],
+		"exclude": [
+			"src/testGeometry.ts",
+			"**/*.test.ts",
+			"tools/**",
+			"AGENT-DEVLOG.md",
+			"AGENTS.md",
+			"CONTRIBUTING.md",
+			".worktrees/**"
+		]
+	},
+	"exports": {
+		"./cli": "./src/cli.ts",
+		"./mod": "./src/mod.ts"
 	}
 }

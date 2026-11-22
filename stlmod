@@ -1,11 +1,4 @@
 #!/usr/bin/env -S deno run --allow-read --allow-write --allow-net
-import { runOperations } from "./src/operators.ts";
+import { main } from "./src/cli.ts";
 
-if (import.meta.main) {
-	try {
-		await runOperations(Deno.args);
-	} catch (error) {
-		console.error(`stlmod: ${error instanceof Error ? error.message : String(error)}`);
-		Deno.exit(1);
-	}
-}
+await main(Deno.args);
