@@ -1,0 +1,8 @@
+This might be problematic.
+
+See the comment on throwing when branching.
+
+This means we can't (without doing more math than I anticipated)
+derive loops from edges if there are shared-with-self edges!
+
+I suppose it's fine if we remove all the shared-with-self edges, first.
