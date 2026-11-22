@@ -5,7 +5,7 @@ import {
 	assertStringIncludes,
 } from "@std/assert";
 import { runOperations } from "./operations.ts";
-import { polyhedronLeaves, trianglesOfObject3D } from "./object3d.ts";
+import { polyhedronLeaves, trianglesOfObject3d } from "./object3d.ts";
 import { formatStlBinary, formatStlText, parseStl, Triangle } from "./stl.ts";
 
 const TRIANGLES: Triangle[] = [
@@ -327,13 +327,13 @@ Deno.test("store refuses non-triangular polygons in STL", async () => {
 	}
 });
 
-Deno.test("trianglesOfObject3D is used for the loaded data", async () => {
+Deno.test("trianglesOfObject3d is used for the loaded data", async () => {
 	const dir = await Deno.makeTempDir();
 	try {
 		const input = `${dir}/in.stl`;
 		await Deno.writeTextFile(input, formatStlText(TRIANGLES));
 		const [object] = await runOperations([`load/stl:${input}`]);
-		assertEquals(trianglesOfObject3D(object), TRIANGLES);
+		assertEquals(trianglesOfObject3d(object), TRIANGLES);
 	} finally {
 		await Deno.remove(dir, { recursive: true });
 	}

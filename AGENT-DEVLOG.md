@@ -131,14 +131,14 @@ Kept out of README.md, which describes the tool and its spec.
 Implemented in `src/object3d.ts`, which replaces `vector3d-object.ts`:
 - `Polyhedron3DData`, `Polyhedron3D`, `UnionObject3D`, and `type Object3D = Polyhedron3D | UnionObject3D`,
   with `readonly` fields so the compiler enforces immutability.
-- `makeObject3D(polyhedra, base?)`: one builder. Without a base it creates fresh data. With a base it copies the
+- `makeObject3d(polyhedra, base?)`: one builder. Without a base it creates fresh data. With a base it copies the
   base's lists, reuses base vertexes and lines whose coordinates or endpoints match, and appends. A single polyhedron
   gives a `Polyhedron3D`; more than one gives a `UnionObject3D` of them.
-- `pruneObject3D`: writes a new data per source data, containing only what the leaves use, renumbered in order.
+- `pruneObject3d`: writes a new data per source data, containing only what the leaves use, renumbered in order.
   The union structure is kept.
 - `checkManifold`: works on coordinates, so leaves from different data are checked together. Each directed edge must
   be used as many times as its reverse. That gives "two uses in opposite directions, or some multiple of these pairs".
-- `simplify` (`src/simplify.ts`): `simplifyObject3D` runs the merge passes on the leaves' loops. If the leaves share
+- `simplify` (`src/simplify.ts`): `simplifyObject3d` runs the merge passes on the leaves' loops. If the leaves share
   one data, the new parts are appended to it (the base). Otherwise they go into fresh data. If nothing changes
   (same counts of polyhedrons, loops, and vertexes), it returns the input object. It does not prune.
 - `prune` is a separate operation. `simplify` is not followed by `prune` automatically.
@@ -174,14 +174,16 @@ For candidate splitting lines, you'd probably want to pick pairs of vertexes tha
 but that don't have any other lines between them.
 Perhaps Master Haiku could figure it out (or look up an algorithm).
 
+## 2026-11-22 - Lower-camel-case names ending in 3D - Master Pickle
+
+Renamed lower-camel-case identifiers ending in `3D` to end in `3d`:
+`makeObject3d`, `simplifyObject3d`, `pruneObject3d`, `trianglesOfObject3d`,
+and `loopsOfObject3d`. Upper-camel-case type names such as `Object3D` are unchanged.
+
 ## To-do
 
 Keep this section at the end of the devlog until we have a more formal task list.
 
-- Fix casing of some variable/field/method names
-  - `fooBar3D` should be `fooBar3d`; `3D` is treated as one word,
-    so becomes `3d` before the squishing-together step;
-    see naming convention in [CONTRIBUTING.md](./CONTRIBUTING.md).
 - Allow for polygons with holes (i.e. inner loops in addition to the outer one)
   - We could simply allow for the lines that make up a polygon's edges to be specified
     in any order and not be contiguous--then holes can be represented!

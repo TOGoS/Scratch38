@@ -2,13 +2,13 @@ import { OperationSpec, parseOperationSpec } from "./operation-syntax.ts";
 import { openResource } from "./resource.ts";
 import {
 	checkManifold,
-	makeObject3D,
+	makeObject3d,
 	Object3D,
-	pruneObject3D,
-	trianglesOfObject3D,
+	pruneObject3d,
+	trianglesOfObject3d,
 } from "./object3d.ts";
 import { formatObj, parseObj } from "./obj.ts";
-import { simplifyObject3D } from "./simplify.ts";
+import { simplifyObject3d } from "./simplify.ts";
 import { formatStlBinary, formatStlText, parseStl, StlFormat } from "./stl.ts";
 
 export type StackValue = Object3D;
@@ -117,14 +117,14 @@ const definitions: OperationDefinition[] = [
 			const bytes = await openResource(name).read();
 			if (format.kind === "obj") {
 				stack.push(
-					makeObject3D(parseObj(new TextDecoder().decode(bytes))),
+					makeObject3d(parseObj(new TextDecoder().decode(bytes))),
 				);
 			} else {
 				const triangles = parseStl(
 					bytes,
 					format.variant === "auto" ? undefined : format.variant,
 				);
-				stack.push(makeObject3D([triangles]));
+				stack.push(makeObject3d([triangles]));
 			}
 		},
 	},
@@ -140,7 +140,7 @@ const definitions: OperationDefinition[] = [
 			if (format.kind === "obj") {
 				bytes = new TextEncoder().encode(formatObj(object));
 			} else {
-				const triangles = trianglesOfObject3D(object);
+				const triangles = trianglesOfObject3d(object);
 				bytes = format.variant === "binary"
 					? formatStlBinary(triangles)
 					: new TextEncoder().encode(formatStlText(triangles));
@@ -167,7 +167,7 @@ const definitions: OperationDefinition[] = [
 		params: [],
 		run({ modifiers, stack }) {
 			noModifiers("simplify", modifiers);
-			stack.push(simplifyObject3D(popObject("simplify", stack)));
+			stack.push(simplifyObject3d(popObject("simplify", stack)));
 		},
 	},
 	{
@@ -175,7 +175,7 @@ const definitions: OperationDefinition[] = [
 		params: [],
 		run({ modifiers, stack }) {
 			noModifiers("prune", modifiers);
-			stack.push(pruneObject3D(popObject("prune", stack)));
+			stack.push(pruneObject3d(popObject("prune", stack)));
 		},
 	},
 ];

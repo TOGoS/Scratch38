@@ -2,7 +2,7 @@ import type { Vertex } from "./stl.ts";
 import {
 	Loop,
 	loopOfPolyhedron,
-	makeObject3D,
+	makeObject3d,
 	Object3D,
 	Polyhedron3D,
 	Polyhedron3DData,
@@ -327,12 +327,12 @@ function sameCounts(before: Loop[][], after: Loop[][]): boolean {
  * so the old data is kept as the base. Use `prune` afterwards to drop unused parts.
  * If nothing changes, the same object is returned.
  */
-export function simplifyObject3D(object: Object3D): Object3D {
+export function simplifyObject3d(object: Object3D): Object3D {
 	const leaves = polyhedronLeaves(object);
 	const before = leaves.map(loopOfPolyhedron);
 	const after = simplifyPolyhedrons(before);
 	if (sameCounts(before, after)) {
 		return object;
 	}
-	return makeObject3D(after, commonData(leaves));
+	return makeObject3d(after, commonData(leaves));
 }

@@ -1,6 +1,6 @@
 import { assertEquals, assertThrows } from "@std/assert";
 import type { Vertex } from "./stl.ts";
-import { makeObject3D } from "./object3d.ts";
+import { makeObject3d } from "./object3d.ts";
 import { formatObj, parseObj } from "./obj.ts";
 
 const SQUARE = "v 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nf 1 2 3 4\n";
@@ -84,6 +84,6 @@ Deno.test("a file without faces is an error", () => {
 Deno.test("writing then reading keeps every polyhedron, in order", () => {
 	const square: Vertex[][] = [[[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]];
 	const triangle: Vertex[][] = [[[0, 0, 0], [1, 0, 0], [0, 0, 1]]];
-	const text = formatObj(makeObject3D([square, triangle]));
+	const text = formatObj(makeObject3d([square, triangle]));
 	assertEquals(parseObj(text), [square, triangle]);
 });

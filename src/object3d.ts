@@ -64,7 +64,7 @@ function sortedUnique(indexes: number[]): number[] {
  * A single polyhedron becomes a `Polyhedron3D`; otherwise the result is a `UnionObject3D` of them.
  */
 // IMPLIED WINDING ORDER APPLIES HERE
-export function makeObject3D(
+export function makeObject3d(
 	polyhedra: readonly (readonly Loop[])[],
 	base?: Polyhedron3DData,
 ): Object3D {
@@ -200,7 +200,7 @@ export function loopOfPolyhedron(leaf: Polyhedron3D): Loop[] {
 }
 
 /** The loops of every polyhedron in an object, one list per polyhedron. */
-export function loopsOfObject3D(object: Object3D): Loop[][] {
+export function loopsOfObject3d(object: Object3D): Loop[][] {
 	return polyhedronLeaves(object).map(loopOfPolyhedron);
 }
 
@@ -209,8 +209,8 @@ export function loopsOfObject3D(object: Object3D): Loop[][] {
  * Only triangular polygons are supported.
  */
 // IMPLIED WINDING ORDER APPLIES HERE
-export function trianglesOfObject3D(object: Object3D): Triangle[] {
-	return loopsOfObject3D(object).flat().map((loop) => {
+export function trianglesOfObject3d(object: Object3D): Triangle[] {
+	return loopsOfObject3d(object).flat().map((loop) => {
 		if (loop.length !== 3) {
 			throw new Error(
 				`A polygon has ${loop.length} vertexes; only triangles can be written as STL`,
@@ -226,7 +226,7 @@ export function trianglesOfObject3D(object: Object3D): Triangle[] {
  */
 export function checkManifold(object: Object3D): void {
 	const counts = new Map<string, number>();
-	for (const loop of loopsOfObject3D(object).flat()) {
+	for (const loop of loopsOfObject3d(object).flat()) {
 		loop.forEach((v, i) => {
 			const key = `${keyOf(v)}|${keyOf(loop[(i + 1) % loop.length])}`;
 			counts.set(key, (counts.get(key) ?? 0) + 1);
@@ -300,7 +300,7 @@ function pruneData(
  * Writes a new `Polyhedron3DData` for each data the object refers to, containing only what the object's
  * polyhedrons use. The union structure is kept.
  */
-export function pruneObject3D(object: Object3D): Object3D {
+export function pruneObject3d(object: Object3D): Object3D {
 	const used = new Map<Polyhedron3DData, Set<number>>();
 	for (const leaf of polyhedronLeaves(object)) {
 		const set = used.get(leaf.data) ?? new Set<number>();
