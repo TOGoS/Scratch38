@@ -33,6 +33,10 @@ Kept out of README.md, which describes the tool and its spec.
 - Operations declare their accepted named parameters and default parameter, so unknown names are errors.
 - All operation arguments are parsed and checked before any runs, so a bad argument late on the
   command line cannot leave partial side effects.
+- Terminology: an *operator* is the function that static parameters are passed to in order to create an
+  *operation*; an operation is what runs against the stack. One operator may produce operations with different
+  stack shapes, depending on its parameters. Parameters cannot refer to stack values, so stack effects are
+  statically analyzable. There is no `foo:${stack-value}`-style syntax for operator parameters.
 - `crash` throws. The top level catches the error, writes it to stderr, and exits with status 1.
   It prints only the message, not a stack trace, to match the other errors.
 - Stack values are `Vector3DObject` (src/vector3d-object.ts). Built from triangles: each shared
@@ -79,6 +83,36 @@ Kept out of README.md, which describes the tool and its spec.
   settled before implementation.
 - Wavefront `.mod` binary support stays out of scope until needed; `obj/bin` remains unsupported.
 
+### Second revision: single objects vs collections (agreed)
+
+- A single 3D object and a collection of named sub-objects are different stack types. Loading OBJ as one object
+  and loading it as a collection must be separate operations (possibly modifiers of `load`), with different
+  result types.
+- Extracting a named object from a collection is an explicit operation, not an implicit part of loading.
+- `prune` on a single object has no names and needs no mappings. `prune` on a collection uses the name mappings
+  discussed above. Since stack roles and types are statically known, one `prune` operator can produce both,
+  but the collection form should require, or at least allow, a modifier such as `prune/collection`.
+- The special `default` sub-object is removed. It existed only to make a collection look like a single object,
+  which is the source of this ambiguity.
+- Multiple mapping entries that produce the same new name are an error; there is no correct way to combine them.
+- `rename-sub-objects` remains "prune without pruning", but only makes sense for collections.
+
+#### Decisions that need revision
+
+- The `default` group in `Vector3DObject`, and the rule that store/validate/simplify operate on `default`, must be
+  replaced by explicit single-object or collection operations.
+- The `prune` mapping decision above now applies only to the collection form. `default=jon` is no longer a special
+  case; `default` is just an ordinary name when used in a collection.
+- The plan that `simplify` preserves names by preserving polyhedron groups needs revisiting: a single object has no
+  names, while a collection needs an explicit choice between simplifying the whole collection and simplifying one
+  extracted object.
+- The OBJ decisions need revising: `load/obj` must say which stack type it pushes, unnamed `o` groups and the old
+  `default` need a defined representation in the collection form, and the writer needs a matching single/collection
+  choice.
+- The open questions about synthesizing `default` are resolved by removing `default`; the question about duplicate
+  new names is resolved as an error. The exact names of the load modifiers, the extraction operator, and the
+  rename operator's parameters remain open.
+
 - `simplify` (src/simplify.ts) works in coordinate space: each polygon is an outward-facing loop of coordinates,
   so vertexes with equal coordinates are merged automatically. Passes, in order:
   1. Within each polyhedron group, merge polyhedrons that share a polygon with opposite orientation, dropping that polygon.
@@ -101,8 +135,11 @@ Kept out of README.md, which describes the tool and its spec.
 
 ## Open questions (waiting on the user)
 
-- If a `prune` mapping does not map anything to `default`, should the result have no `default` group,
-  or should one be synthesized from the kept groups? Downstream operations currently assume `default`.
-- What should happen when several mapping entries produce the same new name, and what is the final
-  name and parameter shape for `rename-sub-objects`?
+- Which modifiers distinguish loading OBJ as one object from loading it as a collection, and which is the default?
+- What should the extraction operator be called, and what is its syntax (e.g. `extract:<name>`)?
+- Should `prune/collection` be required, or merely allowed, for the collection form?
+- How should an unnamed OBJ `o` group be represented in a collection: a synthetic name, a positional reference,
+  or an error?
+- What are the stack type names for a single 3D object and for a collection?
+- What are the final name and parameter shape for `rename-sub-objects`?
 
