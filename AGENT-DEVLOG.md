@@ -38,9 +38,9 @@ Kept out of README.md, which describes the tool and its spec.
   stack shapes, depending on its parameters. Parameters cannot refer to stack values, so stack effects are
   statically analyzable. There is no `foo:${stack-value}`-style syntax for operator parameters.
 - *Type* is what TypeScript can infer from a value in isolation (`classRef`); *role* is what a context expects
-  of that value. Meaning comes from type plus role. Give each role its own type, sharing structure where useful;
-  do not reuse one `Vector3DObject` type as both a single object and a collection just because role-checking
-  would allow it.
+  of that value. Meaning comes from type plus role. Prefer one type per type/role combination unless a type is
+  genuinely valid in several roles; role-specific TypeScript aliases are optional until used. In particular,
+  do not reuse `Vector3DObject` as both a single object and a collection just because role-checking allows it.
 - `crash` throws. The top level catches the error, writes it to stderr, and exits with status 1.
   It prints only the message, not a stack trace, to match the other errors.
 - Stack values are currently `Vector3DObject` (src/vector3d-object.ts). Built from triangles: each shared
@@ -91,6 +91,8 @@ Kept out of README.md, which describes the tool and its spec.
 
 - A single 3D object and a collection of named entries are different stack types. `load/obj/collection` pushes
   a collection; other OBJ loads push a single 3D object.
+- Unnamed OBJ groups are reachable either by loading the whole file as one 3D object, or by a collection modifier
+  that assigns synthetic names `anonymous-1`, `anonymous-2`, …; the modifier's exact name is open.
 - Extracting a named entry is explicit: `extract:<name>` has shape `(collection<K,T> -- named-object:T)` and
   throws if the name is absent.
 - `prune` on a single object has no names and needs no mappings. `prune/collection` uses the name mappings
@@ -110,9 +112,8 @@ Kept out of README.md, which describes the tool and its spec.
 - The plan that `simplify` preserves names by preserving polyhedron groups needs revisiting: a single object has no
   names, while a collection needs an explicit choice between simplifying the whole collection and simplifying one
   extracted object.
-- The OBJ decisions need revising: `load/obj` must say which stack type it pushes, unnamed `o` groups and the old
-  `default` need a defined representation in the collection form, and the writer needs a matching single/collection
-  choice.
+- The OBJ decisions need revising: `load/obj` pushes a single object, `load/obj/collection` pushes a collection with
+  synthetic `anonymous-N` names for unnamed groups, and the writer still needs a matching single/collection choice.
 - The open questions about synthesizing `default` are resolved by removing `default`; duplicate new names are an
   error. `load/obj/collection`, `extract:<name>`, and required `prune/collection` are settled. The rename operator
   is `rename-entries`; its parameter details remain open.
@@ -139,8 +140,7 @@ Kept out of README.md, which describes the tool and its spec.
 
 ## Open questions (waiting on the user)
 
-- How should an unnamed OBJ `o` group be represented in a collection: a synthetic name, a positional reference,
-  or an error?
-- What are the stack type names for a single 3D object, a collection, and a named entry?
+- What modifier should assign synthetic `anonymous-N` names to unnamed OBJ groups?
+- What concrete TypeScript type names should represent the single-object, collection, and named-entry roles?
 - What parameter name and shape should `rename-entries` use?
 
