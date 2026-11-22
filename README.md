@@ -28,9 +28,9 @@ is either self-delimiting or does not contain the delimiter.
 
 ## Operation 'Shape'
 
-`(foo:String -- bar:3DObject baz:String)` would mean that an operation
+`(foo:String -- bar:Object3D baz:String)` would mean that an operation
 - Takes one value from the stack, which must be a String
-- Puts two values onto the stack: a 3DObject and a String, pushed in that order
+- Puts two values onto the stack: a Object3D and a String, pushed in that order
 
 On both the left and the right sides of the `--`, the top of the stack is on the right.
 
@@ -91,24 +91,39 @@ This allows for a JSON-based serialization;
 the namespaces provide some hints towards an RDF representation
 of the data structures, should we need such a thing.
 
-## Internal Model of Vector3DObject
+## Internal Model
 
-A vector-based 3DObject (we'll leave the possibility for other representations),
-or `Vector3DObject`, consists of:
+Objects on the stack each represent one `Object3D`
+(until/unless we add support for other types of data on the stack,
+like numbers, literal strings, etc).
+Type names put "how it is represented" before "what it represents",
+so `UnionObject3D` is the union-based representation of an `Object3D`.
+
+`Object3D` is a role: anything on the stack that represents one 3D object.
+The types that play it are listed by the TypeScript type `Object3D`:
+
+```
+type Object3D = Polyhedron3D | UnionObject3D;
+```
+
+- `Polyhedron3D`: a reference to one polyhedron within a `Polyhedron3DData`.
+- `UnionObject3D`: a union of a list of `Object3D`s, whatever their representation.
+  A union of `Polyhedron3D`s is the way to represent several polyhedrons together.
+  (Whether a given operation is possible for every member, given its representation, is a separate question.)
+  Its member list is therefore an `Object3D[]`.
+
+`Polyhedron3DData` holds the geometry that these refer to:
 - A list of vertexes, each of which is (x, y, z), where x, y, and z are numbers
   (probably `number` in TypeScript, but let's parameterize it as `D` in case
   we want to support rational numbers later or something).
-- A list of lines between vertexes, each of which is a pair of vertex indices
+- A list of lines between vertexes, each of which is a pair of vertex indices.
 - A list of polygons, each of which is made of a series of (line index, direction)
   such that the vertexes are visited in counter-clockwise order when viewed
   from 'the front' of the polygon.
   Direction is 'forwards' or 'backwards', since each line segment is re-used
-  for two polygons.
+  for two (or some multiple of two) polygons.
 - A list of polyhedrons, each of which is a list of (polygon index, side),
   where side is 'front' or 'back'.
-- A list of polyhedron groups, each of which is a list of polyhedron indexes
-- A dictionary of name -> polyhedron group index, indicating the top-level objects;
-  the one called `default` is the one implicitly represented by the dataset as a whole.
 
 It is allowed for there to be duplication,
 since that allows for transformations that change
@@ -117,15 +132,15 @@ e.g. two polyhedrons may share a point at (0,0),
 but then we may have an operation that rewrites
 the polyhedrons to move their centers away from (0,0).
 Having two instances of the (0,0) vertex...might help
-keep the rewritten versions.
+certain [very naive, now that I think of it] implementations reorganize things?
 
 That said, we should usually try to keep the vertexes and lines unique.
 
-`Vector3DObject` instances should generally be considered immutable
-once they are constructed, and it is allowed for `Vector3DObject`s
-to contain components that are not used by any named top-level object.
-Operations that transform one `Vector3DObject` to another may therefore
-simply copy or reference (if using tree-based list structures) the first's data.
+Objects on the stack, and the `Polyhedron3DData` they refer to, are effectively immutable.
+Operations that change geometry make a new `Polyhedron3DData`, copying the lists of the old one
+and appending to them, so unchanged parts are referenced rather than rewritten.
+The new data may still contain parts that nothing refers to.
+`prune` writes a new `Polyhedron3DData` containing only the parts that the object refers to.
 
 ## Winding Order
 
@@ -138,19 +153,25 @@ We chose it purely because STL is the first format we support.
 Other formats do not all agree:
 - OpenSCAD's `polyhedron` expects points clockwise when viewed from outside (per its manual),
   so importing or exporting OpenSCAD polyhedrons requires reversing each face's vertex order.
-- OBJ's winding order has not been checked yet; check before implementing OBJ.
+- OBJ also uses counter-clockwise order when viewed from the front, so it needs no reversal.
 
 ## Lazy Object Representations
 
 Internally, this might lazily represent objects that have been transformed.
-e.g. there could be a `PrunedVector3DObject` type that simply wraps
-another `Vector3DObject`.  The runtime would not need to calculate
+e.g. there could be a `PrunedObject3D` type that simply wraps
+another `Object3D`.  The runtime would not need to calculate
 the pruning until specific data (like what's the actual coordinate of vertex #0) is actually needed.
 
 ## Operators
 
-Note: 'modify' is used to mean the transformation between
+Note: 'modify' is used as shorthand to describe a transformation between
 an input and output object.  Objects are actually immutable.
+
+### `dup`
+
+Duplicate the top value on the stack.
+
+Shape: `(a -- a a)`
 
 ### `load`
 
@@ -165,64 +186,66 @@ Modifiers:
 Parameters:
 - `resource-name` (default) - name of resource to load
 
-Shape: `(-- 3DObject)`
+Shape: `(-- Object3D)`
 
 OBJ details:
-- Each `o name` statement becomes a named top-level object, and each unnamed group of faces becomes an unnamed object.
-  The `default` object contains all of them.
+- All faces in the file are loaded as one `UnionObject3D` of `Polyhedron3D`s. Each `o` section, and each group of faces before the first `o`,
+  becomes one polyhedron in it. Object names are not kept.
 - Faces may have any number of vertexes. Negative vertex references are relative to the vertexes read so far.
 - Texture and normal references, and `g`, `s`, `mtllib`, and `usemtl` statements, are ignored.
-- Other statements, such as `l`, `p`, and free-form curves and surfaces, are errors.
+- Other statements, such as `l`, `p`, and free-form curves and surfaces,
+  are errors (unless we extend our model to be able to represent them).
 - Faces are counter-clockwise when viewed from the front, as in this project.
 
 ### `store`
 
 Same modifiers and parameters as load, but stores the result instead of loading it.
 Removes the object from the stack.
+STL writes every polyhedron of the object as one solid.
+OBJ writes each polyhedron as an unnamed object (`o` line), since the object has no names.
 
-Shape: `(3DObject --)`
+Shape: `(Object3D --)`
 
 ### `validate`
 
-Shape: `(3DObject -- 3DObject)`
+Shape: `(a:Object3D -- a:Object3D)`
 
-Ensures that the object is manifold, and fails otherwise.
+Ensures that the object is 'manifold' (or at least not obviously problematic), and fails otherwise.
 The object is left on the stack unchanged.
 
 This is a simplified definition, to be refined later.
-An object is manifold if every polygon of its `default` object is closed (each edge ends where the next one starts),
-and every line is used by exactly two polygon edges, which go in different directions.
+A polyhedron-based object is manifold if every polygon
+in it is closed (each edge ends where the next one starts),
+and every line is used by two polygon edges,
+which go in different directions (or some multiple of these pairs).
+`validate` accepts any `Object3D` whose leaves are all polyhedrons (a `Polyhedron3D`, a union of them, a union of unions, and so on).
+The leaves are checked together, as one object.
 
 ### `simplify`
 
-Shape: `(input:3DObject -- output:3DObject)`
+Shape: `(input:Object3D -- output:Object3D)`
 
 Simplifies a shape, without changing its shape, on a best-effort basis:
 - Merging polyhedrons that share a polygon, which is on opposite sides of each, into one polyhedron without that polygon
 - Replacing adjacent coplanar polygons with a single polygon
 - Consolidating collinear lines that meet at a vertex with no other lines
 - Merging vertexes with identical coordinates, and lines between the same two vertexes
-- Discarding lines and vertexes that are unused after the simplification
 
 A merge is skipped if it would leave a polygon that is not simple, or with fewer than three vertexes.
 Coplanarity and collinearity are checked with a small tolerance.
 
-Equivalent to `simplify/keep-unused` followed by `prune`.
+`simplify` accepts any `Object3D` whose leaves are all polyhedrons (a `Polyhedron3D`, a union of them, a union of unions, and so on).
+Its leaves are treated as one set: nested unions do not separate them, so polyhedrons from anywhere in the object may be merged.
 
-#### `simplify/keep-unused`
-
-Same as `simplify`, but retains unused sub-objects (vertexes, lines, polygons, polyhedrons, groups).
+You may want to call `prune` after `simplify`.
 
 #### `prune`
 
-Optional parameters:
-- `main-object-name` - name of main object to keep; default is `default`.
+Shape: `(input:Object3D -- output:Object3D)`
 
-Shape: `(input:3DObject -- output:3DObject)`
-
-Removes all sub-objects not referenced by the top level polyhedron group,
+Writes a new `Polyhedron3DData` containing only the vertexes, lines, polygons, and polyhedrons that the object refers to,
 rewriting indexes accordingly. Indexes keep their relative order.
-The output's `default` object is the main object; other top-level objects are removed.
+`prune` likewise works on the whole object, however its unions are nested.
 
 e.g. a shape with 10 vertexes, the first two of which are unused by the main polyhedron group
 would be transformed to one with 8 vertexes, and all the vertex indexes 2 lower than

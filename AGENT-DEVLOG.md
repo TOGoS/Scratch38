@@ -19,8 +19,9 @@ Kept out of README.md, which describes the tool and its spec.
   Plain `deno fmt` also once rewrapped AGENTS.md (which must stay verbatim) and README.md.
   `deno.json` excludes `*.md` from formatting, so that should not happen again.
 - Unit tests exist: `src/*_test.ts` and `tools/*_test.ts`, 94 tests as of the OBJ entry.
+  The tests describe the architecture before 2026-11-21; see Known divergences.
 
-## Decisions
+## Decisions (2026-11-21)
 
 ### General
 
@@ -42,10 +43,11 @@ Kept out of README.md, which describes the tool and its spec.
   stack shapes, depending on its parameters. Parameters cannot refer to stack values, so stack effects are
   statically analyzable. There is no `foo:${stack-value}`-style syntax for operator parameters.
 - *Type* is what TypeScript can infer from a value in isolation (`classRef`); *role* is what a context expects
-  of that value. Meaning comes from type plus role. Prefer one type per type/role combination unless a type is
-  genuinely valid in several roles; role-specific TypeScript aliases are optional until used.
-  Use `role:` and `type:` prefixes when a name could mean either, e.g. `role:Dictionary<K,V>` represented by
-  `type:Map<K,V>`.
+  of that value. Meaning comes from type plus role. `role:Foo` and `type:Foo` are related but separate concepts.
+  Role applies to the place, type to the actual data structure. (In a language with ADTs, a role would be an ADT
+  whose variants are the types that can fill it.) Prefer one type per type/role combination unless a type is
+  genuinely valid in several roles.
+- Naming: "3D" goes right after the word it qualifies, e.g. `Object3D`, `Polyhedron3DData`, and `UnionObject3D`. Type names put "how it is represented" before "what it represents".
 - `crash` throws. The top level catches the error, writes it to stderr, and exits with status 1.
   It prints only the message, not a stack trace, to match the other errors.
 - Winding: counter-clockwise viewed from outside, same as STL. OBJ faces are counter-clockwise viewed from the
@@ -58,86 +60,94 @@ Kept out of README.md, which describes the tool and its spec.
 - Facet normals are ignored on load and recomputed on store from the winding order.
 - Resources: `openResource(name)` returns a `Resource` with `read()` and `write()`. Stdin/stdout, plain paths,
   `file:`, `http:`, and `https:` are supported; storing to an HTTP(S) URL is an error. Other URI schemes error.
-- `validate` peeks: it checks the object on top of the stack and leaves it there. "Manifold" is the simplified
-  definition from the user: every polygon is closed, and every line is used by exactly two polygon edges in
-  opposite directions.
+- `validate` peeks: it checks the object on top of the stack and leaves it there.
+  "Manifold" is the simplified definition from the user: every polygon in a polyhedron group is closed, and every
+  line is used by exactly two polygon edges in opposite directions.
 - Leftover stack values at the end of a run are silently discarded.
 - `tools/fix-blank-lines.ts` is run by `deno task fmt`. Its tests are in `tools/fix-blank-lines_test.ts`.
 - `src/cli_test.ts` runs `stlmod` as a subprocess. It needs `--allow-run`, which is in the test task.
 - Wavefront `.mod` binary support is out of scope until needed; `obj/bin` remains unsupported.
 
-### Revised architecture
+### Architecture
 
-This supersedes the earlier implementation notes after `efb5377`.
-
-- `3D object`, `3DObject`, and `ThreeDObject` are the same concept; `ThreeDObject` is the TypeScript-safe
-  spelling. Use `role:3DObject` or `type:3DObject` to say which is meant.
-- There are currently two `type:3DObject` representations: `type:Union3DObject` and
-  `type:Vector3DPolyhedronGroup`. Either can represent a `role:3DObject`.
-- `type:Vector3DObjectData` holds the shared vertex, line, polygon, and polyhedron lists.
-  `type:Vector3DPolyhedronGroup` references a `Vector3DObjectData` plus a polyhedron-group index.
-  `type:Union3DObject` contains a list of `ThreeDObject`s; it represents the union of otherwise-distinct objects,
-  which may share a `Vector3DObjectData`.
-- `role:Dictionary<K,V>` is represented by `type:Map<K,V>`. Our collection role is
-  `role:Dictionary<string, ThreeDObject>`, represented by `type:Map<string, ThreeDObject>`.
-- The special `default` sub-object is removed. It existed only to make a collection look like a single object,
-  which caused the earlier ambiguity.
-- A `role:3DObject` and a `role:Dictionary<string, ThreeDObject>` are different stack roles. `load/obj` pushes
-  the former; `load/obj/collection` pushes a `type:Map<string, ThreeDObject>`.
-- Unnamed OBJ groups are reachable by loading the whole file as one 3D object. In a collection,
-  `load/obj/collection;default-name-prefix=anonymous-` names them `anonymous-1`, `anonymous-2`, and so on.
-  Without the prefix, they are excluded from `role:Dictionary<string, ThreeDObject>`. Supporting unnamed entries
-  in a collection would need a different collection type; it is not planned now.
-  The OBJ loader may keep unnamed groups in a parallel list internally, then union all entries for the
-  single-object case. That list is not a public stack type.
-- Extracting a named entry is explicit: `extract:<name>` has shape
-  `(role:Dictionary<K,T> -- role:named-object:T)` and throws if the name is absent.
-- `prune` on a single object has no names and needs no mappings. `prune/collection` keeps and renames entries.
-  The `/collection` modifier is required until the parser can know the role of the top stack value.
-- A mapping is a semicolon-separated list of entries of the form `(<new name> "=") <old name>`; a bare old name
-  keeps its name. Duplicate new names are an error, since there is no correct way to combine them.
-  Example: `prune/collection:fred=ted;main;cube=jon`.
-- `rename-entries` is "prune without pruning", for collections only. It uses the same mapping grammar and keeps
-  unmapped entries. Spell it `rename-entries:<mapping>` or
-  `rename-entries;mapping=<the same mapping string, percent-encoded>`, e.g.
-  `rename-entries:fred=ted;cube=jon`.
-- `simplify` never merges polyhedron groups; polyhedrons within one group may be merged. It works in coordinate
-  space with outward-facing loops, so equal coordinates are shared. Passes: merge polyhedrons sharing an
-  oppositely oriented polygon; merge coplanar loops sharing an edge; remove vertexes with exactly two collinear
-  neighbours; rebuild. `simplify/keep-unused` appends the result after the original parts; plain `simplify`
-  prunes them. Deduplicate only obvious results: cache a simplified polyhedron, reuse one index for identical
-  results, and keep the original when simplification changes nothing.
+- `Object3D` is the role of anything on the stack that represents one 3D object.
+  In TypeScript the role is written `type Object3D = Polyhedron3D | UnionObject3D;` (user's decision).
+  The alias lists the types that currently play the role, and it is what makes `UnionObject3D`'s member list describable (`Object3D[]`).
+  Adding a new implementation means editing the alias, as with any closed union.
+  - `Polyhedron3D`: a reference to one polyhedron within a `Polyhedron3DData`.
+  - `UnionObject3D`: a union of a list of `Object3D`s, whatever their representation.
+    Several polyhedrons together are a `UnionObject3D` of `Polyhedron3D`s.
+    It is abstract: whether the interpreter can handle a given member is a separate question.
+- `Polyhedron3DData` holds the geometry that these refer to: vertexes, lines, polygons, and polyhedrons.
+  It has no polyhedron groups and no names. A polyhedron group is a `UnionObject3D` of `Polyhedron3D`s.
+- `Polyhedron3DData` and the objects that refer to it are effectively immutable. An operation that changes geometry
+  makes a new `Polyhedron3DData` by copying the old lists and appending to the copies. The old data is the base, so
+  unchanged parts are referenced rather than rewritten. Structural sharing (e.g. a persistent tree list) is deferred.
+  - Idea: A list type that is simply a reference to a shared, append-only array, and a length,
+    may be a suitable 'effectively immutable even while the backing list is shared' data structure!
+- `simplify` and `validate` accept any polyhedron-based `Object3D`: one whose leaves are all `Polyhedron3D`s,
+  however they are nested in `UnionObject3D`s (user's decision). The leaves are treated as one set, so nested unions
+  do not separate them. Polyhedrons from anywhere in the object may be merged.
+  Passes: merge polyhedrons sharing an oppositely oriented polygon; merge coplanar loops sharing an edge; remove
+  vertexes with exactly two collinear neighbours; rebuild. The output's new data includes the whole old data as its
+  base. `simplify/keep-unused` stops there; plain `simplify` also prunes (kept as in the README).
+- `prune` writes a new `Polyhedron3DData` containing only what the object refers to, unless the data is already pruned.
+  `prune` works on the whole object, however its unions are nested.
+- `validate` checks the leaves together, as one set, however they are nested.
+- OBJ: `load/obj` produces one `UnionObject3D` of `Polyhedron3D`s, one per `o` section, plus one for
+  faces before the first `o`. Object names are not kept, since names only matter once there are dictionaries.
+- OBJ: `store/obj` writes each polyhedron as an unnamed object (a bare `o` line).
+  STL: `store/stl` writes every polyhedron of the object as one solid.
+- Storing a collection is not part of this work (see Punted).
 - `obj/bin` remains unsupported; free-form curves/surfaces, `l`, and `p` in OBJ are errors.
+- Deduplicate only obvious results: keep the original when a simplification changes nothing, and reuse one index
+  for identical results.
 
 ### Punted to future
 
-- Role-aware parsing, which would let the `/collection` modifier on `prune` become optional
-  in contexts where the role of its argument is obvious (e.g. after a `load/obj/collection`).
-- Other ways to create collections.
+- Collections: `Dictionary<string, Object3D>` (represented by `Map<string, Object3D>`), named OBJ objects, `extract`,
+  `prune/collection`, `rename-entries`, `default-name-prefix`, and mapping grammar. Thought experiment only, not to be
+  implemented yet. Notes so far:
+  - Loading OBJ into a collection (`load/obj/collection`) would need names; a collection entry would be a
+    `UnionObject3D` of that name's polyhedrons, sharing one `Polyhedron3DData`.
+  - Unnamed groups cannot go into a collection without a prefix; with a prefix (`anonymous-1`, ...) they can.
+    Any mapping or generated name that collides with an existing name is an error.
+  - Writing a collection to a format with one object is an error. Writing a single object to OBJ is a list of
+    unnamed objects, so a collection could be written to OBJ with names only if each entry is one polyhedron.
+  - Duplicate `o name` in a file would be an error for a collection.
+- Role-aware parsing, which would let `/collection` become optional where the role is obvious.
 - Whether `simplify` on a collection simplifies the whole collection or one extracted object.
 - A better naming system for identifiers that start with a digit (see To-do).
 
 ### Known divergences in current code
 
-- `type:Vector3DObject` still combines data, polyhedron groups, and names with a `default` group; split it into
-  `type:Vector3DObjectData`, `type:Vector3DPolyhedronGroup`, and `type:Union3DObject`.
-- `prune;main-object-name=...` still exists; replace it with `prune` and `prune/collection` mappings.
-- `store`, `validate`, `simplify`, and `trianglesFromVector3DObject` still use the `default` group; make them
-  role-specific (explicitly with `/collection` to indicate that their input and output is a collection,
-  or potentially implictly by context; otherwise they work on 3D objects).
-- OBJ load/store still produce and consume one combined object with `default`; add `load/obj/collection`,
-  `extract`, `default-name-prefix`, `type:Union3DObject` for the single-object union, and a matching writer choice.
-- `simplify` currently merges across all polyhedrons of `default`; make it group-scoped.
-- `rename-entries` is not implemented.
-- README and tests still describe the old architecture; update them during the refactor.
+The following describe the code as it is now, before the architecture change above. Code and tests change in the
+next step.
+
+- `Vector3DObject` combines data, polyhedron groups, and names with a `default` group. It becomes `Polyhedron3DData`
+  plus `UnionObject3D`/`Polyhedron3D`, with no `default` and no groups in the data.
+- `prune;main-object-name=...` still exists. It goes away; `prune` takes the object on the stack as given.
+- `store`, `validate`, `simplify`, and `trianglesFromVector3DObject` use the `default` group. They work on objects.
+- OBJ load produces one combined object with names and `default`. It should produce one `UnionObject3D` of `Polyhedron3D`s.
+- `simplify` merges across all polyhedrons of `default`. It should accept any polyhedron-based object (leaves flattened).
+- `rename-entries` and `extract` are not implemented; leave them until collections are wanted.
+- Tests still describe the old architecture: they use `default`, `namedGroups`, and names.
+
+## Open questions (waiting on the user)
+
+- Resolved: `Polyhedron3DUnion` is dropped. A polyhedron group is a `UnionObject3D` of `Polyhedron3D`s (user's decision).
+- Resolved: nested unions are flattened for `simplify` and `validate`; the leaves form one set (user's decision).
+  Still open: whether a union of leaves from different `Polyhedron3DData`s is valid for `simplify`, and which data it uses as base.
+- Does plain `simplify` also prune, as the README still says? Or does it stop after keep-unused, which the user's
+  description ("includes all the old data as the base") could also mean?
+- `obj/bin`: the README listed it. Keep it as unsupported, or implement the Wavefront binary `.mod` format?
 
 ## To-do
 
 Keep this section at the end of the devlog until we have a more formal task list.
 
-- Figure out a better system for munging names that start with numbers, such as `Object3D` instead of
-  `ThreeDObject`, then apply it consistently and all at once.
-- Refactor the model into `type:Vector3DObjectData`, `type:Vector3DPolyhedronGroup`, and `type:Union3DObject`,
-  with `type:Map<string, ThreeDObject>` for collections.
-- Implement the revised operators: `load/obj/collection`, `extract`, `prune/collection`, `rename-entries`.
-- Update README and tests to match the revised architecture.
+- Refactor the model into `Polyhedron3DData`, `Polyhedron3D`, and `UnionObject3D`, as described above.
+  Update the code and tests to match, then the classRef tags.
+- Update `load/obj`, `store/obj`, `store/stl`, `validate`, `simplify`, and `prune` to the new model.
+- Remove `prune;main-object-name`.
+- Collections are deferred; see Punted.
