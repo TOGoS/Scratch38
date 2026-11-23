@@ -215,6 +215,19 @@ and `loopsOfObject3d`. Upper-camel-case type names such as `Object3D` are unchan
   Parameters describe what an operator accepts; arguments are the actual values.
   The file layout follows the naming convention in CONTRIBUTING.md.
 
+## 2026-11-22 - Index coplanar merges - Master Pickle
+
+`mergeCoplanar` used to rescan every pair of loops after each merge. With an STL holding thousands of
+triangles in one polyhedron that is O(n^3) coplanarity checks: the p2652.stl model (6878 facets) did not
+finish in hours. It now builds a map from each undirected line to the loops using it, seeds a worklist
+with the pairs that share a line, and caches each loop's normal. A merge removes both old loops from the
+index, updates only the survivor's entries, and enqueues its new partners. Pairs are stamped with the
+versions of both loops so a pair is retried after either changes, and normals are recomputed only for
+changed loops. The same command now finishes in about a second.
+
+`splitSharedLines` shares the `edgeKey` helper with the index. A regression test merges a strip of
+400 triangles, where each merge exposes the next pair as partners.
+
 ## To-do
 
 Keep this section at the end of the devlog until we have a more formal task list.

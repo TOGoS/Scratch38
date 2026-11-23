@@ -53,6 +53,26 @@ Deno.test("adjacent coplanar triangles are merged back into quads", () => {
 	checkManifold(simplified);
 });
 
+Deno.test("a long triangulated strip merges through newly exposed partners", () => {
+	// Each merge exposes the next pair of triangles as line-sharing partners, so this
+	// exercises updating the index of shared lines rather than rebuilding it.
+	const triangles: Triangle[] = [];
+	for (let i = 0; i < 200; i++) {
+		const a: Vertex = [i, 0, 0];
+		const b: Vertex = [i + 1, 0, 0];
+		const c: Vertex = [i + 1, 1, 0];
+		const d: Vertex = [i, 1, 0];
+		triangles.push([a, b, c], [a, c, d]);
+	}
+	const [polyhedron] = simplifyPolyhedrons([triangles]);
+	assertEquals(polyhedron.length, 1);
+	assertEquals(polyhedron[0].length, 1);
+	assertEquals(
+		[...polyhedron[0][0]].sort(([x1, y1], [x2, y2]) => x1 - x2 || y1 - y2),
+		[[0, 0, 0], [0, 1, 0], [200, 0, 0], [200, 1, 0]],
+	);
+});
+
 Deno.test("a vertex on a straight edge with two neighbours is removed", () => {
 	const midpoint: Vertex = [0.5, 0, 1];
 	const faces = CUBE_FACES.map((loop, i) => {

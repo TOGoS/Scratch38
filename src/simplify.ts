@@ -18,6 +18,13 @@ function keyOf(v: Vertex): string {
 	return v.join(",");
 }
 
+/** A key for the undirected line between two vertexes. */
+function edgeKey(a: Vertex, b: Vertex): string {
+	const ka = keyOf(a);
+	const kb = keyOf(b);
+	return ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
+}
+
 function sub(a: Vertex, b: Vertex): Vertex {
 	return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 }
@@ -86,14 +93,6 @@ function loopNormal(loop: Loop): Vertex {
 		normal[2] += c[2];
 	}
 	return normal;
-}
-
-function areCoplanar(a: Loop, b: Loop): boolean {
-	const na = loopNormal(a);
-	const nb = loopNormal(b);
-	const lengths = length(na) * length(nb);
-	if (lengths === 0) return false;
-	return dot(na, nb) / lengths > 1 - EPSILON;
 }
 
 /** Whether `v` lies strictly between `p` and `q` on a straight line. */
@@ -239,14 +238,9 @@ export function splitSharedLines(loop: Loop): Loop[] {
 		v,
 		i,
 	) => [v, loop[(i + 1) % loop.length]]);
-	const undirect = ([from, to]: readonly [Vertex, Vertex]) => {
-		const a = keyOf(from);
-		const b = keyOf(to);
-		return a < b ? `${a}|${b}` : `${b}|${a}`;
-	};
 	const uses = new Map<string, number[]>();
 	edges.forEach((edge, i) => {
-		const key = undirect(edge);
+		const key = edgeKey(edge[0], edge[1]);
 		uses.set(key, [...(uses.get(key) ?? []), i]);
 	});
 	const removed = new Set<number>();
@@ -309,25 +303,105 @@ function mergePolyhedrons(polyhedrons: Loop[][]): Loop[][] {
 	return [...groups.values()];
 }
 
-/** Repeatedly joins coplanar loops that share an edge. Mutates and returns `loops`. */
+interface MergeEntry {
+	loop: Loop;
+	normal: Vertex | undefined;
+	alive: boolean;
+}
+
+/**
+ * Repeatedly joins coplanar loops that share a line. The index of loops using each line is built
+ * once and updated as loops merge, so only pairs that share a line are tried. Returns the loops
+ * in their original relative order; the first of a merged pair keeps its place.
+ */
 function mergeCoplanar(loops: Loop[], singleLoop: boolean): Loop[] {
-	let changed = true;
-	while (changed) {
-		changed = false;
-		outer: for (let i = 0; i < loops.length; i++) {
-			for (let j = 0; j < loops.length; j++) {
-				if (i === j || !areCoplanar(loops[i], loops[j])) continue;
-				const merged = mergeAcross(loops[i], loops[j], singleLoop);
-				if (merged !== undefined) {
-					loops[i] = merged;
-					loops.splice(j, 1);
-					changed = true;
-					break outer;
-				}
+	const entries: MergeEntry[] = loops.map((loop) => ({
+		loop,
+		normal: undefined,
+		alive: true,
+	}));
+	
+	const byLine = new Map<string, Set<number>>();
+	const updateLines = (id: number, loop: Loop, add: boolean) => {
+		for (let i = 0; i < loop.length; i++) {
+			const key = edgeKey(loop[i], loop[(i + 1) % loop.length]);
+			const using = byLine.get(key);
+			if (add) {
+				if (using === undefined) byLine.set(key, new Set([id]));
+				else using.add(id);
+			} else if (using !== undefined) {
+				using.delete(id);
+				if (using.size === 0) byLine.delete(key);
 			}
 		}
+	};
+	entries.forEach((entry, id) => updateLines(id, entry.loop, true));
+	
+	const versions = entries.map(() => 0);
+	const pending: [number, number][] = [];
+	const tried = new Map<string, string>();
+	const enqueue = (a: number, b: number) => {
+		if (a !== b) pending.push(a < b ? [a, b] : [b, a]);
+	};
+	// Every pair sharing a line is a possible merge to start with.
+	for (const using of byLine.values()) {
+		const ids = [...using];
+		for (let i = 0; i < ids.length; i++) {
+			for (let j = i + 1; j < ids.length; j++) enqueue(ids[i], ids[j]);
+		}
 	}
-	return loops;
+	
+	const normalOf = (id: number): Vertex | undefined => {
+		const entry = entries[id];
+		if (entry.normal === undefined) entry.normal = loopNormal(entry.loop);
+		return entry.normal;
+	};
+	const coplanar = (a: number, b: number): boolean => {
+		const na = normalOf(a);
+		const nb = normalOf(b);
+		if (na === undefined || nb === undefined) return false;
+		const lengths = length(na) * length(nb);
+		return lengths !== 0 && dot(na, nb) / lengths > 1 - EPSILON;
+	};
+	
+	// A merge changes only the survivor's loop, so only its partner pairs need revisiting.
+	for (let next = 0; next < pending.length; next++) {
+		const [a, b] = pending[next];
+		if (!entries[a].alive || !entries[b].alive) continue;
+		const stamp = `${versions[a]},${versions[b]}`;
+		const key = `${a}:${b}`;
+		if (tried.get(key) === stamp) continue;
+		tried.set(key, stamp);
+		if (!coplanar(a, b)) continue;
+		const merged = mergeAcross(
+			entries[a].loop,
+			entries[b].loop,
+			singleLoop,
+		);
+		if (merged === undefined) continue;
+		
+		updateLines(a, entries[a].loop, false);
+		updateLines(b, entries[b].loop, false);
+		entries[a].loop = merged;
+		entries[a].normal = undefined;
+		entries[b].alive = false;
+		updateLines(a, merged, true);
+		versions[a]++;
+		
+		const partners = new Set<number>();
+		for (let i = 0; i < merged.length; i++) {
+			const using = byLine.get(
+				edgeKey(merged[i], merged[(i + 1) % merged.length]),
+			);
+			if (using === undefined) continue;
+			for (const id of using) {
+				if (id !== a && entries[id].alive) partners.add(id);
+			}
+		}
+		for (const id of partners) enqueue(a, id);
+	}
+	
+	return entries.filter((entry) => entry.alive).map((entry) => entry.loop);
 }
 
 /**
