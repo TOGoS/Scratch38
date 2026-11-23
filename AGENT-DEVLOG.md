@@ -236,6 +236,18 @@ Keep this section at the end of the devlog until we have a more formal task list
   able to import it, parse operation tokens into operators, and build or compose operations without running them.
   Running is a separate step (`runOperations` is one way to do it). Currently only `parseOperationSpec`,
   `instantiateOperation`, and `runOperations` are exported from `./mod`.
+- De-couple resource reading and writing from parsing and formatting data;
+  `load` and `store` with no format modifiers load and store byte blobs.
+  Corresponding `parse` and `format` operators convert byte blobs to/from Object3Ds
+  (or potentially other things given the right modifier).
+  - `ByteBlob` will be an abstract role and type; could be in-memory,
+    could be lazily loaded from the web, could be generated procedurally
+    (as is also the case for `Object3D`)
+  - This will open the way for `concat` and other operators that work on blobs
+    so that we can write custom output from our program.
+  - This might also make it possible for several of the `.io.test.ts` tests
+    to run without needing extra permissions, since they could just
+    operate on in-memory `ByteBlob`s.
 - Consider a shared, append-only list type so appending to a base does not need to copy the backing array.
 - Collections are deferred; see Punted.
 - Figure out a better system for names that start with digits (for example `Object3D` versus `ThreeDObject`).
