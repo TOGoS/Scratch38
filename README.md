@@ -4,7 +4,7 @@
 
 Each argument is one operation to apply.
 Loading and saving are just more operations.
-It's 'concatenative', see.
+It's a 'concatenative' language.
 
 ```sh
 ./stlmod load/stl:<URI, filename, or "-" for stdin> some-op:params some-other-op:more-params store/stl/bin:<output filename or "-" for stdout> 
@@ -13,7 +13,13 @@ It's 'concatenative', see.
 To run straight from JSR:
 
 ```sh
-deno run jsr:@togos/s38s39@0.1.0/cli
+deno run jsr:@togos/s38s39@0.1.2/cli
+```
+
+For example, to load an STL, simplify the polygons, and write the result as a `.obj`:
+
+```sh
+deno run jsr:@togos/s38s39@0.1.2/cli load/stl:http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:XU6BP2VS22D3ZLQA3O5HFV5JBN7TW6VA.MDAM4QMA5GWYFLDGHVA4IDF6DCO5BRWAGAEHXTI/p2652.stl simplify prune store/obj/autofix:p2652-simplified.obj
 ```
 
 Exit status is 0 if every operation succeeds.
