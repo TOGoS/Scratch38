@@ -6,8 +6,14 @@ Each argument is one operation to apply.
 Loading and saving are just more operations.
 It's 'concatenative', see.
 
-```
+```sh
 ./stlmod load/stl:<URI, filename, or "-" for stdin> some-op:params some-other-op:more-params store/stl/bin:<output filename or "-" for stdout> 
+```
+
+To run straight from JSR:
+
+```sh
+deno run jsr:@togos/s38s39@0.1.0/cli
 ```
 
 Exit status is 0 if every operation succeeds.
