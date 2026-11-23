@@ -248,6 +248,9 @@ Keep this section at the end of the devlog until we have a more formal task list
   - This might also make it possible for several of the `.io.test.ts` tests
     to run without needing extra permissions, since they could just
     operate on in-memory `ByteBlob`s.
+- Note the similarity betwen this language and that used by [TScript34.2](https://github.com/TOGoS/TScript34/tree/master/P0002).
+  Maybe one of the LLM agent things can anylize their similarities
+  and decide if it's worth trying to come up with a unified language, lolidk.
 - Consider a shared, append-only list type so appending to a base does not need to copy the backing array.
 - Collections are deferred; see Punted.
 - Figure out a better system for names that start with digits (for example `Object3D` versus `ThreeDObject`).
