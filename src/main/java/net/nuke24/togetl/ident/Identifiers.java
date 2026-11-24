@@ -74,7 +74,13 @@ public final class Identifiers {
 		return documentIri + "#tef-entry-" + ordinal;
 	}
 	
-	static final Pattern   WSWHATEVER_PATTERN = Pattern.compile("^(?:WSBATCH|WSITEM|WSPROJECT|WSTASK|WSTYPE)-(\\d+)$");
+	// Hmm: The optional " p<page>" suffix supports a particular notebook ID + page
+	// number syntax (e.g. "WSITEM-3424 p180") found in 3DPrintingData.tef.
+	// If we decide we like the "#<page>" fragment URI, we might want to change to
+	// simply allowing "#..." fragments after all our shorthand references, and update
+	// the source in that particular case to say "WSITEM-3424#p180", since resolving
+	// the reference would then be a direct expansion of the abbreviated part.
+	static final Pattern   WSWHATEVER_PATTERN = Pattern.compile("^(?:WSBATCH|WSITEM|WSPROJECT|WSTASK|WSTYPE)-(\\d+)(?:\\s+(p\\d+))?$");
 	static final Pattern GFM_PARTNAME_PATTERN = Pattern.compile("^gfm(\\d+)$");
 	static final Pattern  BT_PARTNAME_PATTERN = Pattern.compile( "^bt(\\d+)$");
 	static final Pattern   P_PARTNAME_PATTERN = Pattern.compile(  "^p(\\d+)$");
@@ -90,7 +96,8 @@ public final class Identifiers {
 		assert( shortName.equals(shortName.trim()) );
 		Matcher m;
 		if( (m = WSWHATEVER_PATTERN.matcher(shortName)).matches() ) {
-			return Namespaces.WSITEM_NS + m.group(1);
+			String page = m.group(2);
+			return Namespaces.WSITEM_NS + m.group(1) + (page != null ? "#" + page : "");
 		}
 		// TODO: These should probably only really be assumed within the context of
 		// certain files, since they're such short prefixes.

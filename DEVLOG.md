@@ -72,3 +72,12 @@ Answers from TOGoS on the open questions:
   TEF mapping tables for it.
 - Music: reuse terms from the historical music ontology (see the note at the
   top of vocab/external.tef).
+
+## 2026-11-24 - Shorthand reference fragments (`WSITEM-3424 p180`) - Gemini 4 Argon
+
+`Identifiers.shortNameToUri` currently matches an optional ` p<page>` suffix on
+`WSITEM-*` references (to handle `see-also: WSITEM-3424 p180` in
+`3DPrintingData.tef`) and maps it to a `#p<page>` fragment on the item URI.
+If we settle on `#` fragments for sub-item/page URIs, we may want to allow
+`#...` fragments on all shorthand references and write `WSITEM-3424#p180` in
+source documents so reference resolution is a direct prefix/base expansion.

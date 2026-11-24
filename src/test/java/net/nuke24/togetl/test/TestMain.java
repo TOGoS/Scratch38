@@ -903,6 +903,7 @@ public final class TestMain {
 				"=part p2700\n"
 				+ "short-description: cap for cans; 3-inch OD\n"
 				+ "see-also: p2326 ; shorter and slimmer\n"
+				+ "see-also: WSITEM-3424 p180\n"
 				+ "member-of: p2 ;\n"
 				+ "obsoleted-by: p2199 ; unless you like the asymmetry\n"
 				+ "stl-file: p2700.stl\turn:bitprint:ABC ; printed in PETG\n"
@@ -922,6 +923,8 @@ public final class TestMain {
 				"plain field keeps its semicolon");
 		check(has(statements, part, Namespaces.GENERAL_SEE_ALSO,
 				Identifiers.shortNameToUri("p2326")), "see-also annotation is not part of the reference");
+		check(has(statements, part, Namespaces.GENERAL_SEE_ALSO,
+				Namespaces.WSITEM_NS + "3424#p180"), "see-also WSITEM page reference resolves to fragment IRI");
 		check(has(statements, part, Namespaces.GENERAL_IS_MEMBER_OF,
 				Identifiers.shortNameToUri("p2")), "member-of with empty annotation");
 		check(has(statements, part, Namespaces.GENERAL_OBSOLETED_BY,

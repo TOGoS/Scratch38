@@ -4226,8 +4226,7 @@ short-description: outer connector for 2+1/8-inch desiccant holders, with 2-4+1/
 member-of: p2360
 stl-file: p2197.stl	urn:bitprint:MHFCEFX72K3CTSCJ323T6QAGJNUEB2EJ.ZKVLV4ZJHI3XQQDQ3XAV6CHDFYLPDYJP5RX2VXA
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:NJZNP4NC3PQNTDVS4HQCWNJDWO723OO6.ZFJFOFPHRQLSWXBBXIYOPUKJIU47V67TEDRUWJY/p2197.png
-# p2199: unless you like the asymmetry
-obsoleted-by: p2199
+obsoleted-by: p2199 ; unless you like the asymmetry
 
 Threads were supposed to be inset on top and buttom,
 but they seem to be inset only on the bottom.
@@ -4761,13 +4760,13 @@ stl-file: p2280.stl	urn:bitprint:KWOA5NFEUKZ3KXU3RXGO7BTNCGP5HXL3.7FS6FDG2KFHMIX
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:KRWJMCM33BR63RJK2XFMWHCU2536WV24.SJWAAN7KFKCWVG7CUYOLWS6C7EYPZTYUUNVUPAQ/p2280.png
 
 =part p2281
-short-description: 3/4-inch-tall octagonal cap for 1+1/4-inch-7-UNC bolts
+short-description: 3/4-inch-tall octagonal cap for 1+1/4-7-UNC bolts
 stl-file: p2281.stl	urn:bitprint:4STJMUY4L56FRYQT55ILT63IL4JHX3PL.WK42MAQ7JBRROVFNKZBMNUB5NA7IHNIQKKIJLQA
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:RN2P34NKOZFWI3TRSOJ5B3ATTMSJLF2V.GXIFTGR5ADPZ75HJFWYMZ7RDA3TW2KA4NDHQH3A/p2281.png
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:VMJUPVAOJXKCTCTR52PQDLZSBQF2JJ6H.GPQR33GE27D664IQGFBBRKAKKPRBCN6GB2RSWNY/p2281-higher.png
 
 =part p2282
-short-description: 1+1/2-inch-tall octagonal cap for 1+1/4-inch-7-UNC bolts
+short-description: 1+1/2-inch-tall octagonal cap for 1+1/4-7-UNC bolts
 stl-file: p2282.stl	urn:bitprint:MDYJI7SFDIPEQWKYALEVUUSV2O7ERVBN.YZC4C3KDMRVLO25Y2KYBHG2VXEO7A3Q3MM2GPTQ
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:IF5BSW6ZOKM4JY3DE7ZKSU5JZPAZDW3Y.EPZOIB3COW6QY3GB7DYXIMHN2Q7BWEEGLLCEIWI/p2282-higher.png
 
@@ -4782,7 +4781,7 @@ stl-file: p2284.stl	urn:bitprint:ROCMBY2GLC4SXOCT4HBUN4UMPAR65LAA.C4EFRFJXENSHNX
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:TQSFATJG27UWD2Q4ZIWU3JPPZNBBAHLW.2V7Q3CWNH2A4YD3YHFDZE3VYRP4BFM3T64PVYOQ/p2284.png
 
 =part p2285
-short-description: 3/4-inch-tall round cap for 1+1/4-inch-7-UNC bolts
+short-description: 3/4-inch-tall round cap for 1+1/4-7-UNC bolts
 stl-file: p2285.stl	urn:bitprint:LIMIACRFEZFF6NWNSPOV2ZIOGZFFWF33.WKBG463ZG5TCM2HCXRN4ADE3DKS5HPDGFT3VVVQ
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:PEE6ILE22YAF6VUQB5V53VLHUNU2KQ6J.P2HR7W6C7KR7KOVINAZVNABJXFLBIURRS2USJLY/p2285.png
 
@@ -4900,12 +4899,12 @@ stl-file: p2303.stl	urn:bitprint:HINYKKSIRJZVQBA226MBO7HANREMBTR4.J67SPRBOXPXWKY
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:M3AAFEDNCNFFR7WUXEPTD3VQOCCMLFTP.YUQCFS6225UNIVKTQA6ISXFBDPRLCNCIME3AMHQ/p2303.png
 
 =part p2304
-short-description: 1+1/4-inch bolt with NON-STANDARD 7/8-inch-10 outer threads and 5/8-inch inner threads and 1+1/4-inchx3/8-inch octagonal head
+short-description: 1+1/4-inch bolt with NON-STANDARD 7/8-10-UNC outer threads and 5/8-inch inner threads and 1+1/4-inchx3/8-inch octagonal head
 stl-file: p2304.stl	urn:bitprint:52A436ZH67WRME7VMGJHEYNNTUUAP73W.U7WRANLUVFCEIXF5OWRGW5CGJVYU342VRTXOBOY
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:NDWNM2ZW32FMK2FMCLUJUAB4AR6J5GXZ.GSZ35Y45V2MXNUOCXVU7AYXGFBVI5CCDXD5JP5A/p2304.png
 
 =part p2305
-short-description: 3/8-inch-thick x 1+1/4-inch octagonal nut with NON-STANDARD 7/8-inch-10 threads
+short-description: 3/8-inch-thick x 1+1/4-inch octagonal nut with NON-STANDARD 7/8-10-UNC threads
 stl-file: p2305.stl	urn:bitprint:I7SSR6F5FGQKIT2HX6QCOWNGM3W3FMN3.H222DTPH2BLXGP4GG7V4DQBSA647HTR22AXIONI
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:USL2X5LH5ERAS3QZURCQRZTFXHYKMFLE.3HAHAV73SH2NS7PF7VRV25VGATIF3OZMF6QMDGY/p2305.png
 
@@ -4940,15 +4939,18 @@ With 7/8"-10 (not the standard 7/8"-9) threads.
 
 =part-set p2308
 short-description: 1/2 ID to 1/4 OD irrigation tubing port/adapter
-members: p2240, p2239, p2242, p2306, p2307
+members: p2240, p2239, p2242, p2306, p2307, p2630
+update/2026-11-23: Add p2630.
 
 | Part ID | Role                                                                                              |
 |---------+---------------------------------------------------------------------------------------------------|
-| p2240   | 3/4"-10 1/4" tube port plug                                                                       |
+| p2240   | 3/4"-10 1/4" tube port ('Q-Port') plug                                                            |
 | p2239   | O-ring squishing 1/4" tube terminating bulkhead / 'solid washer'                                  |
 | p2242   | O-ring squishing 1/4" tube washer, for use inside port                                            |
-| p2306   | Through-hole (1+1/4"-7 threaded) port with 1/4" tube port on one end, 1/2" tube port on the other |
-| p2307   | Nut for tigtening 1/2" tubing onto barb                                                           |
+|---------|---------------------------------------------------------------------------------------------------|
+| p2306   | Through-hole (1+1/4"-7 threaded) port with 1/4" Q -Port on one end, 1/2" H-barb on the other      |
+| p2307   | 7/8-10 nut for tigtening 1/2" tubing onto H-barb (1+1/2"-wide version)                            |
+| p2630   | 7/8-10 nut for tigtening 1/2" tubing onto H-barb (1+1/8"-wide version)                            |
 
 p2306 and p2307 are interchangeable with the [[https://www.amazon.com/dp/B09ZDKP1T1][tubing adapters that I bought online]]
 ([[http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:P24W2T2COKIS2FWD3MZHX2ECAEAV25H6.LVHJ4FYFKLPDT66H2UHM2V3BD35M2MR3PT43BDA/20251103_164301.jpg][pic]]).
@@ -4994,12 +4996,12 @@ stl-file: p2315.stl	urn:bitprint:FKTU54RQBKCL5PO26ZIKK3YQT55W2X5Q.WH573Z66SQAKEV
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:6YEMKZ2OH4CWNM3HS4C7WC2UMHUPGWPG.BH7HF6E5XGP7IWVGQ77ZH6RKB7VKDQ2ZQHQOAJQ/p2315.png
 
 =part p2316
-short-description: octagonal 'ring' for 1+1/4-inch-7-UNC bolts with 1/2-inch threads, 1/16-inch lip, and 1/4-inch slot
+short-description: octagonal 'ring' for 1+1/4-7-UNC bolts with 1/2-inch threads, 1/16-inch lip, and 1/4-inch slot
 stl-file: p2316.stl	urn:bitprint:QAFFZEGO7KAQDYTKPGLUPPVMYJUQ7FNL.YJNKTODV22GFKNRUFYRA2BTH6DTVGEAR2V5ZOHI
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:OX7SZR4HW2BDAK2KQYG5B7NIAHSPAFTG.WZPV3GZYGOQQ32Y25QSBN5WRRR2FZDKM6IGP2LY/p2316.png
 
 =part p2317
-short-description: octagonal cap for 1+1/4-inch-7-UNC bolts with 1/2-inch-long threads and 1/4-inch slot
+short-description: octagonal cap for 1+1/4-7-UNC bolts with 1/2-inch-long threads and 1/4-inch slot
 stl-file: p2317.stl	urn:bitprint:FSTEHW2OUTATY7YRSF3HWSHXUBBFR56F.R2G2QCUXGLC54B7ZZRN3UWHWCOUGX6GHM63VHEA
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:IMN7T2TNT4LLVN3G5KWIH7LYNSLZUTSM.KTAIMUC4OG2CHLCL4XK36WNVFUZQPKK4FLZCZ5Q/p2317.png
 
@@ -5025,8 +5027,7 @@ short-description: 4+1/2-inch-long 1+1/4-inch hexagon with 3/8-inch-16 inner thr
 member-of: WSPROJECT-201830
 stl-file: p2320.stl	urn:bitprint:L62T6TPL2IU6FHGAGAJ4H5NPFXNUBU3F.EP4XCANBCYTI3SJ3Z2YK7LYQHJDNNUCITTTVR2Y
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:SFY5Q2LWJB4JZPENZSZNTPFY7CJ7XE7F.4WYOA6IAYILMLLFUQD2EQKMZ4N46MKPGLDLZBYQ/p2320.png
-# p2326: shorter and slimmer
-see-also: p2326
+see-also: p2326 ; shorter and slimmer
 
 Findings, via WSITEM-202048:
 - Ergonomics-wise, could stand to be a little bit slimmer, or have a different number of sides
@@ -5083,10 +5084,8 @@ Findings, via 2026-01-02T15:53-KM:
 short-description: 3-inch-long 1-inch hexagon with 3/8-inch-16 inner threads and 1/4-inch slot
 stl-file: p2326.stl	urn:bitprint:K6GLIJ7FKIKOBNA6P2HHWC5IJ3JENSEO.UIHQYRMIMXUI7QJXVJE73T6F64H7OZAYPOXMFJQ
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:HNTJQS473NRKQDSZ2JPWSEBYVY42ZZVV.SPN7V6S6MZGDP2PH3VBHGBQZFE7QKJTANUSUJBI/p2326.png
-# p2315, p2319: ends
-see-also: p2315, p2319
-# p2320: the longer and thicker version
-see-also: p2320
+see-also: p2315, p2319 ; ends
+see-also: p2320 ; the longer and thicker version
 
 Intended as a replacement bucket handle grip.
 
@@ -5771,8 +5770,7 @@ short-description: 12-inch x 4+1/2-inch gridbeam panel routing template with 'co
 member-of: p2470
 stl-file: p2473.stl	urn:bitprint:DLAXRW2M3VMHU3FB4XG2H5WUDZR6ZNEX.JZ2R66ORP4SAZMAJL2U66PBRR6LXA6LXDSZDC5Y
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:HHEVRGNLWQROPYV44UW4DZGLVUPNXXAZ.2PIDCMX2223MHUGRAKSVU3DCOHAN7A54SHGFQHQ/p2473.png
-# p2475: allows to use 1/4" flatheads in some of the router bushing holes
-see-also: p2475
+see-also: p2475 ; allows to use 1/4" flatheads in some of the router bushing holes
 
 =part p2474
 short-description: bushing/adapter for 1/4-inch flathead bolt into 1/2-inch routing template holes
@@ -6124,7 +6122,7 @@ and the actual object should be about 0.9965 as big.
 =part p2553
 short-description: 3-chunk x 1-chunk x 3/4-inch ButtonBlock0.1
 tags: ButtonBlock0
-see-also: WSITEM-3424, p180
+see-also: WSITEM-3424 p180
 stl-file: p2553.stl	urn:bitprint:75OQR4PPDB4BV2LGXADJ2Z5JQF4GSBUS.7BMGVEMGWTD4GQBCNC4VNBRWW4Z5OVXI2CEGHWI
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:B3TNR3EW3NYOZBNFBZMMCNRNOWZF7KAZ.EE7KH54OSKZVQVB6A324M3V3PGUJDMTIAQZ35JY/p2553.png
 
@@ -6547,9 +6545,13 @@ keywords: H-barb
 stl-file: p2627.stl	urn:bitprint:FZCYQ3SSGK2O64SZ3Y4EBDOQMAXSL337.KAJ2EQM6MOW4UNOJHEKJP7SUJVA4XENVS4KDN5Y
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:44PDOX3ZKPMQ3KMOXP5CYPNVPI776UTB.MPTF6K4DSZJFMYVLVKWXLIXHE2NHREJJ73GSQVY/p2627-top.png
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:RXPBEHGEBI4HQNEMV7M2AD5UDIZSAFJ3.32QATPAQXYJFQHTJ73FKPC5MKS4UVZYV4WBOKPQ/p2627-bottom.png
+see-also: p2629
+
+The barbs are not quite as thick as those on the store-bought ones.
+You might want p2629, isntead.
 
 =part p2628
-short-description: 1-inch 1+1/4-inch-7 port with 7/8-inch-10 (nonstandard) inner threads
+short-description: 1-inch 1+1/4-7-UNC port with 7/8-10-UNC (nonstandard) inner threads
 stl-file: p2628.stl	urn:bitprint:6BKOV6H75SYQXCMNSMYBIC7UKCZ4YDTN.2RXUJGCX44NOPUQVWCST7O6ECEJDXD7BNZIV5CY
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:L5PYRMS4RVKKVPVHSOGYTMSSAHHJKJGV.44JLCXOL5ZFNWNDRLYWYMRXCXAJW4JG4UYLDIRI/p2628.png
 
@@ -6564,11 +6566,16 @@ openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint
 
 Same as p2627, but the barb is thicker because that one turned out to be too small.
 
+This and p2627 might both suffer from a cross-threading problem,
+especially if you can't print them as perfectly as my Dad's Bambu printer does
+
+- 2026-10-30T17:00-DB :: Print on Dad's Bambu printer; these work fine.
+- 2026-11-23T16:30-E3 :: p2627s on my Ender 3; these don't seem to thread into the nuts properly, but only want to cross-thread.
+
 =part p2630
 short-description: 1-inch-tall x 1+1/8-inch-wide 'nut' for clamping 1/2-inch (ID) tubing onto barbs, e.g. p2306
 keywords: H-barb
-# p2607: the earlier, chonkier version
-see-also: p2607
+see-also: p2307 ; the earlier, chonkier version
 stl-file: p2630.stl	urn:bitprint:4NPPPD6PY3VEZRBSEQ7YPKHQSMOSU6WU.MQUJT7BWAY2BKQ5NW6WA6LVDRRNWWXZM4AZUPBA
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:GXW36IIFRJEZV5KUJSUSRVV42VONE7KB.JC6GJVYIKZDGO3ULB62L66OLXENAKM4KUBLNWSA/p2630-top.png
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:FUAG4PMUPKEKQ7JPGHJH37PBZXU64XO3.GTVJ4OGUNWFXXSHVEMLSS6SARAMXQYQ7D7T5MQQ/p2630-bottom.png
@@ -6731,3 +6738,5 @@ openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint
 openscad-rendering-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:DRJHFZZBBAWOWB6GFOK77677TFUEJSP7.R2O66NPTINJHDHDSCBYCOX2QNIJ3J4B7ZD5KTGA/p2652-bottom.png
 image-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:ZAR6SFT5VY53AFQCKCMYT5AEAHSGSAZI.GBWKW2EHMLS36CHPZF7NORHOX2UPRCY6CDUHYUI/p2652-xs.png
 image-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:T47WPP7YS6G7XFTXAIWYREDT3UGP2UHU.QN4UHSHPTYRDCTQXR3TV6GH4SZFSU4GK6IGKLIY/p2652-xs-wf.png
+image-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:N53VLNBE7W7EF3GV6WFEVLNDYH7RNQS7.3L7PWD7LG3SYNNTKH6XT2CZR4C6DMRYMPUJC6CI/20261122-p2652-simplification.png      ; showing (top of box, in Blender) polygon simplification by Scratch38-S0039
+image-ref: http://picture-files.nuke24.net/uri-res/raw/urn:bitprint:27CELLDCDGM2GJ5KNHWWSL6MAAKIX77Q.VMAF6XEGPSAHKY3AJA54N56WMZ2HCCLJL6RTZAI/20261122-p2652-simplification-back.png ; showing (bottom of box, in Blender) polygon simplification by Scratch38-S0039
