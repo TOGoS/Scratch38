@@ -34,6 +34,7 @@ Prints `small slop` twice, then `big slop`.
 | SlopLang      | Conventional | Meaning                                                 |
 | ------------- | ------------ | ------------------------------------------------------- |
 | `slop`        | `let`        | Declare a mutable variable                              |
+| `loadbearing` | `const`      | Declare an immutable variable; requires an initializer  |
 | `clanker`     | `fn`         | Define a function                                       |
 | `vibe`        | `if`         | Conditional                                             |
 | `nah`         | `else`       | Else branch                                             |
@@ -70,16 +71,16 @@ No implicit conversions.
 
 ## Variables
 
-`slop` declares a mutable variable and requires an initializer. A scope cannot declare a name twice, but an inner block may shadow an outer name.
+`slop` declares a mutable variable and requires an initializer. `loadbearing` declares an immutable variable and also requires an initializer. Both share one namespace: a scope cannot declare a name twice, but an inner block may shadow an outer name.
 
 ```slop
+loadbearing LIMIT = 100✨
 slop score = 10✨
-slop LIMIT = 100✨
 score = score + 5✨
 score = score + 1✨
 ```
 
-Assignment is a statement, not an expression: `name = expression✨`. It updates the nearest existing `slop` variable. Reading or assigning an undefined name is a runtime error.
+Assignment is a statement, not an expression: `name = expression✨`. It updates the nearest existing `slop` variable; assigning to a `loadbearing` variable is a runtime error (`cannot assign to loadbearing '<name>'`). Reading or assigning an undefined name is a runtime error.
 
 Every brace block is a lexical scope. Assignment searches the current scope, then each enclosing scope.
 
@@ -152,7 +153,7 @@ functionDecl   -> "clanker" IDENTIFIER "(" parameters? ")" block ;
 parameters     -> IDENTIFIER ( "," IDENTIFIER )* ;
 
 declaration    -> variableDecl | statement ;
-variableDecl   -> "slop" IDENTIFIER "=" expression "✨" ;
+variableDecl   -> ("slop" | "loadbearing") IDENTIFIER "=" expression "✨" ;
 
 statement      -> assignStmt | ifStmt | loopStmt | returnStmt
                 | block | expressionStmt ;
@@ -184,7 +185,8 @@ The interpreter stops at the first lexical, syntax, or runtime error, writes the
 ```text
 SlopLang lexical error at line 1: straight quotes are not supported, use “ and ” for strings
 SlopLang syntax error at line 2: expected ✨ after variable declaration, found 'slop'
-SlopLang runtime error at line 3: division by zero
+SlopLang runtime error at line 3: cannot assign to loadbearing 'LIMIT'
+SlopLang runtime error at line 4: division by zero
 ```
 
 ## Typing SlopLang

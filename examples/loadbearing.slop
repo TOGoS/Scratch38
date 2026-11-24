@@ -1,0 +1,8 @@
+— loadbearing freezes a binding; slop can still change.
+loadbearing LIMIT = 3✨
+slop count = 0✨
+
+ralph count < LIMIT {
+    hallucinate(count)✨
+    count = count + 1✨
+}
