@@ -44,8 +44,10 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0035 :: Junk Bin Tracker project planning (schema?)
 - S0036 :: TEF to TOGETLTSV tool in Java
 - S0037 :: https://www.boot.dev/courses/learn-ai-coding
+- S0040 :: Reserved to avoid confusion with Scratch38 itself
 - S0039 :: Let OpenCode think about polyhedron generation for me
-- S0040 :: Let OpenCode help me brainstorm about 'the build system'
+- S0040 :: Reserved to avoid confusion with TOGSOFT-40
+- S0041 :: Let OpenCode help me brainstorm about 'the build system'
   - Which is sort of TOGETL and TOGSOFT-40 adacent, and may pull ideas from TDAR and Mill
 
 ** Branching conventions
