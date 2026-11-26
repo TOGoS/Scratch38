@@ -45,6 +45,8 @@ to outgrow this monorepo, should be [[Branching conventions][maintained as subtr
 - S0036 :: TEF to TOGETLTSV tool in Java
 - S0037 :: https://www.boot.dev/courses/learn-ai-coding
 - S0039 :: Let OpenCode think about polyhedron generation for me
+- S0040 :: Let OpenCode help me brainstorm about 'the build system'
+  - Which is sort of TOGETL and TOGSOFT-40 adacent, and may pull ideas from TDAR and Mill
 
 ** Branching conventions
 
