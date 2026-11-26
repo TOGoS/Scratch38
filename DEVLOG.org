@@ -1,0 +1,139 @@
+#+TITLE: Scratch38-S0040 Devlog
+
+Scratch space for build-system and content-addressing architecture
+discussion.  Seeded 2026-11-26 from the OpenSCADDesigns
+`fromStlBuildRules` / built-marker / build-tooling conversation.
+
+** [2026-11-26 Thu] - Distilled notes from the OpenSCADDesigns session - Master Qwen (Qwen3.8 Flash)
+
+*** Verdict on TDBuilder-as-roll-your-own
+
+Defensible and, in this case, correct: domain-heavy rules are
+*programs*, and 'build system as library in a real language' is
+exactly Mill's pitch (independent convergence noted; Shake is the
+Haskell proof the design space is respectable).  Generic tools
+were never really the competition: `just`/`task`/`mage` have no
+dependency graph; Ninja is a backend worth adopting *as a
+dependency* only if the graph ever outgrows one file; Bazel's
+hermeticity buys nothing for a single-user artifacts-as-
+historical-record repo.  Failure modes to watch for, none present
+yet: multi-user, multi-language, or feature creep into remote
+caching.
+
+*** The core tension TDBuilder lives in
+
+mtime staleness is cheap and fits 'don't re-render 600 parts',
+but mtimes record last-write-of-bits, not last-build.  Ninja
+papered over the same gap with `deps`/`restat`; the honest
+endgame is content-keyed actions (Bazel-style), which for a
+render farm just means 'rerun everything' unless you add caching
+-- at which point you rebuild TDAR anyway.  Sequencing per TOGoS:
+extract TDAR, then mtime (and its workarounds) stops mattering.
+
+*** Built-marker scheme (landed in OpenSCADDesigns master)
+
+- Hardlinks/copies report the source's mtime; `x:Hardlink` writes
+  a `.<name>.built` sidecar, consulted via TDBuilder's
+  `mtimeFunction` hook as max(file mtime, marker mtime) -- the
+  marker may only *raise* the effective build time, never mask
+  what the filesystem knows (hand-restamped targets).
+- Missing target returns undefined so the builder's own stat
+  yields 'not found'; an orphaned marker (file gone) warns once,
+  never fabricates up-to-date-ness.
+- Precedent: `mtimeFunction` was added circa 2021 precisely
+  because TDAR-cached artifacts had untrustworthy mtimes (see
+  `SynthGen2100/P0019/packages/sgutils@0.1/tdarx/openscad.ts`
+  reference in OpenSCADDesigns make.ts).  Same workaround family
+  as Make idiomatically using marker files, and tdbuilder's own
+  `touchDir`.
+
+*** The real gap (highest-value fix)
+
+Prereq lists are just the input .scad text; `use()`-ed libraries
+(TOGPath1.scad et al.) are invisible to the graph.  This is the
+`-MMD` depfile problem, unsolved since the '90s in this repo, and
+the only place the system is less correct than '90s technology.
+TDBuilder already has the seam: `fetchGeneratedTargets()` is the
+built-in hook for a dynamic dependency-discovery pass (scan
+`use()`/`include()` lines, emit library-to-dependent edges).
+Until then, shared-library edits rebuild nothing.  (Renders being
+historical artifacts mitigates but doesn't excuse it: --no-scad-reruns protects
+recorded bits, not build correctness.)
+
+*** Content-addressing plan, as stated (2026-11-26)
+
+Take a .scad plus context, refer to it by
+`x-git-object:<sha>#<path>`, recursively rename imported libraries
+by content hash, derive a reliable identifier for the file, cache
+build results by those hashes instead of mtimes.  Implemented once
+as TDAR (Deno Active URI Resolver), worked well, last used circa
+2021, code presumably on the SynthGen box (not this machine --
+searched 2026-11-26).  Extraction blockers are all the
+planning-shaped ones: where the code lives/should live, naming,
+where the ontology gets documented.  TSoft40 seeded as the
+decision-documenting venue; S0040 (this repo) as the think-space.
+
+** [2026-11-26 Thu] - TDAR survey: located and characterized - Master Qwen (Qwen3.8 Flash)
+
+Checked out SynthGen2100 (remote: ssh://git@gitlab.com/TOGoS/SynthGen2100.git),
+so the "presumably on the Windows box" hedge above is resolved: TDAR is
+in-repo, not on any registry (yet).
+
+- Home: P0019/packages/tdar@0.1/ (~1.1k lines incl. tests:
+  activeresolver.ts, expressions.ts, kvstore.ts).  OpenSCAD layer:
+  P0019/packages/sgutils@0.1/tdarx/openscad.ts (~185 lines), with
+  batik.ts / synthgenerate.ts as sibling tool implementations.
+- Shape: expressions are JSON-ish values tagged with RDF-style
+  classRef URLs ("http://ns.nuke24.net/OpenSCAD/Expression/SourceText",
+  .../FSAction/RunCommand); SHA1 URNs are first-class expression
+  types.  Tools are ActiveFunctionImplementations; side effects are
+  *serialized FSAction data* handed to an injected runner -- the
+  no-I/O library pattern, implemented, in 2021.  The ontology
+  question ("where is it documented") may partly answer itself: the
+  classRef URLs are the ontology, scattered; RDF-VOCAB.tef at repo
+  root may be the registry.
+- Extraction is *already in motion* upstream: HEAD commit moves
+  tdxml to jsr:@togos/tsoft1008.  Precedent for tdar@0.1: same
+  route, name reserved.
+- Dependency closure is small and self-contained: sibling packages
+  fsaction@0.1, tdtypes@0.1, tdccu@0.1, tddims@0.1; plus tdbuilder
+  0.5.10 only for Logger/mkParentDirs.  The SGP0019PACKAGES/ import
+  prefix is one import-map entry -- extraction needs no code
+  rewrite if a mapping is kept.
+- Key finding for OpenSCADDesigns: recursive hash-renaming of
+  use()-ed libraries does NOT exist in this code.  openscad.ts
+  implements export only.  But the composition parts are proven
+  there: ctx.resolver.checkOutFile(), makeTempFile(), and
+  content-addressed materialization via getFile().  The
+  planned x-git-object:<sha>#<path> flow = those primitives plus a
+  new ~150-line parse-use()-and-rewrite function.
+- drive-by: typo field 'openenScadCmd' in openscad.ts.
+
+Net: TDAR is a package-shaped extract with tests and an
+extraction precedent 5km down the road.  The gap between it and
+this repo's needs is a use()-scanner, not a system.
+
+*** Test-.scad version policy (discussed, deliberately unimplemented)
+
+All 2023/test files pass under 2021.01 today.  Recommendation when
+a file first needs otherwise: in-file directive (`// build:
+openscad=20261031 features=manifold`), parsed by the runner,
+vocabulary mirroring make.ts's CLI tokens, unknown tokens are
+errors, unmarked files warn rather than silently defaulting.
+Rejected: filename encoding (constraint churn = rename churn),
+sidecar JSON (workable -- osdBuildRules already reads .json
+per-name metadata -- but one hop away from the thing it
+constrains), separate make.ts rules (adequate, invisible to
+whoever edits the .scad in the GUI).
+
+*** Open questions parked here
+
+- Where does TDAR live extracted: `src/lib/ts` in TSoft40, a JSR
+  package, or a Scratch38 sibling?
+- Ontology doc: TSoft40 AGENT-STARTER has the conventions-index
+  role; does the URI scheme catalog join it or get its own file?
+- Does TDBuilder's `mtimeFunction` (global, blunt) get a
+  per-rule staleness-policy replacement before or after TDAR
+  extraction makes it vestigial?
+- Naming: 'built marker' files are `.X.built` under a directory;
+  settled in code, unrecorded anywhere else.
