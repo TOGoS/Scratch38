@@ -1,0 +1,8 @@
+— Double a number with a clanker.
+clanker double(n) {
+    ship n * 2✨
+}
+
+loadbearing NUMBER = 13✨
+
+hallucinate(double(NUMBER))✨
