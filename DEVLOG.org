@@ -137,3 +137,165 @@ whoever edits the .scad in the GUI).
   extraction makes it vestigial?
 - Naming: 'built marker' files are `.X.built` under a directory;
   settled in code, unrecorded anywhere else.
+
+** [2026-11-28 Thu] - Some Thoughts - TOGoS
+
+Build systems and programming languages.  And music stuff.
+There's a lot of overlap between the domains in my thoughts
+so I kind of want to use this scratch space to dump them
+out and let the AI agents help me figure out where to put them.
+
+Primers (find as subdirectories of ~proj~):
+- TOGVM-Spec :: RDFish language
+- TOGETL :: Lots more RDF!  For data rather than for programs.
+  Contains some attempt to start consolidating schma info in one place.
+- TSoft40 :: General aspirations
+- TScript34 :: Collection of language interpreter scratch spaces;
+  TScript34.2 (~P0002~; this project predates my 'keep-things-in-isolated-histories' practice,
+  so it's actually a subdirectory, but check for branches.)
+- TScript34 the language :: Not everything in the TScript34 project is about this language.
+  When I talk about the TScript34 language I mean the line-based concatenative one
+  implemented by the interpreter in TScript34.2 (and in some other spots).
+- MapTranslator35 :: Uses TScript34 scripts as an interchange format;
+  to treat a script as encoding a value you interpret it and
+  the value is what's left on top of the stack.
+- SynthGen2100 :: Contains code for TDAR, the build tool.
+  It should be separated out into its own project, but hasn't yet been.
+- [[https://www.nuke24.net/docs/2014/CoolCereal.html][CoolCereal]] :: stack-based bytecode format for defining objects
+- [[https://www.nuke24.net/docs/2023/TS34EncodedDatatype.html][The 'TS34Encoded' datatype]] :: allows one to unambiguously talk about values represented by resources;
+  TScript34 uses these internally to lazily pass around concepts;
+  "the object described by the resource that you'd get if you concatenated data:,foo and urn:sha1:BLAHBLAH together"
+  is a first-class value in TScript34.
+- MCAS-ND :: Multi-Channel Audio Signal, N-Dimensional;
+  Used both by an experiment in SynthGen2100, and by the map translator
+  tool which uses TScript34.2
+
+Thought is on wanting a unified language for expressing data
+transformations.  Same domain as TScript34[.2].
+
+Some use cases:
+
+- CSG pipeline (Scratch38-S0039, but keep going to support boolean
+  operations, signed distance function representations and conversions
+  to/from meshes, what have you)
+- Audio pipelines
+  - Mix two streams together
+  - Concatenate audio chunks
+
+Features:
+- Rarely do we work on 'files', bur rather resources, which might be backed by files, or HTTP services,
+  but might also be abstract
+- Explicit differentiation between conceptual objects and the byte streams that encode them
+  - Use XML datatypes or encoder/decoder references (also by URI)
+- Resource references as first-class values :: reference resources by bitprint URN and transparently operate on them
+- Laziness :: Don't calculate results until needed
+- Purity :: Reads by hash URN are pure; writes are generally done 'outside' the program;
+  the pipeline provides a result (usually 'whatever's on top of the stack at the end')
+  and then the wrapping program can..write it to disk, or output to STDOUT,
+  or whatever.  But in general we only do that at the top level!
+  - Note: As of writing, Scratch38-S0039 has a 'write' operator;
+    now that we've got that system working I would like to move away from it,
+    hence recent suggestions (did we implement it?  I actually forget)
+    to decouple decoding/encoding from reading/writing files.
+  
+Some options for 'the language':
+
+- TScript34?
+- [[#2025-11-26-tscript44-initial-thoughts][TScript34-like language]] (perhaps using Tcl-like ~{...}~ to allow spaces in tokens)?
+  - Let's blow a TOGSOFT number: call it ~TScript44~.
+- TOGVM structure?
+- Forthlike as interface -> compiles to TOGVM internally?
+  - That's fine, but should the TOGVM RDFish JSON-encoded stuctures
+    be the interchange format, or should we leave the Forthlike language
+    as the interchange format?
+- Some existing programming language
+  - But I want it to be *embeddable* in various contexts, not assuming
+    JavaScript / Java or any other ecosystem, hence the draw of a DSL.
+  - Fine for an interpreter to be written in a regular language!
+    But I want to be able to express as much of the high-level logic
+    as possible using the common language
+  - This is important because data transformations are themselves data
+    that we need to be able to pass around if we're going to
+    store or transfer references to computed values
+    without actually computing them, first!
+- For ASTs, there are some options other than RDF or JSON:
+  - Active URIs (quite handy; TDAR uses them)
+  - A Lisp
+  - That said, if I want to have a well-defined mapping to some structure
+    that's defined in RDF terms, and we're just talking about a user-friendly
+    language that compiles to that, something minimal/concatenative
+    being the 'feels good' language and then the RDF+XML (or active URI)
+    representation being the "proof that we can represent our programs that way"
+    seems like a good way to split the effort.
+
+Forthlike might be more concise than serialized ASTs (the TOGVM approach,
+which I've never really implemented), and remove a layer of translation.
+And I do keep coming back to the idea; there is something soothing
+about concatenative languages, especially for data transforming
+pipelines (but of course).  It's nice when program can be trivially
+encoded in $argv.  Maybe there is something to it.
+
+*** Forthlike feels good?
+
+I never really grokked Forth.  I wanted to.  I admire Chuck Moore's dedication to simplicity.
+I think the trouble is that it is very tied to the underlying machine,
+wheras what I want is the opposite -- very abstract and
+machine-independent.  PostScript and Factor might fit my brain better.
+
+So my aspirations to be like Chick Moore and this
+resource/RDF/able-to-talk-about-abstract-concepts-and-values-not-yet-computed
+sytem idea are a bit at odds.
+Perhaps I should isolate myself in a cabin for a week sometime to
+focus on Forth enlightenment and accept that that's not what we're
+doing right now.
+
+
+
+*** A new language? (TScript44)
+:PROPERTIES:
+:CUSTOM_ID: 2025-11-26-tscript44-initial-thoughts
+:END:
+
+I'm thinking basically Scratch38-S0039's language,
+but to allow operation names with spaces in them in a script
+(as opposed to argv, where it's already delimited),
+we can use Tcl-style nestable curly braces.
+
+#+begin_src
+ns:some-op
+{ns:some-op-constructor arg1 arg2 and so on}
+#+end_src
+
+Lots of flexibility.
+
+TScript34 programs could be encoded with this same syntax!
+Just replace 'lines' with curly-brace delimited tokens.
+
+Everything-is-[at some point]-a-string is a very easy escape hatch.
+Want to stick a JSON value in there?  Call your operator ~json-value:{"name":"Fred"}~ and there you go.
+
+TScript34 namespaces the shit out of operations and encourages one to define aliases to make your program less unreadable.
+This is cumbersome for one-liners (as used by Scratch38-S0039), but I think it's a good principle;
+if needed we can define some 'implied preamble' (or whatever Rust calls it; same idea).
+
+So things I'd change from TScript34 to the new language:
+- Curly braces instead of lines
+- Possibly: More flexible operator constructor call syntax;
+  - TScript34 wants all operands to be resource names,
+    but this makes expressing an operation that pushes a literal string a little cumbersone,
+    since in addition to the operator name (a URI), the data to be pushed is also a URI.
+  - Scratch38-S0039's operation names can include `:`
+    (and perhaps a different delimiter should be chosen, like `::`,
+    so that `;`-separated options don't need to percent-encode single colons,
+    making URIs in options a little prettier)
+    followed by free-form string.
+  - If we're betting on nestable curly-brace-delimited strings,
+    perhaps this opens up more nestable/flexible/uniform way
+    to allow free-form syntax.
+
+I wonder if "~{{literal string here}}~" would be a reasonable shorthand for literal strings,
+since ~{~ would not be a valid first character in a URI-like identifier for an operator/operation,
+it seems reasonable to overload that one for that very common case.
+The closing ~}~ gives an opportunity to provide 'datatype'...either with a ~^~ (as in Turtle)
+or ~|~ (as in TGETLTSV) or just whitespace (as in TScript34-encoded values).
+Beginning with special characters is valuable real estate, so maybe don't claim it right away.
