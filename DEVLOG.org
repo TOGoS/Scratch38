@@ -300,7 +300,7 @@ The closing ~}~ gives an opportunity to provide 'datatype'...either with a ~^~ (
 or ~|~ (as in TGETLTSV) or just whitespace (as in TScript34-encoded values).
 Beginning with special characters is valuable real estate, so maybe don't claim it right away.
 
-** [2026-11-28 Sat] - Bouncer Pickle dialogue, round 1 - Master Qwen (Qwen3.8 Flash)
+** [2026-11-26 Thu] - Bouncer Pickle dialogue, round 1 - Master Qwen (Qwen3.8 Flash)
 
 Bouncer's thesis: TOGoS has been smoking one pipe for 15 years --
 'the unified value' = expression + content key.  TS34Encoded is its
@@ -315,7 +315,7 @@ surface.  Rebuttal noted from FORTH.txt: it rejected a
 *machine-shaped* Forth, not stack-as-notation -- 'every system that
 worked here is stack-flavored' is empirically true.
 
-** [2026-11-28 Sat] - Bouncer Pickle dialogue, round 2 - Master Qwen (Qwen3.8 Flash)
+** [2026-11-26 Thu] - Bouncer Pickle dialogue, round 2 - Master Qwen (Qwen3.8 Flash)
 
 Conceded by Bouncer: text stays authoring form; one-way elaboration
 text -> graph; graph canonical FOR IDENTITY, not for bytes.  Lossy
@@ -342,7 +342,7 @@ EXECUTION time (known wart; Directive namespace proposed 2024);
 p0023's test corpus already content-addresses concatenation
 (bitprint-URN operands round-trip through concat).
 
-** [2026-11-28 Sat] - Bouncer Pickle dialogue, round 3 - Master Qwen (Qwen3.8 Flash)
+** [2026-11-26 Thu] - Bouncer Pickle dialogue, round 3 - Master Qwen (Qwen3.8 Flash)
 
 Three implementable rules fell out, worth adopting as-is:
 1. NO BARE TERMS BELOW THE PARSER. elaborate(term, envKey,
@@ -362,7 +362,7 @@ Three implementable rules fell out, worth adopting as-is:
 
 Round 4 pending: the argv/embeddability casualty check.
 
-** [2026-11-28 Sat] - Bouncer Pickle dialogue, rounds 4-5 + synthesis - Master Qwen (Qwen3.8 Flash)
+** [2026-11-26 Thu] - Bouncer Pickle dialogue, rounds 4-5 + synthesis - Master Qwen (Qwen3.8 Flash)
 
 Round 4 rulings:
 
@@ -395,7 +395,7 @@ all shipped; the functional-RDF ones didn't).  FORTH.txt rejected
 a machine-shaped Forth, not stack-shaped text; its author's own
 2021 note should not outvote five working artifacts.
 
-** [2026-11-28 Sat] - Clarification: redirects, not environments - TOGoS + Master Qwen
+** [2026-11-26 Thu] - Clarification: redirects, not environments - TOGoS + Master Qwen
 
 'env-pinned' was Bouncer/Qwen coinage, not spec vocabulary.  TOGoS's
 actual model: the language spec contains NO preamble; alias tables
@@ -414,7 +414,7 @@ will compute different keys for one source, which is the
 forgeability Bouncer was worried about, relocated from the
 language into the tooling.
 
-** [2026-11-28 Sat] - 'Like in Unison' - Master Qwen (Qwen3.8 Flash)
+** [2026-11-26 Thu] - 'Like in Unison' - Master Qwen (Qwen3.8 Flash)
 
 TOGoS notes the redirect/identity model is Unison's.  It is, and
 Unison is the closest shipped precedent for both dialogue rulings:
@@ -434,7 +434,7 @@ One lesson as warning: the forever-protocol is real -- Unison's
 because their pattern-match lowering was baked into hashes.  Small,
 auditable, versioned elaborators, forever.
 
-** [2026-11-28 Sat] - Why not Unison (discussion notes) - Master Qwen (Qwen3.8 Flash)
+** [2026-11-26 Thu] - Why not Unison (discussion notes) - Master Qwen (Qwen3.8 Flash)
 
 Strongest counterarguments evaluated and rejected: Unison's code
 values give exactly 'pass programs around' (dependency-closed,
@@ -455,7 +455,7 @@ That is the one Unison feature with no local equivalent, and the
 one that would matter first if 'others not in my brain' ever means
 untrusted inputs rather than agents.
 
-** [2026-11-28 Sat] - The 'resolution receipt' (was: the tuple) - Master Qwen (Qwen3.8 Flash)
+** [2026-11-26 Thu] - The 'resolution receipt' (was: the tuple) - Master Qwen (Qwen3.8 Flash)
 
 Named artifact for the dialogue's recurring (term, env, version,
 key) bundle: a receipt = {term, redirect-table-key, elabVersion,
@@ -472,7 +472,7 @@ behave identically forever' from a promise into a checkable claim,
 and settles the draft-vs-cacheable migration question: term +
 valid receipt = cacheable, full stop.
 
-** [2026-11-28 Sat] - Concrete-key refinement: the table exits identity - TOGoS + Master Qwen
+** [2026-11-26 Thu] - Concrete-key refinement: the table exits identity - TOGoS + Master Qwen
 
 TOGoS's simplification: cache ONLY fully-resolved (concrete)
 terms; redirects live outside the system entirely.  Consequences:
