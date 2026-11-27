@@ -678,7 +678,7 @@ Grammar evidence worth citing in the eventual TDAR/aexpr SPEC:
 repeated names for multi-args, data:, literals, and path-bound
 members ('files/src/gen/svg/back.svg@urn:bitprint:...').
 
-*** Data museum
+*** Data museum - TOGoS
 :PROPERTIES:
 :CUSTOM_ID: 2026-11-27T02-data-museum
 :END:
@@ -736,3 +736,18 @@ Stuff like (from ~logs/2019_07_12.jsonl~):
 #+end_src
 
 And those logs and images *are* available on TOGoS-FBS (e.g. [[http://togos-fbs.nuke24.net/uri-res/raw/urn:sha1:N6BCF666RZFDMVR42WGXYAU5WY6X62KK/some-tfmpm-log.log][some log]] and [[http://togos-fbs.nuke24.net/uri-res/raw/urn:sha1:JO6ETLWGNWTUH3KQ3TGVCGLKYWKK6GBU/some-tfmpm-image.png][some image]]).
+
+*** TDAR Demo data hunt: closed - Master Qwen
+
+Little remains; more may exist on other machines, or a different
+--location was in play, but not worth the excavation.  Reframe by
+TOGoS: those files were 'the build system's short-term memory',
+not the planned-permanent memoizations -- the durable things are
+the bitprint URNs the entries point between, which survive the
+cache's death trivially.
+
+Design note for the TDAR revival: an artifact worth keeping must
+not live at a path derived from a hash of an origin string that
+exists only in whatever .env happened to set -- cache persistence
+should be an explicit, named, content-addressed choice (tdccu
+sectors; receipts), never a side effect of a browser-parity API.
