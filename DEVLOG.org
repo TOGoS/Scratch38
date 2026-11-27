@@ -642,3 +642,20 @@ The real work Qwen did was to reorganize the libraries a bit.
 I want to address (a) (attempt recovery of active resolutions from 2021)
 first, but then I'll look at the transformed TDAR and maybe give it a
 spin or at least work on whatever errors prevent it from spinning.
+
+** [2026-11-27 Fri] - TDAR Demo localStorage located - Master Qwen (Qwen3.8 Flash)
+
+Deno stores per-origin localStorage under DENO_DIR/location_data/
+<sha256-of-origin>/local_storage (SQLite; WAL sidecars possible).
+Origin is hashed WITHOUT trailing slash -- verified empirically on
+deno 2.9.8 and by collision against Framey's directory listing:
+C:\...\deno\location_data\35398ddcbbdb473d... = sha256("https://
+tdar-demo.20220110.synthgen.nuke24.net"), the TDAR Demo cache of
+un-run expressions (~12 KB, Jan 2022).  The 28.6 KB sibling
+(3276a45c...) is sha256 of p0019.synthgen.nuke24.net -- P0019's
+unit-test corpus, touched as late as 2024-12 with a live -wal.
+
+Backup advice given: copy the whole location_data tree (it's tiny)
+with deno processes stopped -- WAL data can live only in the side-
+car files, and a Deno 2.x reader may checkpoint a 2022-era database
+as a side effect of merely listing it.
