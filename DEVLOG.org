@@ -434,3 +434,64 @@ One lesson as warning: the forever-protocol is real -- Unison's
 because their pattern-match lowering was baked into hashes.  Small,
 auditable, versioned elaborators, forever.
 
+** [2026-11-28 Sat] - Why not Unison (discussion notes) - Master Qwen (Qwen3.8 Flash)
+
+Strongest counterarguments evaluated and rejected: Unison's code
+values give exactly 'pass programs around' (dependency-closed,
+verifiable), but (1) its content identity lives inside the
+parser/typechecker lowering, opaque to RDF-level tooling, whereas
+TOGoS's operation identity IS a URI, a first-class datum addressable
+by TOGETL/bitprint/uri-res plumbing; (2) embedding a Haskell
+toolchain conflicts with the single-file polyglot runtime tradition
+(TScript34.2 in C#, Java interpreters, PHP emitters, Deno); (3) the
+global type lattice would double-specify what TOGETL's RDF schma
+already owns.
+
+Worth stealing wholesale: the UCM trust model.  TDAR-style
+(term, resolved-table, elabVersion, key) tuples are already
+dependency manifests; adding 'receiver re-elaborates and compares'
+buys verified untrusted exchange without adopting the platform.
+That is the one Unison feature with no local equivalent, and the
+one that would matter first if 'others not in my brain' ever means
+untrusted inputs rather than agents.
+
+** [2026-11-28 Sat] - The 'resolution receipt' (was: the tuple) - Master Qwen (Qwen3.8 Flash)
+
+Named artifact for the dialogue's recurring (term, env, version,
+key) bundle: a receipt = {term, redirect-table-key, elabVersion,
+computedKey}.  The key is redundant to its creator; the receipt
+exists so a RECEIVER (or future self) can re-derive and compare --
+verify-by-re-elaboration, the UCM trick, the one thing a bare
+bitprint URN can't attest (it proves bytes-of-serialization, not
+resolution history).
+
+Fits existing practice: .tef already pins OUTPUT bits by URN
+('stl-file: ... urn:bitprint:K'); receipts pin the INPUT story
+(sources, use()-resolved libs, tool redirects).  Turns 'terms
+behave identically forever' from a promise into a checkable claim,
+and settles the draft-vs-cacheable migration question: term +
+valid receipt = cacheable, full stop.
+
+** [2026-11-28 Sat] - Concrete-key refinement: the table exits identity - TOGoS + Master Qwen
+
+TOGoS's simplification: cache ONLY fully-resolved (concrete)
+terms; redirects live outside the system entirely.  Consequences:
+- elabVersion mostly evaporates: concrete terms need no resolution
+  algorithm, so there's no algorithm to version inside the key.
+  (Receipts shrink to {concrete-term, key}; table-pinning was
+  insurance for ambiguity the design refuses to cache.)
+- TDAR already implements the core: results keyed by serialized
+  active URI; validateCached checks presence, with a TODO
+  ('recurse') where re-derivation would live if shared/untrusted
+  caches ever demand it -- so the receipt's receiver-check is
+  untrusted-exchange porcelain, not core.
+- One durable loss, cheaply patched: after retargeting a redirect,
+  'which cache entries used the old mapping?' is unanswerable.
+  Fix is annotation-only: store the table key alongside cache
+  entries (TDAR logEvent already thinks this way).  History
+  queryable, identity untouched.
+- Unison's 'sourcification' problem is much smaller here: concrete
+  terms are self-describing strings, so human-readable rendering
+  is a table inverse-lookup (display layer), not AST-to-syntax
+  machinery.  Porcelain must handle inverse ambiguity: many names,
+  one term -- render either, never re-key on the choice.
