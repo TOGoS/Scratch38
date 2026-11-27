@@ -495,3 +495,94 @@ terms; redirects live outside the system entirely.  Consequences:
   is a table inverse-lookup (display layer), not AST-to-syntax
   machinery.  Porcelain must handle inverse ambiguity: many names,
   one term -- render either, never re-key on the choice.
+
+** [2026-11-26 Thu] - Next Steps - TOGoS
+
+A couple of relatively concrete tasks:
+
+- [ ] See if I can preserve the resolutions that TDAR already did
+  for various SynthGen2100-related things back in 2021.
+  In theory they could still be in some database in ~/.deno on Framey.
+
+- [ ] Revive TDAR.  By this I mean extract it and its dependencies
+  from ~SynthGen2100/P0019/packages~.
+  - This could just mean dumping
+    the remaining dependencies (I did take care of one little XML bit already)
+    into a directory inside the extracted TDAR for now.
+  - I think I fnd that idea a little distateful because they could be referenced
+    from elsewhere in SynthGen2100's various sub-projects,
+    and then there'd be TDAR's vendored copy and also the still-referenced
+    bits in ~SynthGen2100/P0019/packages~.
+
+Other thoughts:
+
+- I am seeking some kind of 'unification' of TDAR and TScript34-P0023 and TOGVM stuff.
+  P0023 provides some simple test cases for concatenation functions,
+  but it did not go further than that due to...frankly: having to encode everything in data URIs.
+  And some hemming and hawing about how to represent multi-argument functions.
+- Decide how to map the stack language.
+  Maybe ops in the stack language are simply ~Stack ->{optional effects} Stack~ functions?
+- It would seem that if we want the stack language and the expression tree language
+  to be translatable, every operation needs a ~Stack -> Stack~ function
+  and a corresponding ~X -> Y~ function.
+- TOGVM-Spec talks about functions that take multiple, sometimes named, arguments,
+  and allowing for the name to appear multiple times.  This maps pretty cleanly
+  to ~active:~ URIs (TDAR demonstrates this).
+- I've decided that Unison's ~Input ->{Effect} Output~ function model should
+  be the fundamental type of function.
+  - As already mentioned, stack ops can be modeled as ~Stack ->{e} Stack~.
+  - Multi-argument functions can be defined as ~ArgumentsStructure ->{e} returnType~.
+    - Again, TDAR demonstrates this exact model pretty directly in its TypeScript code!
+- Alright, I think this gives us a framework.
+  - TDAR's 'active functions' and TScript34-P0023's functions
+    (intentionally, explicitly the same domain) are ~Args -> whatever~,
+    and ops in the stack languages are (conceptually, anyway) ~Stack ->{e} Stack~
+    (in practice, the hope is to have enough type information known statically
+    that these could be compiled or analyzed for functional meaning).
+
+So what do I want to /do/ with it?  What is my goal?
+- One goal might be simply to have the framework spelled out
+  so that when I craft a new interpreter, it can fit into it,
+  joining the ecosystem relatively seamlessly.
+- One goal is an interchange format for functional expressions
+  - ~active:~ URIs are fine when there are no variables!
+  - TOGVM can represent the same basic structure as ~active:~ URIs
+    but has variables.  And possibly a lambda?
+  - The stack language actually provides the simplest representation;
+    the inputs are implicitly the stack at the beginning of the program,
+    and what's left on the stack at the end are the outputs!
+    Type-check as needed.  It's the same information as a TOGVM
+    expression but a much simpler structure, and it's theoretically
+    possible to convert between them.
+- A set of test vectors
+  - P0023 started this, but I think I abandoned it due to the TSV-with-URL-encoded-values being incredibly cumbersome.
+    Also, 'TOGScheme' or 'TOGLisp' was never really the point; the point was a simpler syntax
+    for TOGVM expressions.  Which the lispy stuff may be, and may be worth the cost
+    of 'yet another representation' if we can spec out what the syntax means
+    and then get some agents to do the grunt work.
+  - The Tcl-like syntax that I'm proposing for [[#2025-11-26-tscript44-initial-thoughts][TScript44]
+    could be a better fit (there may be a reason SQLite uses Tcl for its test suite!)
+- Test vectors not just for evaluating expressions, but for translating between formats.
+  - Which, if you define the transformations as functions,
+    can be part of the evaluation test vectors, after all!
+    We "just" have to name those functions and fully specify their contract.
+- All of the needed functionality as a unified library or cohesive set of libraries
+  that can be used to write an actual program from a single platform.
+  - Like PHPTemplateProject, the goal is to show how it's done.
+    You don't need to use all the parts, but if you need to,
+    we have a reference implementation and test vectors.
+  - PHP?  TypeScript?  Java?
+    Doesn't really matter; prototype the system in one and it can act
+    as a blueprint for other platforms if/when the functionality is actually needed.
+  - TypeScript may be the best option, not because TDAR is already written in it,
+    but because it has a relatively expressive type system, and because some
+    JavaScript runtime features like promises and [async] iterators
+    provide a pretty rich foundation that my Java interpreters get
+    stalled on as I try to re-implement them.
+    (I can't say exactly what it is, but aside from JavaScript's Streams
+    API, which feels rather clunky, a lot of functional patterns just
+    seem to fit comfortably without much remodeling being necessary.)
+
+- Decide what to call it and where to put it and where to put
+  all the documentation.  This is the question that gives me
+  some anxiety because I've already done so much thrashing-about.
