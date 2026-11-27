@@ -500,9 +500,13 @@ terms; redirects live outside the system entirely.  Consequences:
 
 A couple of relatively concrete tasks:
 
-- [ ] See if I can preserve the resolutions that TDAR already did
+- [X] See if I can preserve the resolutions that TDAR already did
   for various SynthGen2100-related things back in 2021.
   In theory they could still be in some database in ~/.deno on Framey.
+  - Found the data, but it's not much.  See [[#2026-11-27T02-data-museum]].
+
+- [ ] Also check on Dellie.  Back up ~AppData/Local/deno~,
+  then run the commands mentioned in [[#2026-11-27T02-data-museum]].
 
 - [ ] Revive TDAR.  By this I mean extract it and its dependencies
   from ~SynthGen2100/P0019/packages~.
@@ -673,3 +677,62 @@ Grammar evidence worth citing in the eventual TDAR/aexpr SPEC:
   active:<function-uri>+<name>@<expr>+<name>@<expr>...
 repeated names for multi-args, data:, literals, and path-bound
 members ('files/src/gen/svg/back.svg@urn:bitprint:...').
+
+*** Data museum
+:PROPERTIES:
+:CUSTOM_ID: 2026-11-27T02-data-museum
+:END:
+
+From within ~C:/Users/TOGoS/stuff/proj/SynthGen2100~ (~C:~ being WSITEM-3343.3):
+
+#+being_src
+deno eval --location=https://tdar-demo.20220110.synthgen.nuke24.net "console.log(JSON.stringify(Object.fromEntries([...Object.keys(localStorage).map(k => [k, localStorage.getItem(k)])]), null, 2))"
+#+end_src
+
+#+begin_example
+{
+  "active:http://ns.nuke24.net/SynthGen2100/Functions/RasterizeUsingBatik+files/src/gen/svg/back.svg@urn:bitprint:VQEZZVN2ISOLDVFM4QGW5KZPYZMH7Z27.XMUGB4UFCNETRXQVU5HI7TW2YQY3XM6EDAVKF7I+files/src/images/back-edging.png@urn:bitprint:CRLPRUJU5JLWTP66LUZMOVXVUGKEUT47.WHTYEBEKDV6QGD2TL6LAKVZCD2QQMFCC2SXJUZQ+files/src/images/back-rails+blackness.png@urn:bitprint:6WC2K7R36QW6ZUSIOBRDD5HHJ5XEBRTL.UBZ33WVMYKGMEUYWC2PZ2KX7UDYCLYH7VXUOXYI+files/src/images/back-shadows.png@urn:bitprint:BTOVMHYTT6RE6WYDI3YHIYBRTFYIWM3U.GUJEA2VSS5J7BQPSIOLISUSNGZJZ47DJ4UCXX5Y+height@data:,126+input-filename@urn:bitprint:I2CX7YP6J4D2JOEE7MLZ7FLCV5PJQK3F.NZR3N4TIZVWKUUV6LKJTSNKFS4HODER2TIZI3MY+width@data:,1368": "urn:bitprint:JA6LCIQMH46P5ZZL7IF6UBQFVCG5P4PL.QQT67K2GGKWXRLNV6TU77FCTWHFDW2F6SZWEB5I",
+  "active:http://ns.nuke24.net/SynthGen2100/Functions/RasterizeUsingBatik+height@data:,128+input@urn:bitprint:INFMTNZACC2OTAKTTX3STW2H47PDWSNN.ZLRVGCWGBMWB5J4Z72PQSAOG5QKUECG5BLXPU5Y+width@data:,128": "urn:bitprint:UNGMFWB4Q7G2PAQYJTJSNM27OQG7DKAC.WZIKKVUGAB4QLSXJMMG66WV246ZNVML2J4J433Y",
+  "active:http://ns.nuke24.net/TOGVM/Functions/Concatenate+item@urn:bitprint:BH5MRW75E66ZWTJDUAHLMSFKOULYSU3N.LM5EDZVPRBQ4OXAVFAUUCNPOLBSSSU2CGX7PACQ+item@urn:bitprint:EA42S4SF3PYHPQFFQ3TUW3VQHNXLDFBK.DH7C7UBLZZZZBKHDGPUFOSJDKOZUWNBDKJIZRGI": "urn:bitprint:JIRO57D262CZWON6K2OZXQK7WD43MBQ6.QYQLBOO4MH5BDE2PMN762DL6B4F57MT6GZJEFQI"
+}
+#+end_example
+
+#+being_src
+deno eval --location=https://p0019.synthgen.nuke24.net "console.log(JSON.stringify(Object.fromEntries([...Object.keys(localStorage).map(k => [k, localStorage.getItem(k)])]), null, 2))"
+#+end_src
+
+#+begin_example
+{
+  "active:http://ns.nuke24.net/SynthGen2100/Functions/RasterizeUsingBatik+height@data:,128+input@urn:bitprint:6NHCNT5QOZPQMERTC3DCIB7AUPAKJYMK.FULEH6ES2PP7UKRVQ6VV725FKJTQK3TZ4JD7R7Q+width@data:,128": "urn:bitprint:F4GAUP2RLRLPCCUSR3WYT43SUF7YNTTD.N2L6LETZEOWEBUAANF5KCOK5YN4Q7KFPYWEETEA"
+}
+#+end_example
+
+Disappointingly little, and most of those blobs I can't find, including
+in ~C:/Users/TOGoS/stuff/proj/SynthGen2100/.ccouch~.
+Some of the input SVGs exist, at least.
+
+Maybe I was writing the data to some old external hard drive.
+Perhaps the one that up and died.
+
+There might be more on Dellie.
+
+But also, while it would have been interesting to have some old data
+to use as reference, this isn't actually important.
+I can run TDAR again and get some new data.
+
+But I want to transition to a 'log first, then update the database' architecture
+(with 'provenance' info; what process did the evaluation and when),
+similar to that used by [[https://github.com/TOGoS/TFMPM][TFMPM]].
+
+Hey, do I have the logs from TFMPM?
+Oh yeah, ~/home/tog/proj/TFMPM/logs~ (on TOGoS-FBS) is full of ~.jsonl~ files.
+Stuff like (from ~logs/2019_07_12.jsonl~):
+
+#+begin_src jsonl
+{"startTime":"2019-07-12T16:50:09-05:00","endTime":"2019-07-12T16:50:27-05:00","tfmpmCommitId":"959b5e99c9fc2f9e57224f575c65374489129b7b","generationParams":{"reportQuantities":["coal","stone","iron-ore","copper-ore","crude-oil","uranium-ore","biter-spawner","spitter-spawner"],"factorioCommitId":"027bf3902bee8d9e02c2c73a0331c66f176ca02c","dataCommitId":"027bf3902bee8d9e02c2c73a0331c66f176ca02c","mapSeed":"2001","mapScale":"8","mapOffset":["0","0"],"mapWidth":"1024","slopeShading":"0.3"},"generationResult":{"logFile":"urn:sha1:LBEEKYDTCW4KQEEUYIT6IRRVLPCM7G4Y","mapFile":"urn:sha1:BYKA23VOMDC5LNVQSFOC2J3EZA2GD77C"}}
+{"startTime":"2019-07-12T16:50:27-05:00","endTime":"2019-07-12T16:50:45-05:00","tfmpmCommitId":"959b5e99c9fc2f9e57224f575c65374489129b7b","generationParams":{"reportQuantities":["coal","stone","iron-ore","copper-ore","crude-oil","uranium-ore","biter-spawner","spitter-spawner"],"factorioCommitId":"027bf3902bee8d9e02c2c73a0331c66f176ca02c","dataCommitId":"027bf3902bee8d9e02c2c73a0331c66f176ca02c","mapSeed":"3001","mapScale":"8","mapOffset":["0","0"],"mapWidth":"1024","slopeShading":"0.3"},"generationResult":{"logFile":"urn:sha1:V2LQRQ5R45Z7ZXQGIN5OR2GJDHFMSTEJ","mapFile":"urn:sha1:HL3TK4MXFZI3KVNSGHEJ4U4QSMXVO73F"}}
+{"startTime":"2019-07-12T16:50:45-05:00","endTime":"2019-07-12T16:51:04-05:00","tfmpmCommitId":"959b5e99c9fc2f9e57224f575c65374489129b7b","generationParams":{"reportQuantities":["coal","stone","iron-ore","copper-ore","crude-oil","uranium-ore","biter-spawner","spitter-spawner"],"factorioCommitId":"027bf3902bee8d9e02c2c73a0331c66f176ca02c","dataCommitId":"027bf3902bee8d9e02c2c73a0331c66f176ca02c","mapSeed":"4001","mapScale":"8","mapOffset":["0","0"],"mapWidth":"1024","slopeShading":"0.3"},"generationResult":{"logFile":"urn:sha1:FDNMGIFCIFCHS76IDLUWIAZF2AYHXOGV","mapFile":"urn:sha1:AD4YT2SLSEL6Z4XARY2HZ4KHTS24N7H5"}}
+{"startTime":"2019-07-12T16:51:04-05:00","endTime":"2019-07-12T16:51:23-05:00","tfmpmCommitId":"959b5e99c9fc2f9e57224f575c65374489129b7b","generationParams":{"reportQuantities":["coal","stone","iron-ore","copper-ore","crude-oil","uranium-ore","biter-spawner","spitter-spawner"],"factorioCommitId":"027bf3902bee8d9e02c2c73a0331c66f176ca02c","dataCommitId":"027bf3902bee8d9e02c2c73a0331c66f176ca02c","mapSeed":"5001","mapScale":"8","mapOffset":["0","0"],"mapWidth":"1024","slopeShading":"0.3"},"generationResult":{"logFile":"urn:sha1:N6BCF666RZFDMVR42WGXYAU5WY6X62KK","mapFile":"urn:sha1:JO6ETLWGNWTUH3KQ3TGVCGLKYWKK6GBU"}}
+#+end_src
+
+And those logs and images *are* available on TOGoS-FBS (e.g. [[http://togos-fbs.nuke24.net/uri-res/raw/urn:sha1:N6BCF666RZFDMVR42WGXYAU5WY6X62KK/some-tfmpm-log.log][some log]] and [[http://togos-fbs.nuke24.net/uri-res/raw/urn:sha1:JO6ETLWGNWTUH3KQ3TGVCGLKYWKK6GBU/some-tfmpm-image.png][some image]]).
