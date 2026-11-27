@@ -659,3 +659,17 @@ Backup advice given: copy the whole location_data tree (it's tiny)
 with deno processes stopped -- WAL data can live only in the side-
 car files, and a Deno 2.x reader may checkpoint a 2022-era database
 as a side effect of merely listing it.
+
+** [2026-11-27 Fri] - TDAR Demo localStorage contents - TOGoS + Master Qwen
+
+Dumped (3 entries): a RasterizeUsingBatik chain (back.svg + image
+args -> bitprint, rasterized again at 128x128 from a bitprint
+input) and a TOGVM/Functions/Concatenate over two bitprint items.
+The blobs themselves 404 on uri-res -- demo-store artifacts that
+never migrated to picture-files -- making this JSON the last
+complete record of the demo's computations.
+
+Grammar evidence worth citing in the eventual TDAR/aexpr SPEC:
+  active:<function-uri>+<name>@<expr>+<name>@<expr>...
+repeated names for multi-args, data:, literals, and path-bound
+members ('files/src/gen/svg/back.svg@urn:bitprint:...').
