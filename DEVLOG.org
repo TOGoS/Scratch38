@@ -586,3 +586,31 @@ So what do I want to /do/ with it?  What is my goal?
 - Decide what to call it and where to put it and where to put
   all the documentation.  This is the question that gives me
   some anxiety because I've already done so much thrashing-about.
+
+** [2026-11-28 Sat] - 'So what?' answered - Master Qwen (Qwen3.8 Flash)
+
+Assessment: the framework is already decided in TOGoS's own entry
+(Unison function model adopted; TDAR as proof; stack text as
+simplest interchange).  Remaining work is naming, writing one
+page, and spending the framework -- not more design.
+
+Proposed decisions (veto-able):
+- Name the concept Active Expressions; ontology namespace
+  tag:nuke24.net,2026-11:aexpr:.  Name the flagship repo `tdar`
+  (extraction to jsr:@togos/tdar, tdxml precedent); no separate
+  umbrella repo -- docs live where the runnable thing lives.
+- Commit to stack shape as a static type (Factor/Joy discipline);
+  the dual Stack->Stack / X->Y requirement becomes derivable.
+  TOGVM survives as exactly two binder classes (Variable, Let/
+  NamedValue); only closed expressions are cacheable.
+- Test vectors live as TOGETL dialect (=test-vector: term in the
+  Tcl-brace stack notation -- the suite self-hosts; representation
+  as concrete URI; expects/kind).  Translation vectors collapse
+  into evaluation vectors by naming the converters as operations.
+- TDAR-the-extraction IS the reference implementation; other
+  platforms are ports from the vector corpus, no new blueprint repo.
+- Order: Framey cache archaeology (timeboxed) -> tdar extraction
+  (vendor deps in; accept the fork knowingly -- migration to the
+  published package is the convergence) -> 150-line SPEC.md ->
+  P0023 corpus as first vectors -> OpenSCADDesigns as first
+  external consumer (use()-scanner as content-keyed elaboration).
