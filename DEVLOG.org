@@ -614,3 +614,31 @@ Proposed decisions (veto-able):
   published package is the convergence) -> 150-line SPEC.md ->
   P0023 corpus as first vectors -> OpenSCADDesigns as first
   external consumer (use()-scanner as content-keyed elaboration).
+
+** [2026-11-27 Fri] - TDAR has an OID; extraction underway - TOGoS + Master Qwen
+
+TDAR is, from 2026-11-27, urn:oid:1.3.6.1.4.1.44868.261.45
+(enterprise 44868 = TOGoS's registered PEN).
+
+Extraction (b) in progress at ~/proj/TDAR: local clone of
+SynthGen2100, filter-branch --prune-empty over master's 1049
+commits, keeping P0019/{packages/{tdar,tdccu,fsaction,tdtypes,
+tddims}@0.1, make.ts, import-map.json, README.org}.  Dependency
+closure verified first: exactly those five (tdccu <-> tdar import
+cycle makes them inseparable; sgutils was the only other importer
+of the closure and is left behind); externals are URL imports
+(std, tdbuilder@0.5.10, tef@0.3.3), nothing outside P0019.  Plan:
+history filter keeps original paths (preserves blob hashes);
+follow-up commits do the restructure to src/lib/ts/<pkg>/ per the
+pseudo-Maven layout the other projects use.
+
+*** Addendum by TOGoS
+
+Actually we just kept SynthGen2100's entire history,
+ending with 363b99ef54798d6a737806d16f75891e64eee96c,
+and adding a couple more, giving 70b611a066643459aacdd8bc1809dca96fc91c2d.
+The real work Qwen did was to reorganize the libraries a bit.
+
+I want to address (a) (attempt recovery of active resolutions from 2021)
+first, but then I'll look at the transformed TDAR and maybe give it a
+spin or at least work on whatever errors prevent it from spinning.
