@@ -1,4 +1,4 @@
-#+TITLE: Scratch38-S0040 Devlog
+#+TITLE: Scratch38-S0041 Devlog
 
 Scratch space for build-system and content-addressing architecture
 discussion.  Seeded 2026-11-26 from the OpenSCADDesigns
@@ -299,3 +299,138 @@ it seems reasonable to overload that one for that very common case.
 The closing ~}~ gives an opportunity to provide 'datatype'...either with a ~^~ (as in Turtle)
 or ~|~ (as in TGETLTSV) or just whitespace (as in TScript34-encoded values).
 Beginning with special characters is valuable real estate, so maybe don't claim it right away.
+
+** [2026-11-28 Sat] - Bouncer Pickle dialogue, round 1 - Master Qwen (Qwen3.8 Flash)
+
+Bouncer's thesis: TOGoS has been smoking one pipe for 15 years --
+'the unified value' = expression + content key.  TS34Encoded is its
+linear form, the active URI its tree form, TDAR its evaluator,
+TOGETL schma the node labels, TScript44 the notation, stlmod one
+operator vocabulary, MapTranslator the proof that script == value.
+The OpenSCAD prereq-list-vs-use()-tree fracture noted above is the
+same bug in a different costume.
+
+Load-bearing decision proposed: tree is canonical, stack is
+surface.  Rebuttal noted from FORTH.txt: it rejected a
+*machine-shaped* Forth, not stack-as-notation -- 'every system that
+worked here is stack-flavored' is empirically true.
+
+** [2026-11-28 Sat] - Bouncer Pickle dialogue, round 2 - Master Qwen (Qwen3.8 Flash)
+
+Conceded by Bouncer: text stays authoring form; one-way elaboration
+text -> graph; graph canonical FOR IDENTITY, not for bytes.  Lossy
+re-serialization fine; lossy elaboration not.  The forever-protocol
+didn't die, it moved into the elaborator -- so the elaborator must
+be versioned and small ('ring's still a ring; just make it small').
+
+Identity formula agreed: key = content-key-of(elaborate(term, env));
+bare expression is the empty-env case.  Hard corollary for TOGoS's
+'implicit preamble' idea: the preamble must itself be an explicit
+term (or a registered default whose identity ships with the
+implementation), because an ambient environment is invisible to the
+key and 'forgeable-by-alias-change' otherwise.
+
+Agreed first vertical slice: retrofit stlmod -- add the ByteBlob +
+parse/format ops TOGoS already specced in its AGENT-DEVLOG, delete
+'write'; visible win = pipelines pass unwritten artifacts, only the
+CLI touches disk.
+
+Also confirmed by TScript34 skim: the symbolic/reference duality
+already exists there as Op/ (constructors, parse-time) vs Ops/
+(run-time); 'alias' mutates the global definitions dict at
+EXECUTION time (known wart; Directive namespace proposed 2024);
+p0023's test corpus already content-addresses concatenation
+(bitprint-URN operands round-trip through concat).
+
+** [2026-11-28 Sat] - Bouncer Pickle dialogue, round 3 - Master Qwen (Qwen3.8 Flash)
+
+Three implementable rules fell out, worth adopting as-is:
+1. NO BARE TERMS BELOW THE PARSER. elaborate(term, envKey,
+   elabVersion) has no shorter overload; an elided preamble is
+   sugar the parser expands into an explicit env:<key> binding
+   BEFORE anything is hashed.  envKey = content key of a published
+   preamble document.  A vocabulary move re-keys everything --
+   caches break loudly instead of lying.
+2. VERSION OUTSIDE THE GRAPH: the elaborator version is a key
+   derivation prefix ('elab-1:bitprint:...'), not a term -- as a
+   term, rewriters could drop/reorder it and a bump would mutate
+   meaning instead of re-keying.
+3. ';' IS THE ONLY LOAD-BEARING DELIMITER (it never collides with
+   the URIs script-rewriters like cache-resources.php swap, which
+   are full of ':' and '/').  ':' migrates into {{literal}}
+   braces; '/' becomes explicit modifier edges in tree form.
+
+Round 4 pending: the argv/embeddability casualty check.
+
+** [2026-11-28 Sat] - Bouncer Pickle dialogue, rounds 4-5 + synthesis - Master Qwen (Qwen3.8 Flash)
+
+Round 4 rulings:
+
+- SOURCE/IR boundary at the parser.  'stlmod load/stl:x simplify'
+  stays legal source; the parser desugars to (term, envKey,
+  elabVersion) before anything hashes.  Consequence nobody has
+  priced yet: every existing .ts34/.togetltsv artifact scattered in
+  repos is, under this rule, a DRAFT -- cacheable only after it
+  carries an env pin.  The migration story is an open item.
+- TDAR is the runtime; TScript44 runs on it.  Interpreter.cs's
+  Op/Ops/procedures/marks become vocabulary and graph nodes, not a
+  second machine.  'Extract TDAR first; elaborator is a package on
+  top, not a rival runtime.'
+- Sequence: (1) S0039 ByteBlob/parse/format (free: specced in its
+  AGENT-DEVLOG, test suite exists), (2) tdar@0.1 JSR extraction
+  (critical path; tdxml precedent), (3) use()-scanner ONLY as
+  content-keyed elaboration -- as an mtime depfile patch it's
+  throwaway ('don't let today's build fix become tomorrow's
+  architecture'), (4) TScript44 elaborator + stlmod vocabulary.
+  Skip forever: unifying the four interpreter implementations --
+  'that's TOGVM with extra steps.'
+
+Synthesis (Bouncer + Qwen, agreed): the one value everything shares
+is (expression, environment, version) with content-key
+'{elabVersion}:{key(elaborate(...))}'.  TS34Encoded = linear
+lexical form; active URI = tree form; TDAR = evaluator; TOGETL
+schma = node labels; concatenative text = the one notation that
+has ever worked here (TScript34, CoolCereal, stlmod, MapTranslator
+all shipped; the functional-RDF ones didn't).  FORTH.txt rejected
+a machine-shaped Forth, not stack-shaped text; its author's own
+2021 note should not outvote five working artifacts.
+
+** [2026-11-28 Sat] - Clarification: redirects, not environments - TOGoS + Master Qwen
+
+'env-pinned' was Bouncer/Qwen coinage, not spec vocabulary.  TOGoS's
+actual model: the language spec contains NO preamble; alias tables
+are tooling.  Identity comes from TOGVM's existing 'temporary
+redirects' mechanism: an authored name ('OpenSCAD') resolves
+through a redirect to its concrete referent
+('OpenSCAD2021.01, x86-linux'), and it is the RESOLVED form that
+goes into cache keys -- so a term, once defined, behaves in a
+functionally identical way forever.  Stack ops follow the same
+principle as everything else.
+
+Consequence for the redirect table itself: it must be a published,
+hashable thing, and an artifact should record the table (or its
+key) that resolved it -- or two machines with different redirects
+will compute different keys for one source, which is the
+forgeability Bouncer was worried about, relocated from the
+language into the tooling.
+
+** [2026-11-28 Sat] - 'Like in Unison' - Master Qwen (Qwen3.8 Flash)
+
+TOGoS notes the redirect/identity model is Unison's.  It is, and
+Unison is the closest shipped precedent for both dialogue rulings:
+term identity = content hash, names/aliases = mutable metadata
+(= tooling-side redirects, but WITH a recorded resolution story),
+and its untyped 'Term' IR is functionally a small concatenative
+instruction set -- friendly surface text over stack-shaped
+canonical values.
+
+Two lessons to steal: (1) hash the type/shape with the term, so
+operator-shape changes re-key instead of silently invalidating;
+(2) refactoring-in-hash-space (split/compose/inline = new hash,
+old term persists) is what makes content identity livable.
+
+One lesson as warning: the forever-protocol is real -- Unison's
+2022 'code values' redesign paid a whole-release hash discontinuity
+because their pattern-match lowering was baked into hashes.  Small,
+auditable, versioned elaborators, forever.
+
